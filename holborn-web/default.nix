@@ -1,6 +1,6 @@
 { mkDerivation, base, basic-prelude, Spock, stdenv }:
 mkDerivation {
-  pname = "holborn";
+  pname = "holborn-web";
   version = "0.1.0.0";
   src = ./.;
   isLibrary = false;
