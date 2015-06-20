@@ -1,6 +1,7 @@
-name:                holborn
+name:                holborn-web
 version:             0.1.0.0
 synopsis:            Code search
+description:         Web service for browseable, clickable code
 homepage:            https://github.com/jml/holborn
 license:             GPL-3
 license-file:        LICENSE
