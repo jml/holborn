@@ -20,6 +20,7 @@ executable holborn
                      , basic-prelude >= 0.3.13 && <0.6
                      , highlighting-kate >= 0.6 && <0.7
                      , blaze-html >= 0.8 && <0.9
+  exposed-modules:     ExampleData
   hs-source-dirs:      src
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
