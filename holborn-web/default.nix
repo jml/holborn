@@ -1,4 +1,4 @@
-{ mkDerivation, base, basic-prelude, blaze-html, highlighter2
+{ mkDerivation, base, basic-prelude, blaze-html, highlighting-kate
 , Spock, stdenv
 }:
 mkDerivation {
@@ -8,7 +8,7 @@ mkDerivation {
   isLibrary = false;
   isExecutable = true;
   buildDepends = [
-    base basic-prelude blaze-html highlighter2 Spock
+    base basic-prelude blaze-html highlighting-kate Spock
   ];
   homepage = "https://github.com/jml/holborn";
   description = "Code search";

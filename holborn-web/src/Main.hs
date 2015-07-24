@@ -2,12 +2,20 @@ module Main where
 
 import BasicPrelude
 
-import qualified Data.List as List
-import Text.Blaze.Html (Html)
+import Text.Blaze.Html (Html, toHtml)
 import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
-import Text.Highlighter.Formatters.Html (format)
-import Text.Highlighter.Lexer (runLexer)
-import Text.Highlighter.Lexers (lexers)
+import Text.Blaze.Html5 ((!))
+import qualified Text.Blaze.Html5 as H
+import qualified Text.Blaze.Html5.Attributes as A
+
+import Text.Highlighting.Kate (
+  defaultFormatOpts,
+  formatHtmlBlock,
+  highlightAs,
+  styleToCss,
+  tango,  -- XXX: Just copied from the example, not necessarily what we want
+  )
+
 import Web.Spock.Safe
 
 import ExampleData (examplePython)
@@ -21,13 +29,19 @@ import ExampleData (examplePython)
 
 -- XXX: Is Text the right type?
 
+
+-- | Take some Python code and turn it into HTML
 renderPythonCode :: Text -> Html
-renderPythonCode pythonCode =
-  -- True means "include line numbers".
-  format True tokens
-  where
-    (Right tokens) = runLexer pythonLexer (encodeUtf8 pythonCode)
-    (Just pythonLexer) = List.lookup ".py" lexers
+renderPythonCode = formatHtmlBlock defaultFormatOpts . highlightAs "python" . textToString
+
+
+-- | Given a rendered HTML block of code and return a full HTML with
+-- highlighting.
+codePage :: Html -> Html
+codePage codeHtml = do
+  H.head $ H.style ! A.type_ (H.toValue ("text/css" :: Text))
+    $ toHtml $ styleToCss tango
+  H.body codeHtml
 
 
 -- XXX: Is there a better way of sending blaze to the user with Spock?
@@ -39,6 +53,4 @@ main :: IO ()
 main =
     runSpock 8080 $ spockT id $
     do get root $
-           blaze $ renderPythonCode examplePython
-       get ("hello" <//> var) $ \name ->
-           text ("Hello " <> name <> "!")
+           blaze $ codePage $ renderPythonCode examplePython
