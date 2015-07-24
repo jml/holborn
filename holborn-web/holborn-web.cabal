@@ -17,7 +17,7 @@ executable holborn
   build-depends:       base >=4.8 && <4.9
                      , Spock >= 0.7.9 && <0.8
                        -- We want basic-prelude 0.4.0, but it's not in Nix yet.
-                     , basic-prelude >= 0.3.13 && <0.5
+                     , basic-prelude >= 0.3.13 && <0.6
   hs-source-dirs:      src
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
