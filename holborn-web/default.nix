@@ -1,5 +1,5 @@
 { mkDerivation, base, basic-prelude, blaze-html, highlighting-kate
-, Spock, stdenv, tasty
+, Spock, stdenv, tasty, tasty-hunit
 }:
 mkDerivation {
   pname = "holborn-web";
@@ -10,7 +10,7 @@ mkDerivation {
   buildDepends = [
     base basic-prelude blaze-html highlighting-kate Spock
   ];
-  testDepends = [ base tasty ];
+  testDepends = [ base tasty tasty-hunit ];
   homepage = "https://github.com/jml/holborn";
   description = "Code search";
   license = stdenv.lib.licenses.gpl3;
