@@ -15,9 +15,11 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Holborn.Web
                      , Holborn.Style
+                     , Holborn.HtmlFormat
   build-depends:       base >=4.8 && <4.9
                        -- We want basic-prelude 0.4.0, but it's not in Nix yet.
                      , basic-prelude >= 0.3.13 && <0.6
+                     , bytestring >= 0.10 && <0.11
                      , highlighter2 >= 0.2 && <0.3
                      , blaze-html >= 0.8 && <0.9
                      , text >= 1.2 && <1.3
