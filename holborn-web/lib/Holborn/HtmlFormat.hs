@@ -4,8 +4,9 @@ module Holborn.HtmlFormat (format, formatInline) where
 
 import BasicPrelude hiding (div, span)
 
-import Text.Blaze.Html5
-import Text.Blaze.Html5.Attributes hiding (span)
+import Text.Blaze.Html5 (Html, (!))
+import qualified Text.Blaze.Html5 as H
+import qualified Text.Blaze.Html5.Attributes as A
 import qualified Data.ByteString as BS
 
 import Text.Highlighter.Types
@@ -14,25 +15,25 @@ import Text.Highlighter.Types
 format :: Bool -> [Token] -> Html
 format ls ts
     | ls =
-        table ! class_ "highlighttable" $ tr $ do
-            td ! class_ "linenos" $
-                div ! class_ "linenodiv" $
-                    pre (lineNos (countLines ts))
+        H.table ! A.class_ "highlighttable" $ H.tr $ do
+            H.td ! A.class_ "linenos" $
+                H.div ! A.class_ "linenodiv" $
+                    H.pre (lineNos (countLines ts))
 
-            td ! class_ "code" $
-                div ! class_ "highlight" $
-                    pre $ highlight ts
+            H.td ! A.class_ "code" $
+                H.div ! A.class_ "highlight" $
+                    H.pre $ highlight ts
     | otherwise =
-        div ! class_ "highlight" $
-            pre $ highlight ts
+        H.div ! A.class_ "highlight" $
+            H.pre $ highlight ts
 
 formatInline :: [Token] -> Html
-formatInline = code . highlight
+formatInline = H.code . highlight
 
 highlight :: [Token] -> Html
 highlight [] = return ()
 highlight (Token t s:ts) = do
-    span ! class_ (toValue $ shortName t) $ toHtml (decodeUtf8 s)
+    H.span ! A.class_ (H.toValue $ shortName t) $ H.toHtml (decodeUtf8 s)
     highlight ts
 
 countLines :: [Token] -> Int
@@ -45,11 +46,11 @@ lineNos n = lineNos' 1
   where
     lineNos' c
         | c <= n = do
-            a ! href (toValue $ "#L-" ++ show c)
-              ! name (toValue $ "L-" ++ show c) $
-                toHtml (show c)
+            H.a ! A.href (H.toValue $ "#L-" ++ show c)
+                ! A.name (H.toValue $ "L-" ++ show c) $
+              H.toHtml (show c)
 
-            toHtml ("\n" :: Text)
+            H.toHtml ("\n" :: Text)
 
             lineNos' (c + 1)
         | otherwise = return ()
