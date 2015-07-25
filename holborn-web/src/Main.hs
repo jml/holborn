@@ -52,5 +52,4 @@ blaze = lazyBytes . renderHtml
 main :: IO ()
 main =
     runSpock 8080 $ spockT id $
-    do get root $
-           blaze $ codePage $ renderPythonCode examplePython
+    get root $ blaze $ codePage $ renderPythonCode examplePython
