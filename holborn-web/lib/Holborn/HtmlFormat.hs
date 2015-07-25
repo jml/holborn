@@ -2,9 +2,8 @@
 
 module Holborn.HtmlFormat (format, formatInline) where
 
-import Data.Text (Text)
-import Data.Text.Encoding (decodeUtf8)
-import Prelude hiding (div, span)
+import BasicPrelude hiding (div, span)
+
 import Text.Blaze.Html5
 import Text.Blaze.Html5.Attributes hiding (span)
 import qualified Data.ByteString as BS
