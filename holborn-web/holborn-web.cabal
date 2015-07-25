@@ -12,16 +12,41 @@ category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
 
-executable holborn
-  main-is:             Main.hs
+library
+  exposed-modules:     Holborn.Web
   build-depends:       base >=4.8 && <4.9
-                     , Spock >= 0.7.9 && <0.8
                        -- We want basic-prelude 0.4.0, but it's not in Nix yet.
                      , basic-prelude >= 0.3.13 && <0.6
                      , highlighting-kate >= 0.6 && <0.7
                      , blaze-html >= 0.8 && <0.9
-  other-modules:       ExampleData
+  hs-source-dirs:      lib
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+  ghc-options:         -Wall
+
+executable holborn
+  main-is:             Main.hs
   hs-source-dirs:      src
+  default-language:    Haskell2010
+  other-modules:       ExampleData
+  build-depends:       base >=4.8 && <4.9
+                     , Spock >= 0.7.9 && <0.8
+                     , basic-prelude >= 0.3.13 && <0.6
+                     , blaze-html >= 0.8 && <0.9
+                     , holborn-web
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+
+Test-Suite holborn-test
+  type:                exitcode-stdio-1.0
+  main-is:             Tests.hs
+  build-depends:       base >=4.8 && <4.9
+                     , tasty >= 0.10.0
+                     , tasty-hunit >= 0.9.0
+                     , basic-prelude >= 0.3.13 && <0.6
+                     , holborn-web
+  hs-source-dirs:      tests
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
