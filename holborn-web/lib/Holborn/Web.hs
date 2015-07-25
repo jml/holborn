@@ -6,20 +6,20 @@ module Holborn.Web
 
 import BasicPrelude
 
+import qualified Data.List as List
+import Data.Maybe (fromJust)
+
 import Text.Blaze.Html (Html, toHtml)
 import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
-import Text.Highlighting.Kate (
-  defaultFormatOpts,
-  highlightAs,
-  tango,  -- XXX: Just copied from the example, not necessarily what we want
-  )
-import Text.Highlighting.Kate.Types (FormatOptions, SourceLine, Token)
+import Text.Highlighter.Formatters.Html (format)
+import Text.Highlighter.Lexer (runLexer)
+import Text.Highlighter.Lexers (lexers)
+import Text.Highlighter.Types (Token)
 
-
-import Holborn.HtmlFormat (formatHtmlBlock, styleToCss)
+import Holborn.Style (monokai)
 
 
 -- | A token with extra semantic information. More data to be added later.
@@ -35,13 +35,25 @@ getHighlightingToken (HolbornToken t) = t
 data AST = AST
 
 
-annotateSourceLines :: [SourceLine] -> AST -> [[HolbornToken]]
-annotateSourceLines sourceLines _ = map (map HolbornToken) sourceLines
+annotateTokens :: [Token] -> AST -> [HolbornToken]
+annotateTokens tokens _ = map HolbornToken tokens
 
 
+formatHtmlBlock :: [HolbornToken] -> Html
+formatHtmlBlock tokens =
+  format includeLineNumbers (map getHighlightingToken tokens)
+  where includeLineNumbers = False
 
-formatHtmlBlock' :: FormatOptions -> [[HolbornToken]] -> Html
-formatHtmlBlock' opts sourceLines = formatHtmlBlock opts (map (map getHighlightingToken) sourceLines)
+
+lexPythonCode :: Text -> [Token]
+lexPythonCode code =
+  fromRight $ runLexer pythonLexer (encodeUtf8 code)
+  where pythonLexer = fromJust $ List.lookup ".py" lexers
+
+
+fromRight :: Show a => Either a b -> b
+fromRight (Left e) = terror $ show e
+fromRight (Right r) = r
 
 
 -- XXX: When the pattern matching here fails, we get
@@ -56,17 +68,20 @@ formatHtmlBlock' opts sourceLines = formatHtmlBlock opts (map (map getHighlighti
 -- | Take some Python code and turn it into HTML
 renderPythonCode :: Text -> Html
 renderPythonCode pythonCode =
-  let simpleTokens = highlightAs "python" (textToString pythonCode)
+  let simpleTokens = lexPythonCode pythonCode
       ast = undefined
-      annotatedTokens = annotateSourceLines simpleTokens ast
+      annotatedTokens = annotateTokens simpleTokens ast
   in
-    formatHtmlBlock' defaultFormatOpts annotatedTokens
+    formatHtmlBlock annotatedTokens
 
 
 -- | Given a rendered HTML block of code and return a full HTML with
 -- highlighting.
 codePage :: Html -> Html
 codePage codeHtml = do
-  H.head $ H.style ! A.type_ (H.toValue ("text/css" :: Text))
-    $ toHtml $ styleToCss tango
-  H.body codeHtml
+  H.head $ do
+    H.title "Example code page"
+    H.style ! A.type_ (H.toValue ("text/css" :: Text)) $ toHtml monokai
+    -- XXX: Embedding styling here is terrible.
+    H.style ! A.type_ (H.toValue ("text/css" :: Text)) $ toHtml (".codehilite { background-color: #333; }" :: Text)
+  H.body $ H.div ! A.class_ (H.toValue ("codehilite" :: Text)) $ codeHtml
