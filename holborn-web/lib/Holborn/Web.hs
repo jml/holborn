@@ -21,28 +21,22 @@ import Text.Highlighter.Lexers (lexers)
 import Text.Highlighter.Types (Token(tText))
 
 import Holborn.Style (monokai)
-
-
--- | A token with extra semantic information. More data to be added later.
-data Reference = Reference Text
-data HolbornToken = HolbornToken Token Reference
-
+import Holborn.Types (Annotation(..), Symbol(..), HolbornToken(..), Reference(..))
 
 -- | Get a token that can be fed into our highlighting library.
 getHighlightingToken :: HolbornToken -> Token
 getHighlightingToken (HolbornToken t _) = t
 
-
--- | Placeholder data structure for AST
-type AST = [[ByteString]]
-
-annotateTokens :: [Token] -> AST -> [HolbornToken]
+annotateTokens :: [Token] -> Annotation -> [HolbornToken]
 -- left merge
-annotateTokens [] [] = []
-annotateTokens (x:xs) (y:ys)
-  | (tText x) == (y !! 0) = (HolbornToken x (Reference (decodeUtf8 (y !! 0)))) : (annotateTokens xs ys)
-  | otherwise = (HolbornToken x (Reference "")) : annotateTokens xs (y:ys)
-annotateTokens _ _ = []
+annotateTokens [] (Annotation []) = []
+annotateTokens (x:xs) (Annotation (y@(Symbol symbolName symbolRef):ys))
+  | (tText x) == symbolName = (HolbornToken x symbolRef) : (annotateTokens xs (Annotation ys))
+  | otherwise = (HolbornToken x (Reference "")) : annotateTokens xs (Annotation (y:ys))
+
+annotateTokens (x:xs) (Annotation []) = (HolbornToken x (Reference "")) : annotateTokens xs (Annotation [])
+
+annotateTokens _ _ = terror "Could not match AST data to tokenized data"
 
 formatHtmlBlock :: [HolbornToken] -> Html
 formatHtmlBlock tokens =
@@ -71,7 +65,7 @@ fromRight (Right r) = r
 
 
 -- | Take some Python code and turn it into HTML
-renderPythonCode :: Text -> AST -> Html
+renderPythonCode :: Text -> Annotation -> Html
 renderPythonCode pythonCode ast =
   let simpleTokens = lexPythonCode pythonCode
       annotatedTokens = annotateTokens simpleTokens ast
