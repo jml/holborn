@@ -15,10 +15,34 @@ import Text.Highlighting.Kate (
   styleToCss,
   tango,  -- XXX: Just copied from the example, not necessarily what we want
   )
+import Text.Highlighting.Kate.Types (FormatOptions, SourceLine, Token)
 
 import Web.Spock.Safe
 
 import ExampleData (examplePython)
+
+
+
+-- | A token with extra semantic information. More data to be added later.
+data HolbornToken = HolbornToken Token
+
+
+-- | Get a token that can be fed into our highlighting library.
+getHighlightingToken :: HolbornToken -> Token
+getHighlightingToken (HolbornToken t) = t
+
+
+-- | Placeholder data structure for AST
+data AST = AST
+
+
+annotateSourceLines :: [SourceLine] -> AST -> [[HolbornToken]]
+annotateSourceLines sourceLines _ = map (map HolbornToken) sourceLines
+
+
+
+formatHtmlBlock' :: FormatOptions -> [[HolbornToken]] -> Html
+formatHtmlBlock' opts sourceLines = formatHtmlBlock opts (map (map getHighlightingToken) sourceLines)
 
 
 -- XXX: When the pattern matching here fails, we get
@@ -32,7 +56,12 @@ import ExampleData (examplePython)
 
 -- | Take some Python code and turn it into HTML
 renderPythonCode :: Text -> Html
-renderPythonCode = formatHtmlBlock defaultFormatOpts . highlightAs "python" . textToString
+renderPythonCode pythonCode =
+  let simpleTokens = highlightAs "python" (textToString pythonCode)
+      ast = undefined
+      annotatedTokens = annotateSourceLines simpleTokens ast
+  in
+    formatHtmlBlock' defaultFormatOpts annotatedTokens
 
 
 -- | Given a rendered HTML block of code and return a full HTML with
