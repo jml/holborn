@@ -13,12 +13,13 @@ import qualified Text.Blaze.Html5.Attributes as A
 
 import Text.Highlighting.Kate (
   defaultFormatOpts,
-  formatHtmlBlock,
   highlightAs,
-  styleToCss,
   tango,  -- XXX: Just copied from the example, not necessarily what we want
   )
 import Text.Highlighting.Kate.Types (FormatOptions, SourceLine, Token)
+
+
+import Holborn.HtmlFormat (formatHtmlBlock, styleToCss)
 
 
 -- | A token with extra semantic information. More data to be added later.
