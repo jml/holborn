@@ -27,14 +27,21 @@ format ls ts
         H.div ! A.class_ "highlight" $
             H.pre $ highlight ts
 
+
 formatInline :: [Token] -> Html
 formatInline = H.code . highlight
 
+
+highlightToken :: Token -> Html
+highlightToken (Token t s) = H.span ! A.class_ (H.toValue $ shortName t) $ H.toHtml (decodeUtf8 s)
+
+
 highlight :: [Token] -> Html
 highlight [] = return ()
-highlight (Token t s:ts) = do
-    H.span ! A.class_ (H.toValue $ shortName t) $ H.toHtml (decodeUtf8 s)
-    highlight ts
+highlight (token:tokens) = do
+    highlightToken token
+    highlight tokens
+
 
 countLines :: [Token] -> Int
 countLines [] = 0
