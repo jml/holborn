@@ -2,6 +2,7 @@ module Holborn.Web
        ( HolbornToken
        , codePage
        , renderPythonCode
+       , annotateTokens
        ) where
 
 import BasicPrelude
@@ -17,27 +18,31 @@ import qualified Text.Blaze.Html5.Attributes as A
 import Text.Highlighter.Formatters.Html (format)
 import Text.Highlighter.Lexer (runLexer)
 import Text.Highlighter.Lexers (lexers)
-import Text.Highlighter.Types (Token)
+import Text.Highlighter.Types (Token(tText))
 
 import Holborn.Style (monokai)
 
 
 -- | A token with extra semantic information. More data to be added later.
-data HolbornToken = HolbornToken Token
+data Reference = Reference Text
+data HolbornToken = HolbornToken Token Reference
 
 
 -- | Get a token that can be fed into our highlighting library.
 getHighlightingToken :: HolbornToken -> Token
-getHighlightingToken (HolbornToken t) = t
+getHighlightingToken (HolbornToken t _) = t
 
 
 -- | Placeholder data structure for AST
-data AST = AST
-
+type AST = [[ByteString]]
 
 annotateTokens :: [Token] -> AST -> [HolbornToken]
-annotateTokens tokens _ = map HolbornToken tokens
-
+-- left merge
+annotateTokens [] [] = []
+annotateTokens (x:xs) (y:ys)
+  | (tText x) == (y !! 0) = (HolbornToken x (Reference (decodeUtf8 (y !! 0)))) : (annotateTokens xs ys)
+  | otherwise = (HolbornToken x (Reference "")) : annotateTokens xs (y:ys)
+annotateTokens _ _ = []
 
 formatHtmlBlock :: [HolbornToken] -> Html
 formatHtmlBlock tokens =
@@ -66,10 +71,9 @@ fromRight (Right r) = r
 
 
 -- | Take some Python code and turn it into HTML
-renderPythonCode :: Text -> Html
-renderPythonCode pythonCode =
+renderPythonCode :: Text -> AST -> Html
+renderPythonCode pythonCode ast =
   let simpleTokens = lexPythonCode pythonCode
-      ast = undefined
       annotatedTokens = annotateTokens simpleTokens ast
   in
     formatHtmlBlock annotatedTokens
