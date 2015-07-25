@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 {- | Adapted version of highlighting-kate syntax highlighter.
 
 Changes:
@@ -27,15 +29,20 @@ import BasicPrelude
 
 import qualified Data.Text as Text
 
-import Text.Highlighting.Kate.Types
+import Text.Highlighting.Kate.Types (
+  FormatOptions(..),
+  FromColor(..),
+  SourceLine,
+  Style(..),
+  Token,
+  TokenStyle(..),
+  TokenType(..),
+  )
 
 import Text.Blaze.Html (Html, toHtml)
 import Text.Blaze.Html5 ((!), toValue)
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
-
-import Data.Monoid
-import Data.List (intersperse)
 
 
 instance FromColor Text where
@@ -62,7 +69,7 @@ instance FromColor Text where
 -- A 'NormalTok' is not marked up at all.
 formatHtmlInline :: FormatOptions -> [SourceLine] -> Html
 formatHtmlInline opts = (H.code ! A.class_ (toValue $ Text.unwords
-                                                    $ "sourceCode" : (map Text.pack (codeClasses opts))))
+                                                    $ "sourceCode" : map Text.pack (codeClasses opts)))
                                 . mconcat . intersperse (toHtml ("\n" :: Text))
                                 . map (sourceLineToHtml opts)
 
@@ -108,7 +115,7 @@ short WarningTok        = "wa"
 short NormalTok         = ""
 
 sourceLineToHtml :: FormatOptions -> SourceLine -> Html
-sourceLineToHtml opts contents = mapM_ (tokenToHtml opts) contents
+sourceLineToHtml opts = mapM_ (tokenToHtml opts)
 
 formatHtmlBlockPre :: FormatOptions -> [SourceLine] -> Html
 formatHtmlBlockPre opts = H.pre . formatHtmlInline opts
@@ -174,7 +181,7 @@ toCss (t,tf) = "code > span." ++ short t ++ " { "
         weightspec = if tokenBold tf then "font-weight: bold; " else ""
         stylespec  = if tokenItalic tf then "font-style: italic; " else ""
         decorationspec = if tokenUnderline tf then "text-decoration: underline; " else ""
-        showTokenType t =
-          let reversed = Text.reverse (show t)
+        showTokenType token =
+          let reversed = Text.reverse (show token)
               (prefix, rest) = Text.splitAt 3 reversed
           in if prefix == "kot" then Text.reverse rest else ""
