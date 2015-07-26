@@ -28,15 +28,17 @@ import Holborn.Types (Annotation(..), Symbol(..), HolbornToken(..), Reference(..
 getHighlightingToken :: HolbornToken -> Token
 getHighlightingToken (HolbornToken t _) = t
 
-annotateTokens :: [Token] -> Annotation -> [HolbornToken]
--- left merge
-annotateTokens [] (Annotation []) = []
-annotateTokens (x:xs) (Annotation (y@(Symbol symbolName symbolRef):ys))
-  | (tText x) == symbolName = (HolbornToken x symbolRef) : (annotateTokens xs (Annotation ys))
-  | otherwise = (HolbornToken x (Reference "")) : annotateTokens xs (Annotation (y:ys))
 
-annotateTokens (x:xs) (Annotation []) = (HolbornToken x (Reference "")) : annotateTokens xs (Annotation [])
-annotateTokens _ _ = terror "Could not match AST data to tokenized data"
+annotateTokens :: [Token] -> Annotation -> [HolbornToken]
+annotateTokens tokens (Annotation annotation) =
+  case leftMergeBy matchToken tokens annotation of
+    Left _ -> terror "Could not match AST data to tokenized data"
+    Right mergedList ->
+      map (uncurry mergeTokens) mergedList
+  where
+    matchToken token (Symbol name _) = tText token == name
+    mergeTokens token (Just (Symbol _ reference)) = HolbornToken token reference
+    mergeTokens token Nothing = HolbornToken token (Reference "")
 
 
 leftMergeBy :: (a -> b -> Bool) -> [a] -> [b] -> Either [b] [(a, Maybe b)]
