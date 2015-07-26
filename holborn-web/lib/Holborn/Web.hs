@@ -23,9 +23,6 @@ import Holborn.HtmlFormat (format)
 import Holborn.Style (monokai)
 import Holborn.Types (Annotation(..), Symbol(..), HolbornToken(..), Reference(..))
 
--- | Get a token that can be fed into our highlighting library.
-getHighlightingToken :: HolbornToken -> Token
-getHighlightingToken (HolbornToken t _) = t
 
 annotateTokens :: [Token] -> Annotation -> [HolbornToken]
 -- left merge
@@ -38,9 +35,9 @@ annotateTokens (x:xs) (Annotation []) = (HolbornToken x (Reference "")) : annota
 
 annotateTokens _ _ = terror "Could not match AST data to tokenized data"
 
+
 formatHtmlBlock :: [HolbornToken] -> Html
-formatHtmlBlock tokens =
-  format includeLineNumbers (map getHighlightingToken tokens)
+formatHtmlBlock = format includeLineNumbers
   where includeLineNumbers = False
 
 

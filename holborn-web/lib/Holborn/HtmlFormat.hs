@@ -11,8 +11,10 @@ import qualified Data.ByteString as BS
 
 import Text.Highlighter.Types
 
+import Holborn.Types (HolbornToken(..))
 
-format :: Bool -> [Token] -> Html
+
+format :: Bool -> [HolbornToken] -> Html
 format ls ts
     | ls =
         H.table ! A.class_ "highlighttable" $ H.tr $ do
@@ -28,12 +30,12 @@ format ls ts
             H.pre $ highlight ts
 
 
-formatInline :: [Token] -> Html
+formatInline :: [HolbornToken] -> Html
 formatInline = H.code . highlight
 
 
-highlightToken :: Token -> Html
-highlightToken token@(Token t s) =
+highlightToken :: HolbornToken -> Html
+highlightToken token@(HolbornToken (Token t s) _) =
   if isReference token
   then H.a ! A.href (H.toValue ("https://google.com/#safe=strict&q=" ++ decodeUtf8 s)) $ baseToken
   else baseToken
@@ -46,8 +48,8 @@ highlightToken token@(Token t s) =
 -- We use this to decide whether to linkify things or not.
 --
 -- XXX: Probably should return a richer data type, e.g. Reference | Value
-isReference :: Token -> Bool
-isReference (Token t _) =
+isReference :: HolbornToken -> Bool
+isReference (HolbornToken (Token t _) _) =
   -- XXX: These aren't empirically verified to be actual references, it's just
   -- a first guess.
   case t of
@@ -77,13 +79,13 @@ isReference (Token t _) =
     _ -> False
 
 
-highlight :: [Token] -> Html
+highlight :: [HolbornToken] -> Html
 highlight = mconcat . map highlightToken
 
 
-countLines :: [Token] -> Int
+countLines :: [HolbornToken] -> Int
 countLines = sum . map linesInToken
-  where linesInToken (Token _ s) = length $ BS.elemIndices newlineByte s
+  where linesInToken (HolbornToken (Token _ s) _) = length $ BS.elemIndices newlineByte s
         newlineByte = 0xA  -- '\n'
 
 
