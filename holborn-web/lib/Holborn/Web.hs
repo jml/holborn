@@ -3,6 +3,7 @@ module Holborn.Web
        , codePage
        , renderPythonCode
        , annotateTokens
+       , leftMergeBy
        ) where
 
 import BasicPrelude
@@ -35,8 +36,18 @@ annotateTokens (x:xs) (Annotation (y@(Symbol symbolName symbolRef):ys))
   | otherwise = (HolbornToken x (Reference "")) : annotateTokens xs (Annotation (y:ys))
 
 annotateTokens (x:xs) (Annotation []) = (HolbornToken x (Reference "")) : annotateTokens xs (Annotation [])
-
 annotateTokens _ _ = terror "Could not match AST data to tokenized data"
+
+
+leftMergeBy :: (a -> b -> Bool) -> [a] -> [b] -> Either [b] [(a, Maybe b)]
+leftMergeBy _ [] [] = return []
+leftMergeBy _ [] ys = Left ys
+leftMergeBy _ xs [] = return [(x, Nothing) | x <- xs]
+leftMergeBy match (x:xs) allY@(y:ys) = do
+  let (matched, ys') = if match x y then (Just y, ys) else (Nothing, allY)
+  rest <- leftMergeBy match xs ys'
+  return $ (x, matched):rest
+
 
 formatHtmlBlock :: [HolbornToken] -> Html
 formatHtmlBlock tokens =
