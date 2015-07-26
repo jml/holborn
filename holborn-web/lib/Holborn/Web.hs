@@ -2,6 +2,7 @@ module Holborn.Web
        ( HolbornToken
        , codePage
        , renderPythonCode
+       , annotateTokens
        ) where
 
 import BasicPrelude
@@ -16,28 +17,26 @@ import qualified Text.Blaze.Html5.Attributes as A
 
 import Text.Highlighter.Lexer (runLexer)
 import Text.Highlighter.Lexers (lexers)
-import Text.Highlighter.Types (Token)
+import Text.Highlighter.Types (Token(tText))
 
 import Holborn.HtmlFormat (format)
 import Holborn.Style (monokai)
-
-
--- | A token with extra semantic information. More data to be added later.
-data HolbornToken = HolbornToken Token
-
+import Holborn.Types (Annotation(..), Symbol(..), HolbornToken(..), Reference(..))
 
 -- | Get a token that can be fed into our highlighting library.
 getHighlightingToken :: HolbornToken -> Token
-getHighlightingToken (HolbornToken t) = t
+getHighlightingToken (HolbornToken t _) = t
 
+annotateTokens :: [Token] -> Annotation -> [HolbornToken]
+-- left merge
+annotateTokens [] (Annotation []) = []
+annotateTokens (x:xs) (Annotation (y@(Symbol symbolName symbolRef):ys))
+  | (tText x) == symbolName = (HolbornToken x symbolRef) : (annotateTokens xs (Annotation ys))
+  | otherwise = (HolbornToken x (Reference "")) : annotateTokens xs (Annotation (y:ys))
 
--- | Placeholder data structure for AST
-data AST = AST
+annotateTokens (x:xs) (Annotation []) = (HolbornToken x (Reference "")) : annotateTokens xs (Annotation [])
 
-
-annotateTokens :: [Token] -> AST -> [HolbornToken]
-annotateTokens tokens _ = map HolbornToken tokens
-
+annotateTokens _ _ = terror "Could not match AST data to tokenized data"
 
 formatHtmlBlock :: [HolbornToken] -> Html
 formatHtmlBlock tokens =
@@ -66,10 +65,9 @@ fromRight (Right r) = r
 
 
 -- | Take some Python code and turn it into HTML
-renderPythonCode :: Text -> Html
-renderPythonCode pythonCode =
+renderPythonCode :: Text -> Annotation -> Html
+renderPythonCode pythonCode ast =
   let simpleTokens = lexPythonCode pythonCode
-      ast = undefined
       annotatedTokens = annotateTokens simpleTokens ast
   in
     formatHtmlBlock annotatedTokens
