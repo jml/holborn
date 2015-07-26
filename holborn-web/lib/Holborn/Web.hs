@@ -31,11 +31,9 @@ getHighlightingToken (HolbornToken t _) = t
 
 annotateTokens :: [Token] -> Annotation -> [HolbornToken]
 annotateTokens tokens (Annotation annotation) =
-  case leftMergeBy matchToken tokens annotation of
-    Left _ -> terror "Could not match AST data to tokenized data"
-    Right mergedList ->
-      map (uncurry mergeTokens) mergedList
+  map (uncurry mergeTokens) (assertRight "Could not match AST data to tokenized data" mergeResult)
   where
+    mergeResult = leftMergeBy matchToken tokens annotation
     matchToken token (Symbol name _) = tText token == name
     mergeTokens token (Just (Symbol _ reference)) = HolbornToken token reference
     mergeTokens token Nothing = HolbornToken token (Reference "")
@@ -62,6 +60,10 @@ lexPythonCode code =
   fromRight $ runLexer pythonLexer (encodeUtf8 code)
   where pythonLexer = fromJust $ List.lookup ".py" lexers
 
+
+assertRight :: Show a => Text -> Either a b -> b
+assertRight _ (Right r) = r
+assertRight message (Left e) = terror $ message ++ ": " ++ show e
 
 fromRight :: Show a => Either a b -> b
 fromRight (Left e) = terror $ show e
