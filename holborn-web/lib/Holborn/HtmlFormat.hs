@@ -77,18 +77,15 @@ isReference (Token t _) =
     _ -> False
 
 
--- XXX: This is just a fold.
 highlight :: [Token] -> Html
-highlight [] = return ()
-highlight (token:tokens) = do
-    highlightToken token
-    highlight tokens
+highlight = mconcat . map highlightToken
 
 
 countLines :: [Token] -> Int
-countLines [] = 0
-countLines (Token _ s:ts) =
-    length (BS.elemIndices (toEnum . fromEnum $ '\n') s) + countLines ts
+countLines = sum . map linesInToken
+  where linesInToken (Token _ s) = length $ BS.elemIndices newlineByte s
+        newlineByte = 0xA  -- '\n'
+
 
 lineNos :: Int -> Html
 lineNos n = lineNos' 1
