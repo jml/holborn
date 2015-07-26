@@ -11,7 +11,11 @@ import qualified Data.ByteString as BS
 
 import Text.Highlighter.Types
 
-import Holborn.Types (HolbornToken(..))
+import Holborn.Types (
+  HolbornToken,
+  tokenName,
+  tokenType,
+  )
 
 
 format :: Bool -> [HolbornToken] -> Html
@@ -35,12 +39,13 @@ formatInline = H.code . highlight
 
 
 highlightToken :: HolbornToken -> Html
-highlightToken token@(HolbornToken (Token t s) _) =
+highlightToken token =
   if isReference token
-  then H.a ! A.href (H.toValue ("https://google.com/#safe=strict&q=" ++ decodeUtf8 s)) $ baseToken
+  then H.a ! A.href (H.toValue ("https://google.com/#safe=strict&q=" ++ contents)) $ baseToken
   else baseToken
   where
-    baseToken = H.span ! A.class_ (H.toValue $ shortName t) $ H.toHtml (decodeUtf8 s)
+    baseToken = H.span ! A.class_ (H.toValue . shortName . tokenType $ token) $ H.toHtml contents
+    contents = decodeUtf8 (tokenName token)
 
 
 -- | Is this given token a reference to a thing with a definition?
@@ -49,10 +54,10 @@ highlightToken token@(HolbornToken (Token t s) _) =
 --
 -- XXX: Probably should return a richer data type, e.g. Reference | Value
 isReference :: HolbornToken -> Bool
-isReference (HolbornToken (Token t _) _) =
+isReference token =
   -- XXX: These aren't empirically verified to be actual references, it's just
   -- a first guess.
-  case t of
+  case tokenType token of
     Declaration   -> True
     Reserved      -> True
     Type          -> True
@@ -85,7 +90,7 @@ highlight = mconcat . map highlightToken
 
 countLines :: [HolbornToken] -> Int
 countLines = sum . map linesInToken
-  where linesInToken (HolbornToken (Token _ s) _) = length $ BS.elemIndices newlineByte s
+  where linesInToken = length . BS.elemIndices newlineByte . tokenName
         newlineByte = 0xA  -- '\n'
 
 
