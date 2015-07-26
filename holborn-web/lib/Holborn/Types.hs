@@ -12,6 +12,7 @@ import BasicPrelude
 import Text.Highlighter.Types (Token(..), TokenType)
 
 -- | A token with extra semantic information. More data to be added later.
+-- XXX: Should probably be (Maybe Reference), since we don't always know.
 data HolbornToken = HolbornToken Token Reference
 
 -- | Opaque data type representing the location of a token in our yet-to-be-
