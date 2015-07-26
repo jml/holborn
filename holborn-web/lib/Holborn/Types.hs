@@ -9,9 +9,14 @@ import BasicPrelude
 import Text.Highlighter.Types (Token)
 
 -- | A token with extra semantic information. More data to be added later.
-data Reference = Reference Text
 data HolbornToken = HolbornToken Token Reference
 
--- | Placeholder data structure for AST
+-- | Opaque data type representing the location of a token in our yet-to-be-
+-- defined semantic data structure.
+data Reference = Reference Text
+
+-- | An identifier found in code.
 data Symbol = Symbol ByteString Reference
+
+-- | Placeholder data structure for AST
 data Annotation = Annotation [Symbol]
