@@ -15,11 +15,11 @@ import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
-import Text.Highlighter.Formatters.Html (format)
 import Text.Highlighter.Lexer (runLexer)
 import Text.Highlighter.Lexers (lexers)
 import Text.Highlighter.Types (Token(tText))
 
+import Holborn.HtmlFormat (format)
 import Holborn.Style (monokai)
 import Holborn.Types (Annotation(..), Symbol(..), HolbornToken(..), Reference(..))
 
