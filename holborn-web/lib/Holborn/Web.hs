@@ -16,11 +16,11 @@ import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
-import Text.Highlighter.Formatters.Html (format)
 import Text.Highlighter.Lexer (runLexer)
 import Text.Highlighter.Lexers (lexers)
 import Text.Highlighter.Types (Token(tText))
 
+import Holborn.HtmlFormat (format)
 import Holborn.Style (monokai)
 import Holborn.Types (Annotation(..), Symbol(..), HolbornToken(..), Reference(..))
 
@@ -64,6 +64,7 @@ lexPythonCode code =
 assertRight :: Show a => Text -> Either a b -> b
 assertRight _ (Right r) = r
 assertRight message (Left e) = terror $ message ++ ": " ++ show e
+
 
 fromRight :: Show a => Either a b -> b
 fromRight (Left e) = terror $ show e
