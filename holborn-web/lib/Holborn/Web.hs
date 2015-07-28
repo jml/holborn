@@ -3,6 +3,7 @@ module Holborn.Web
        , codePage
        , renderPythonCode
        , annotateTokens
+       , leftMergeBy
        ) where
 
 import BasicPrelude
@@ -27,16 +28,26 @@ import Holborn.Types (Annotation(..), Symbol(..), HolbornToken(..), Reference(..
 getHighlightingToken :: HolbornToken -> Token
 getHighlightingToken (HolbornToken t _) = t
 
+
 annotateTokens :: [Token] -> Annotation -> [HolbornToken]
--- left merge
-annotateTokens [] (Annotation []) = []
-annotateTokens (x:xs) (Annotation (y@(Symbol symbolName symbolRef):ys))
-  | (tText x) == symbolName = (HolbornToken x symbolRef) : (annotateTokens xs (Annotation ys))
-  | otherwise = (HolbornToken x (Reference "")) : annotateTokens xs (Annotation (y:ys))
+annotateTokens tokens (Annotation annotation) =
+  map (uncurry mergeTokens) (assertRight "Could not match AST data to tokenized data" mergeResult)
+  where
+    mergeResult = leftMergeBy matchToken tokens annotation
+    matchToken token (Symbol name _) = tText token == name
+    mergeTokens token (Just (Symbol _ reference)) = HolbornToken token reference
+    mergeTokens token Nothing = HolbornToken token (Reference "")
 
-annotateTokens (x:xs) (Annotation []) = (HolbornToken x (Reference "")) : annotateTokens xs (Annotation [])
 
-annotateTokens _ _ = terror "Could not match AST data to tokenized data"
+leftMergeBy :: (a -> b -> Bool) -> [a] -> [b] -> Either [b] [(a, Maybe b)]
+leftMergeBy _ [] [] = return []
+leftMergeBy _ [] ys = Left ys
+leftMergeBy _ xs [] = return [(x, Nothing) | x <- xs]
+leftMergeBy match (x:xs) allY@(y:ys) = do
+  let (matched, ys') = if match x y then (Just y, ys) else (Nothing, allY)
+  rest <- leftMergeBy match xs ys'
+  return $ (x, matched):rest
+
 
 formatHtmlBlock :: [HolbornToken] -> Html
 formatHtmlBlock tokens =
@@ -48,6 +59,11 @@ lexPythonCode :: Text -> [Token]
 lexPythonCode code =
   fromRight $ runLexer pythonLexer (encodeUtf8 code)
   where pythonLexer = fromJust $ List.lookup ".py" lexers
+
+
+assertRight :: Show a => Text -> Either a b -> b
+assertRight _ (Right r) = r
+assertRight message (Left e) = terror $ message ++ ": " ++ show e
 
 
 fromRight :: Show a => Either a b -> b
