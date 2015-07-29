@@ -11,8 +11,16 @@ import qualified Data.ByteString as BS
 
 import Text.Highlighter.Types
 
+import Holborn.Types (
+  HolbornToken,
+  Reference(Reference),
+  tokenName,
+  tokenReference,
+  tokenType,
+  )
 
-format :: Bool -> [Token] -> Html
+
+format :: Bool -> [HolbornToken] -> Html
 format ls ts
     | ls =
         H.table ! A.class_ "highlighttable" $ H.tr $ do
@@ -28,67 +36,45 @@ format ls ts
             H.pre $ highlight ts
 
 
-formatInline :: [Token] -> Html
+formatInline :: [HolbornToken] -> Html
 formatInline = H.code . highlight
 
 
-highlightToken :: Token -> Html
-highlightToken token@(Token t s) =
-  if isReference token
-  then H.a ! A.href (H.toValue ("https://google.com/#safe=strict&q=" ++ decodeUtf8 s)) $ baseToken
-  else baseToken
+highlightToken :: HolbornToken -> Html
+highlightToken token =
+  case getUrl token of
+    Nothing -> baseToken
+    Just tokenUrl -> H.a ! A.href (H.toValue tokenUrl) $ baseToken
   where
-    baseToken = H.span ! A.class_ (H.toValue $ shortName t) $ H.toHtml (decodeUtf8 s)
+    baseToken = H.span ! A.class_ (H.toValue . shortName . tokenType $ token) $ H.toHtml contents
+    contents = decodeUtf8 (tokenName token)
 
 
--- | Is this given token a reference to a thing with a definition?
---
--- We use this to decide whether to linkify things or not.
---
--- XXX: Probably should return a richer data type, e.g. Reference | Value
-isReference :: Token -> Bool
-isReference (Token t _) =
-  -- XXX: These aren't empirically verified to be actual references, it's just
-  -- a first guess.
-  case t of
-    Declaration   -> True
-    Reserved      -> True
-    Type          -> True
-    Pseudo        -> True
-    Namespace     -> True
-    Class         -> True
-    Constant      -> True
-    Attribute     -> True
-    Builtin       -> True
-    Decorator     -> True
-    Entity        -> True
-    Exception     -> True
-    Function      -> True
-    Identifier    -> True
-    Label         -> True
-    Property      -> True
-    Tag           -> True
-    Variable      -> True
-    Global        -> True
-    Instance      -> True
-    Anonymous     -> True
-    Arbitrary "Name"      -> True
-    Arbitrary "Name" :. _ -> True
-    _ -> False
+-- XXX: I guess theoretically we should be able to get the URL just from the
+-- Reference, so the type signature of this should be Reference -> Maybe Text.
+-- It's not clear to me how public Reference should be.
+getUrl :: HolbornToken -> Maybe Text
+getUrl = map (\(Reference r) -> ("#" ++ r)) . tokenReference'
 
 
--- XXX: This is just a fold.
-highlight :: [Token] -> Html
-highlight [] = return ()
-highlight (token:tokens) = do
-    highlightToken token
-    highlight tokens
+-- XXX: This should probably be the public interface in Holborn.Types.
+tokenReference' :: HolbornToken -> Maybe Reference
+tokenReference' token =
+  case tokenReference token of
+    r'@(Reference r)
+      | r == "" -> Nothing
+      | otherwise -> Just r'
 
 
-countLines :: [Token] -> Int
-countLines [] = 0
-countLines (Token _ s:ts) =
-    length (BS.elemIndices (toEnum . fromEnum $ '\n') s) + countLines ts
+highlight :: [HolbornToken] -> Html
+highlight = mconcat . map highlightToken
+
+
+countLines :: [HolbornToken] -> Int
+countLines = sum . map linesInToken
+  where linesInToken = length . BS.elemIndices newlineByte . tokenName
+        newlineByte = 0xA  -- '\n'
+
 
 lineNos :: Int -> Html
 lineNos n = lineNos' 1

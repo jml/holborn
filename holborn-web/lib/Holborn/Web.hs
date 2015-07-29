@@ -24,9 +24,6 @@ import Holborn.HtmlFormat (format)
 import Holborn.Style (monokai)
 import Holborn.Types (Annotation(..), Symbol(..), HolbornToken(..), Reference(..))
 
--- | Get a token that can be fed into our highlighting library.
-getHighlightingToken :: HolbornToken -> Token
-getHighlightingToken (HolbornToken t _) = t
 
 
 annotateTokens :: [Token] -> Annotation -> [HolbornToken]
@@ -49,9 +46,9 @@ leftMergeBy match (x:xs) allY@(y:ys) = do
   return $ (x, matched):rest
 
 
+
 formatHtmlBlock :: [HolbornToken] -> Html
-formatHtmlBlock tokens =
-  format includeLineNumbers (map getHighlightingToken tokens)
+formatHtmlBlock = format includeLineNumbers
   where includeLineNumbers = False
 
 
