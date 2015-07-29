@@ -6,7 +6,7 @@ module ExampleData (
 
 import BasicPrelude
 
-import Holborn.Types (Annotation(..), Reference(..), Symbol(..))
+import Holborn.Types (Annotation(..), Reference(..), Identifier(..))
 
 examplePython :: Text
 examplePython = unlines (
@@ -65,8 +65,12 @@ examplePython = unlines (
   , "    print format_tree(node, format_tree, get_children)"
   ])
 
+
 exampleAnnotation :: Annotation
-exampleAnnotation = Annotation $ map (\[x, y] -> (Symbol x) (Reference (decodeUtf8 y))) exampleRaw
+exampleAnnotation =
+  Annotation $ map decodeIdentifier exampleRaw
+  where decodeIdentifier [x, y] = Identifier x (Reference (decodeUtf8 y))
+
 
 exampleRaw :: [[ByteString]]
 exampleRaw = [ ["FORK", "492057e481cfda05e6cb098c7b039886"]

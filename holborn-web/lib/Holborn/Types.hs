@@ -1,5 +1,5 @@
 module Holborn.Types
-       ( Symbol(..)
+       ( Identifier(..)
        , Annotation(..)
        , Reference(..)
        , HolbornToken(..)
@@ -20,12 +20,11 @@ data HolbornToken = HolbornToken Token Reference
 data Reference = Reference Text deriving Show
 
 -- | An identifier found in code.
--- XXX: Maybe rename to Identifier?
-data Symbol = Symbol ByteString Reference deriving Show
+data Identifier = Identifier ByteString Reference deriving Show
 
 -- | Placeholder data structure for AST
 -- XXX: This doesn't represent an AST any more. What *does* it represent?
-data Annotation = Annotation [Symbol]
+data Annotation = Annotation [Identifier]
 
 
 tokenType :: HolbornToken -> TokenType
