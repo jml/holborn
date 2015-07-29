@@ -22,7 +22,7 @@ import Text.Highlighter.Types (Token(tText))
 
 import Holborn.HtmlFormat (format)
 import Holborn.Style (monokai)
-import Holborn.Types (Annotation(..), Identifier(..), HolbornToken(..), Reference(..))
+import Holborn.Types (Annotation(..), Identifier(..), HolbornToken(..))
 
 
 
@@ -32,8 +32,8 @@ annotateTokens tokens (Annotation annotation) =
   where
     mergeResult = leftMergeBy matchToken tokens annotation
     matchToken token (Identifier name _) = tText token == name
-    mergeTokens token (Just (Identifier _ reference)) = HolbornToken token reference
-    mergeTokens token Nothing = HolbornToken token (Reference "")
+    mergeTokens token = HolbornToken token . map getReference
+    getReference (Identifier _ reference) = reference
 
 
 leftMergeBy :: (a -> b -> Bool) -> [a] -> [b] -> Either [b] [(a, Maybe b)]
