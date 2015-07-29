@@ -17,11 +17,11 @@ data HolbornToken = HolbornToken Token Reference
 
 -- | Opaque data type representing the location of a token in our yet-to-be-
 -- defined semantic data structure.
-data Reference = Reference Text
+data Reference = Reference Text deriving Show
 
 -- | An identifier found in code.
 -- XXX: Maybe rename to Identifier?
-data Symbol = Symbol ByteString Reference
+data Symbol = Symbol ByteString Reference deriving Show
 
 -- | Placeholder data structure for AST
 -- XXX: This doesn't represent an AST any more. What *does* it represent?

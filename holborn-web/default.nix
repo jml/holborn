@@ -1,5 +1,6 @@
 { mkDerivation, base, basic-prelude, blaze-html, bytestring
-, highlighter2, Spock, stdenv, tasty, tasty-hunit, text
+, highlighter2, Spock, stdenv, tasty, tasty-hunit, tasty-quickcheck
+, text
 }:
 mkDerivation {
   pname = "holborn-web";
@@ -10,7 +11,9 @@ mkDerivation {
   buildDepends = [
     base basic-prelude blaze-html bytestring highlighter2 Spock text
   ];
-  testDepends = [ base basic-prelude tasty tasty-hunit ];
+  testDepends = [
+    base basic-prelude tasty tasty-hunit tasty-quickcheck
+  ];
   homepage = "https://github.com/jml/holborn";
   description = "Code search";
   license = stdenv.lib.licenses.gpl3;
