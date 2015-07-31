@@ -1,5 +1,5 @@
 module Holborn.Types
-       ( Symbol(..)
+       ( Identifier(..)
        , Annotation(..)
        , Reference(..)
        , HolbornToken(..)
@@ -12,20 +12,18 @@ import BasicPrelude
 import Text.Highlighter.Types (Token(..), TokenType)
 
 -- | A token with extra semantic information. More data to be added later.
--- XXX: Should probably be (Maybe Reference), since we don't always know.
-data HolbornToken = HolbornToken Token Reference
+data HolbornToken = HolbornToken Token (Maybe Reference)
 
 -- | Opaque data type representing the location of a token in our yet-to-be-
 -- defined semantic data structure.
 data Reference = Reference Text deriving Show
 
 -- | An identifier found in code.
--- XXX: Maybe rename to Identifier?
-data Symbol = Symbol ByteString Reference deriving Show
+data Identifier = Identifier ByteString Reference deriving Show
 
 -- | Placeholder data structure for AST
 -- XXX: This doesn't represent an AST any more. What *does* it represent?
-data Annotation = Annotation [Symbol]
+data Annotation = Annotation [Identifier]
 
 
 tokenType :: HolbornToken -> TokenType
@@ -36,5 +34,5 @@ tokenName :: HolbornToken -> ByteString
 tokenName (HolbornToken (Token _ s) _) = s
 
 
-tokenReference :: HolbornToken -> Reference
+tokenReference :: HolbornToken -> Maybe Reference
 tokenReference (HolbornToken _ r) = r

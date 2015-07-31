@@ -22,7 +22,7 @@ import Text.Highlighter.Types (Token(tText))
 
 import Holborn.HtmlFormat (format)
 import Holborn.Style (monokai)
-import Holborn.Types (Annotation(..), Symbol(..), HolbornToken(..), Reference(..))
+import Holborn.Types (Annotation(..), Identifier(..), HolbornToken(..))
 
 
 
@@ -31,9 +31,9 @@ annotateTokens tokens (Annotation annotation) =
   map (uncurry mergeTokens) (assertRight "Could not match AST data to tokenized data" mergeResult)
   where
     mergeResult = leftMergeBy matchToken tokens annotation
-    matchToken token (Symbol name _) = tText token == name
-    mergeTokens token (Just (Symbol _ reference)) = HolbornToken token reference
-    mergeTokens token Nothing = HolbornToken token (Reference "")
+    matchToken token (Identifier name _) = tText token == name
+    mergeTokens token = HolbornToken token . map getReference
+    getReference (Identifier _ reference) = reference
 
 
 leftMergeBy :: (a -> b -> Bool) -> [a] -> [b] -> Either [b] [(a, Maybe b)]

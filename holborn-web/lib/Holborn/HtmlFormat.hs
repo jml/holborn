@@ -54,16 +54,7 @@ highlightToken token =
 -- Reference, so the type signature of this should be Reference -> Maybe Text.
 -- It's not clear to me how public Reference should be.
 getUrl :: HolbornToken -> Maybe Text
-getUrl = map (\(Reference r) -> ("#" ++ r)) . tokenReference'
-
-
--- XXX: This should probably be the public interface in Holborn.Types.
-tokenReference' :: HolbornToken -> Maybe Reference
-tokenReference' token =
-  case tokenReference token of
-    r'@(Reference r)
-      | r == "" -> Nothing
-      | otherwise -> Just r'
+getUrl = map (\(Reference r) -> ("#" ++ r)) . tokenReference
 
 
 highlight :: [HolbornToken] -> Html
