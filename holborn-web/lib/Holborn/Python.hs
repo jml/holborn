@@ -18,8 +18,7 @@ import Language.Python.Common.Token (tokenString)
 import Language.Python.Version2.Lexer (lex)
 import Language.Python.Version2.Parser (parseModule)
 
-import Holborn.Scope ( Annotation
-                     , Scoped
+import Holborn.Scope ( Scoped
                      , ID
                      , addReference
                      , bind
@@ -29,6 +28,7 @@ import Holborn.Scope ( Annotation
                      , pushScope
                      , popScope
                      )
+import Holborn.Types (Annotation)
 
 
 getAST :: Text -> FilePath -> Either ParseError (Module SrcSpan, [Token])

@@ -17,13 +17,7 @@ import BasicPrelude
 import Control.Monad.State (State, get, modify, state, runState)
 import qualified Data.Map as M
 
-
--- | Annotation applied to a token. We are interested only in identifiers and
--- how they are used: is an identifier being defined, or is it a reference?
---
--- For definitions, we store something that will help us find the definition
--- again. For references, we store the location of the definition.
-data Annotation a = Binding a | Reference a deriving (Eq, Show)
+import Holborn.Types (Annotation(..))
 
 
 type Symbol = String

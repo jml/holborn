@@ -11,16 +11,16 @@ import qualified Data.ByteString as BS
 
 import Text.Highlighter.Types
 
+import Holborn.Scope (Annotation(..))
 import Holborn.Types (
   HolbornToken,
-  Reference(Reference),
+  tokenAnnotation,
   tokenName,
-  tokenReference,
   tokenType,
   )
 
 
-format :: Bool -> [HolbornToken] -> Html
+format :: (H.ToValue a, Show a) => Bool -> [HolbornToken a] -> Html
 format ls ts
     | ls =
         H.table ! A.class_ "highlighttable" $ H.tr $ do
@@ -36,32 +36,28 @@ format ls ts
             H.pre $ highlight ts
 
 
-formatInline :: [HolbornToken] -> Html
+formatInline :: (H.ToValue a, Show a) => [HolbornToken a] -> Html
 formatInline = H.code . highlight
 
 
-highlightToken :: HolbornToken -> Html
+highlightToken :: (H.ToValue a, Show a) => HolbornToken a -> Html
 highlightToken token =
-  case getUrl token of
+  case tokenAnnotation token of
     Nothing -> baseToken
-    Just tokenUrl -> H.a ! A.href (H.toValue tokenUrl) $ baseToken
+    Just (Binding i) -> H.a ! A.href (H.toValue findReferencesUrl) ! A.id (H.toValue i) $ baseToken
+    Just (Reference i) -> H.a ! A.href (H.toValue (bindingUrl i)) $ baseToken
   where
     baseToken = H.span ! A.class_ (H.toValue . shortName . tokenType $ token) $ H.toHtml contents
     contents = decodeUtf8 (tokenName token)
+    findReferencesUrl = "https://google.com/?q=" ++ decodeUtf8 (tokenName token)
+    bindingUrl i = "#" ++ show i
 
 
--- XXX: I guess theoretically we should be able to get the URL just from the
--- Reference, so the type signature of this should be Reference -> Maybe Text.
--- It's not clear to me how public Reference should be.
-getUrl :: HolbornToken -> Maybe Text
-getUrl = map (\(Reference r) -> ("#" ++ r)) . tokenReference
-
-
-highlight :: [HolbornToken] -> Html
+highlight :: (H.ToValue a, Show a) => [HolbornToken a] -> Html
 highlight = mconcat . map highlightToken
 
 
-countLines :: [HolbornToken] -> Int
+countLines :: [HolbornToken a] -> Int
 countLines = sum . map linesInToken
   where linesInToken = length . BS.elemIndices newlineByte . tokenName
         newlineByte = 0xA  -- '\n'
