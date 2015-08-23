@@ -3,6 +3,7 @@ module Holborn.Python (annotateSourceCode, getAST, Token) where
 import BasicPrelude hiding (lex)
 
 import qualified Data.Map as M
+import Data.Text (pack)
 import Language.Python.Common ( Argument(..)
                               , Expr(..)
                               , Ident(..)
@@ -48,11 +49,11 @@ annotateSourceCode sourceCode = do
 
 
 bindIdent :: Ident a -> Scoped a ()
-bindIdent (Ident name srcSpan) = void (bind name srcSpan)
+bindIdent (Ident name srcSpan) = void (bind (pack name) srcSpan)
 
 
 addReferenceIdent :: Ident a -> Scoped a ()
-addReferenceIdent (Ident name srcSpan) = addReference name srcSpan
+addReferenceIdent (Ident name srcSpan) = addReference (pack name) srcSpan
 
 
 calculateAnnotations :: Module SrcSpan -> [Token] -> [(String, Maybe (Annotation ID))]

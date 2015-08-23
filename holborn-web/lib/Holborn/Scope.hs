@@ -20,7 +20,7 @@ import qualified Data.Map as M
 import Holborn.Types (Annotation(..))
 
 
-type Symbol = String
+type Symbol = Text
 type ID = Int
 
 -- Natural way to build the model is to have a stack of environments, and
