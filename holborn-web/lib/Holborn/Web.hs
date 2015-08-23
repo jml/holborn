@@ -8,6 +8,7 @@ module Holborn.Web
 
 import BasicPrelude
 
+import Data.ByteString.Char8 (pack, unpack)
 import qualified Data.List as List
 import Data.Maybe (fromJust)
 
@@ -19,21 +20,13 @@ import qualified Text.Blaze.Html5.Attributes as A
 import Text.Highlighter.Lexer (runLexer)
 import Text.Highlighter.Lexers (lexers)
 import Text.Highlighter.Types (Token(tText))
+import Text.Show.Pretty (ppShow)
 
 import Holborn.HtmlFormat (format)
 import Holborn.Style (monokai)
-import Holborn.Types (Annotation(..), Identifier(..), HolbornToken(..))
+import Holborn.Types (Annotation, HolbornToken(..))
 
-
-
-annotateTokens :: [Token] -> Annotation -> [HolbornToken]
-annotateTokens tokens (Annotation annotation) =
-  map (uncurry mergeTokens) (assertRight "Could not match AST data to tokenized data" mergeResult)
-  where
-    mergeResult = leftMergeBy matchToken tokens annotation
-    matchToken token (Identifier name _) = tText token == name
-    mergeTokens token = HolbornToken token . map getReference
-    getReference (Identifier _ reference) = reference
+import qualified Holborn.Python as P
 
 
 leftMergeBy :: (a -> b -> Bool) -> [a] -> [b] -> Either [b] [(a, Maybe b)]
@@ -47,7 +40,7 @@ leftMergeBy match (x:xs) allY@(y:ys) = do
 
 
 
-formatHtmlBlock :: [HolbornToken] -> Html
+formatHtmlBlock :: (Show a, H.ToValue a) => [HolbornToken a] -> Html
 formatHtmlBlock = format includeLineNumbers
   where includeLineNumbers = False
 
@@ -60,7 +53,7 @@ lexPythonCode code =
 
 assertRight :: Show a => Text -> Either a b -> b
 assertRight _ (Right r) = r
-assertRight message (Left e) = terror $ message ++ ": " ++ show e
+assertRight message (Left e) = terror $ message ++ ": " ++ decodeUtf8 (pack (ppShow e))
 
 
 fromRight :: Show a => Either a b -> b
@@ -68,22 +61,28 @@ fromRight (Left e) = terror $ show e
 fromRight (Right r) = r
 
 
--- XXX: When the pattern matching here fails, we get
--- src/Main.hs:21:5-52: Irrefutable pattern failed for pattern (Just pythonLexer)
--- and an empty response, rather than the expected 500
-
 -- XXX: Actually handle cases where code won't lex or we can't find a lexer
 
 -- XXX: Is Text the right type?
 
-
--- | Take some Python code and turn it into HTML
-renderPythonCode :: Text -> Annotation -> Html
-renderPythonCode pythonCode ast =
-  let simpleTokens = lexPythonCode pythonCode
-      annotatedTokens = annotateTokens simpleTokens ast
+renderPythonCode :: Text -> Html
+renderPythonCode code =
+  let annotations = assertRight "Could not parse" (P.annotateSourceCode code)
+      highlighterTokens = lexPythonCode code
+      annotatedTokens = annotateTokens highlighterTokens annotations
   in
     formatHtmlBlock annotatedTokens
+
+
+annotateTokens :: Show a => [Token] -> [(String, Maybe (Annotation a))] -> [HolbornToken a]
+annotateTokens highlighterTokens semanticTokens =
+  map (uncurry mergeTokens) (assertRight "Could not match AST data to tokenized data" mergeResult)
+  where
+    mergeResult = leftMergeBy matchToken highlighterTokens (justSecond semanticTokens)
+    matchToken token (name, _) = unpack (tText token) == name
+    mergeTokens token = HolbornToken token . map getReference
+    getReference (_, annotation) = annotation
+    justSecond = mapMaybe (\(x, y) -> (,) x <$> y)
 
 
 -- | Given a rendered HTML block of code and return a full HTML with

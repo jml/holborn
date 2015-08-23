@@ -1,10 +1,9 @@
 module Holborn.Types
-       ( Identifier(..)
-       , Annotation(..)
-       , Reference(..)
+       ( Annotation(..)
+       , Identifier(..)
        , HolbornToken(..)
+       , tokenAnnotation
        , tokenName
-       , tokenReference
        , tokenType
        ) where
 
@@ -12,27 +11,32 @@ import BasicPrelude
 import Text.Highlighter.Types (Token(..), TokenType)
 
 -- | A token with extra semantic information. More data to be added later.
-data HolbornToken = HolbornToken Token (Maybe Reference)
+data HolbornToken a = HolbornToken { _lexerToken :: Token
+                                   , _annotation :: Maybe (Annotation a)
+                                   }
 
--- | Opaque data type representing the location of a token in our yet-to-be-
--- defined semantic data structure.
-data Reference = Reference Text deriving Show
+
+-- | Annotation applied to a token. We are interested only in identifiers and
+-- how they are used: is an identifier being defined, or is it a reference?
+--
+-- For definitions, we store something that will help us find the definition
+-- again. For references, we store the location of the definition.
+data Annotation a = Binding a | Reference a deriving (Eq, Show)
+
 
 -- | An identifier found in code.
-data Identifier = Identifier ByteString Reference deriving Show
-
--- | Placeholder data structure for AST
--- XXX: This doesn't represent an AST any more. What *does* it represent?
-data Annotation = Annotation [Identifier]
+--
+-- Currently only used in example code.
+data Identifier a = Identifier ByteString a deriving Show
 
 
-tokenType :: HolbornToken -> TokenType
+tokenType :: HolbornToken a -> TokenType
 tokenType (HolbornToken (Token t _) _) = t
 
 
-tokenName :: HolbornToken -> ByteString
+tokenName :: HolbornToken a -> ByteString
 tokenName (HolbornToken (Token _ s) _) = s
 
 
-tokenReference :: HolbornToken -> Maybe Reference
-tokenReference (HolbornToken _ r) = r
+tokenAnnotation :: HolbornToken a -> Maybe (Annotation a)
+tokenAnnotation = _annotation
