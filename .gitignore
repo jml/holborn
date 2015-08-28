@@ -1,3 +1,5 @@
 /holborn-web/dist/
 /holborn-web/result
 .dir-locals.el
+*pyc
+*pyo

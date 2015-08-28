@@ -1,5 +1,12 @@
 # Shell
 
 ```
-nix-shell -p pythonPackages.django
+nix-shell
+cd people
+```
+
+# Test etc.
+
+```
+./manage.py test
 ```
