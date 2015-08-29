@@ -1,0 +1,2 @@
+deploy/.envrc filter=git-crypt diff=git-crypt
+deploy/secrets/* filter=git-crypt
