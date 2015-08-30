@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 {-| Simple model for lexical scopes.
 
@@ -208,11 +209,12 @@ incrementID' :: Scope a -> (ID, Scope a)
 incrementID' (Scope stack root i past) = (i, Scope stack root (i + 1) past)
 
 
-type Scoped a = State (Scope a)
+newtype Scoped location a = Scoped { _runScoped :: State (Scope location) a }
+                          deriving (Functor, Applicative, Monad)
 
 
 runScoped :: Scoped location result -> Scope location -> (result, Scope location)
-runScoped = runState
+runScoped = runState . _runScoped
 
 
 execScoped :: Scoped location result -> Scope location -> Scope location
@@ -221,34 +223,34 @@ execScoped action = snd . runScoped action
 
 -- | We have entered a new scope within the present one.
 enterScope :: Scoped a ()
-enterScope = modify (pushEnvironment newEnvironment)
+enterScope = Scoped $ modify (pushEnvironment newEnvironment)
 
 
 -- | We have exited the current scope.
 exitScope :: Scoped a (Environment a)
-exitScope = state popEnvironment'
+exitScope = Scoped $ state popEnvironment'
 
 
 incrementID :: Scoped a ID
-incrementID = state incrementID'
+incrementID = Scoped $ state incrementID'
 
 
 -- | Declare that a symbol is bound at location in the current scope.
 bind :: Symbol -> location -> Scoped location ID
 bind symbol srcSpan = do
   nextID <- incrementID
-  modify (modifyEnvironment (insertBinding symbol nextID srcSpan))
+  Scoped $ modify (modifyEnvironment (insertBinding symbol nextID srcSpan))
   return nextID
 
 
 -- | Declare that a symbol is no longer bound in the current scope.
 unbind :: Symbol -> Scoped location ()
-unbind symbol = modify (modifyEnvironment (insertUnbinding symbol))
+unbind symbol = Scoped $ modify (modifyEnvironment (insertUnbinding symbol))
 
 
 -- | Declare that symbol is a reference to a previously bound variable, using
 -- the current scope to figure out precisely which variable.
 addReference :: Symbol -> a -> Scoped a ()
 addReference symbol srcSpan = do
-  definition <- findDefinition symbol <$> get
-  modify (modifyEnvironment (insertReference symbol definition srcSpan))
+  definition <- findDefinition symbol <$> Scoped get
+  Scoped $ modify (modifyEnvironment (insertReference symbol definition srcSpan))
