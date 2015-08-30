@@ -1,15 +1,45 @@
--- | Very simple model for lexical scopes.
+{-# LANGUAGE MultiParamTypeClasses #-}
+
+{-| Simple model for lexical scopes.
+
+Intended to work for any programming language, but currently only has Python
+use case.
+
+Languages provide their own AST objects and implement 'Interpreter' for them.
+The 'interpret' function then specifies how to traverse the AST. The major
+operations are:
+
+ * 'bind'
+ * 'addReference'
+ * 'enterScope'
+ * 'exitScope'
+
+'calculateAnnotations' then takes an interpreter and produces a map of code
+locations to 'Annotation' values.
+
+== Missing
+
+Currently missing support for a few necessary features
+
+ * re-binding a variable within a scope
+ * unbinding a variable
+ * declaring different models for variables within a scope (e.g. Python's
+   @global@).
+ * support for unresolved references
+
+-}
+
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Holborn.Scope ( Scoped
-                     , execScoped
-                     , pushScope
-                     , popScope
-                     , newScope
+                     , calculateAnnotations
+                     , enterScope
+                     , exitScope
                      , ID
                      , Annotation(..)
                      , addReference
                      , bind
-                     , flattenScope
+                     , Interpreter(..)
                      ) where
 
 import BasicPrelude
@@ -18,6 +48,39 @@ import Control.Monad.State (State, get, modify, state, runState)
 import qualified Data.Map as M
 
 import Holborn.Types (Annotation(..))
+
+
+-- | @m@ is the kind of thing, @location@ is the location type
+--
+-- @location@ must be something that uniquely identifies the thing being
+-- interpreted so that we can match these annotations to syntax-highlighted
+-- tokens.
+class Interpreter m location where
+
+  -- | Interpret an expression.
+  interpret :: m location -> Scoped location ()
+
+  -- | Interpret the expression if it's there.
+  interpretMaybe :: Interpreter m a => Maybe (m a) -> Scoped a ()
+  interpretMaybe = maybe (return ()) interpret
+
+  -- | Interpret a sequence of things.
+  interpretSequence :: (Foldable t, Interpreter m a) => t (m a) -> Scoped a ()
+  interpretSequence = mapM_ interpret
+
+
+-- XXX: I kind of like the 'interpret' abstraction, but it's a little general.
+-- I'd like to be able to express in the type system that certain expressions
+-- *cannot* create bindings.
+--
+-- Another way of thinking about the problem is that a binding is a "write" to
+-- a namespace, and that a reference is a "read". Interpreting expressions
+-- should be a read-only operation.
+
+
+-- | Given an AST, return a map from locations to annotations.
+calculateAnnotations :: (Ord a, Interpreter m a) => m a -> Map a (Annotation ID)
+calculateAnnotations ast = flattenScope $ execScoped (interpret ast) newScope
 
 
 type Symbol = Text
@@ -42,7 +105,7 @@ type ID = Int
 -- references to attributes on objects. We can think of those references as
 -- partial functions that can only be resolved when given other information.
 
--- XXX: I don't have a way of handling redefinition within scope
+
 data Environment a = Env { definitions :: Map Symbol (ID, a)
                          , references :: [(ID, a)]
                          }
@@ -129,29 +192,33 @@ execScoped :: Scoped location result -> Scope location -> Scope location
 execScoped action = snd . runScoped action
 
 
-pushScope :: Scoped a ()
-pushScope = modify (pushEnvironment newEnvironment)
+-- | We have entered a new scope within the present one.
+enterScope :: Scoped a ()
+enterScope = modify (pushEnvironment newEnvironment)
 
 
-popScope :: Scoped a (Environment a)
-popScope = state popEnvironment'
+-- | We have exited the current scope.
+exitScope :: Scoped a (Environment a)
+exitScope = state popEnvironment'
 
 
 incrementID :: Scoped a ID
 incrementID = state incrementID'
 
 
-bind :: Symbol -> a -> Scoped a ID
+-- | Declare that a symbol is bound at location in the current scope.
+bind :: Symbol -> location -> Scoped location ID
 bind symbol srcSpan = do
   nextID <- incrementID
   modify (modifyEnvironment (insertBinding symbol nextID srcSpan))
   return nextID
 
 
+-- | Declare that symbol is a reference to a previously bound variable, using
+-- the current scope to figure out precisely which variable.
 addReference :: Symbol -> a -> Scoped a ()
 addReference symbol srcSpan = do
   definition <- findDefinition symbol <$> get
   case definition of
     Just i -> modify (modifyEnvironment (insertReference symbol i srcSpan))
-    -- XXX: Have something nicer for references that we can't resolve
     _ -> return ()
