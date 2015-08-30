@@ -64,8 +64,8 @@ import Holborn.Scope ( Scoped
                      , addReference
                      , bind
                      , calculateAnnotations
-                     , pushScope
-                     , popScope
+                     , enterScope
+                     , exitScope
                      , Interpreter(..)
                      )
 import Holborn.Types (Annotation)
@@ -139,16 +139,16 @@ instance Interpreter Statement a where
     interpretSequence elseSuite
   interpret (Fun name params _ body _) = do
     bindIdent name
-    pushScope
+    enterScope
     bindParameters params
     interpretSequence body
-    void popScope
+    void exitScope
   interpret (Class name args body _) = do
     bindIdent name
     interpretSequence args
-    pushScope  -- XXX: No idea whether we actually want this.
+    enterScope  -- XXX: No idea whether we actually want this.
     interpretSequence body
-    void popScope
+    void exitScope
   interpret (Conditional guards elseSuite _) = do
     forM_ guards $ \(condition, suite) -> do
       interpret condition
@@ -251,6 +251,14 @@ instance Interpreter RaiseExpr a where
         interpretMaybe fromExpr
 
 
+-- | Warn about how we've encountered an aspect of Python that we don't know
+-- how to deal with.
+--
+-- Silently does I/O using "Debug.Trace" so we can continue processing without
+-- aborting.
+--
+-- In the UI, this will simply look like code that isn't linkified, and any
+-- references to identifiers in this code will be unresolved.
 _unhandled :: Monad m => Text -> m ()
 _unhandled thing = traceShow ("UNHANDLED " ++ (thing :: Text)) $ return ()
 
@@ -308,10 +316,10 @@ instance Interpreter Expr a where
   -- XXX: Should handle attributes!
   interpret (Dot expr _ _) = interpret expr
   interpret (Lambda parameters body _) = do
-    pushScope
+    enterScope
     bindParameters parameters
     interpret body
-    void popScope
+    void exitScope
   interpret (Tuple exprs _) = interpretSequence exprs
   interpret (Yield arg _) =
     case arg of

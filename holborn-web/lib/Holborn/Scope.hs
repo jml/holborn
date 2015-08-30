@@ -11,8 +11,8 @@ operations are:
 
  * 'bind'
  * 'addReference'
- * 'pushScope'
- * 'popScope'
+ * 'enterScope'
+ * 'exitScope'
 
 'calculateAnnotations' then takes an interpreter and produces a map of code
 locations to 'Annotation' values.
@@ -33,8 +33,8 @@ Currently missing support for a few necessary features
 
 module Holborn.Scope ( Scoped
                      , calculateAnnotations
-                     , pushScope
-                     , popScope
+                     , enterScope
+                     , exitScope
                      , ID
                      , Annotation(..)
                      , addReference
@@ -192,14 +192,14 @@ execScoped :: Scoped location result -> Scope location -> Scope location
 execScoped action = snd . runScoped action
 
 
--- | We have started a new scope within the present one.
-pushScope :: Scoped a ()
-pushScope = modify (pushEnvironment newEnvironment)
+-- | We have entered a new scope within the present one.
+enterScope :: Scoped a ()
+enterScope = modify (pushEnvironment newEnvironment)
 
 
--- | We have finished the current scope.
-popScope :: Scoped a (Environment a)
-popScope = state popEnvironment'
+-- | We have exited the current scope.
+exitScope :: Scoped a (Environment a)
+exitScope = state popEnvironment'
 
 
 incrementID :: Scoped a ID
