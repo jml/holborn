@@ -36,6 +36,7 @@ module Holborn.Scope ( Scoped
                      , ID
                      , addReference
                      , bind
+                     , unbind
                      , Interpreter(..)
                      ) where
 
@@ -110,7 +111,7 @@ data Environment a =
     -- symbol can be redefined within an environment, we store a list. The
     -- first element of the list is the latest binding. The list is never
     -- empty.
-    definitions :: Map Symbol [(ID, a)],
+    definitions :: Map Symbol [Maybe (ID, a)],
     -- | References found in the environment. @Just x@ means we could find a
     -- matching symbol in scope, @Nothing@ means we couldn't.
     references :: [(Maybe ID, a)]
@@ -126,7 +127,7 @@ flattenEnvironment env =
   where
     bindings = do
       xs <- M.elems (definitions env)
-      (i, srcSpan) <- xs
+      Just (i, srcSpan) <- xs
       return (srcSpan, Binding i)
     getReference (Just i, srcSpan) = (srcSpan, Reference i)
     getReference (Nothing, srcSpan) = (srcSpan, UnresolvedReference)
@@ -134,7 +135,12 @@ flattenEnvironment env =
 
 insertBinding :: Symbol -> ID -> a -> Environment a -> Environment a
 insertBinding symbol bindID srcSpan (Env env refs) =
-  Env (addToKey symbol (bindID, srcSpan) env) refs
+  Env (addToKey symbol (Just (bindID, srcSpan)) env) refs
+
+
+insertUnbinding :: Symbol -> Environment a -> Environment a
+insertUnbinding symbol (Env env refs) =
+  Env (addToKey symbol Nothing env) refs
 
 
 addToKey :: Ord k => k -> a -> Map k [a] -> Map k [a]
@@ -148,8 +154,13 @@ insertReference _ refID srcSpan (Env env refs) = Env env ((refID, srcSpan):refs)
 
 
 getBinding :: Symbol -> Environment a -> Maybe ID
-getBinding symbol =
-  listToMaybe . map fst . fromMaybe [] . M.lookup symbol . definitions
+getBinding symbol env =
+  -- XXX: There's almost certainly a shorter, clearer way of writing this.
+  case M.lookup symbol (definitions env) of
+    Nothing -> Nothing
+    Just [] -> Nothing
+    Just (Nothing:_) -> Nothing
+    Just (Just (i, _):_) -> Just i
 
 
 data Scope a = Scope { _stack :: [Environment a]
@@ -232,6 +243,11 @@ bind symbol srcSpan = do
   nextID <- incrementID
   modify (modifyEnvironment (insertBinding symbol nextID srcSpan))
   return nextID
+
+
+-- | Declare that a symbol is no longer bound in the current scope.
+unbind :: Symbol -> Scoped location ()
+unbind symbol = modify (modifyEnvironment (insertUnbinding symbol))
 
 
 -- | Declare that symbol is a reference to a previously bound variable, using

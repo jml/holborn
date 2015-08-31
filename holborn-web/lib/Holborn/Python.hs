@@ -66,6 +66,7 @@ import Holborn.Scope ( Scoped
                      , calculateAnnotations
                      , enterScope
                      , exitScope
+                     , unbind
                      , Interpreter(..)
                      )
 import Holborn.Types (Annotation)
@@ -93,6 +94,10 @@ getSymbol (Ident name srcSpan) = (pack name, srcSpan)
 
 bindIdent :: Ident a -> Scoped a ()
 bindIdent = void . uncurry bind . getSymbol
+
+
+unbindIdent :: Ident a -> Scoped a ()
+unbindIdent = unbind . fst . getSymbol
 
 
 addReferenceIdent :: Ident a -> Scoped a ()
@@ -183,7 +188,9 @@ instance Interpreter Statement a where
   interpret (Pass {}) = return ()
   interpret (Break {}) = return ()
   interpret (Continue {}) = return ()
-  interpret (Delete exprs _) = interpretSequence exprs
+  interpret (Delete exprs _) = do
+    interpretSequence exprs
+    mapM_ unbindIdent $ concatMap getTargets exprs
   interpret (StmtExpr expr _) = interpret expr
   interpret (Global {}) = _unhandled "Global"
   interpret (NonLocal {}) = _unhandled "NonLocal"

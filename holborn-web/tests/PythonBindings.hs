@@ -279,12 +279,12 @@ del =
     input =
       [ "foo = 2"
       , "del foo"
---      , "print foo"
+      , "print foo"
       ]
     output =
       [ b "foo" 1, n "= 2"
       , n "delete", r "foo" 1
---      , n "print", u "foo"
+      , n "print", u "foo"
       ]
 
 
