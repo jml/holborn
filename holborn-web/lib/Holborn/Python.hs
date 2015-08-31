@@ -87,12 +87,16 @@ annotateSourceCode sourceCode = do
   where filename = "<stdin>"
 
 
+getSymbol :: Ident a -> (Text, a)
+getSymbol (Ident name srcSpan) = (pack name, srcSpan)
+
+
 bindIdent :: Ident a -> Scoped a ()
-bindIdent (Ident name srcSpan) = void (bind (pack name) srcSpan)
+bindIdent = void . uncurry bind . getSymbol
 
 
 addReferenceIdent :: Ident a -> Scoped a ()
-addReferenceIdent (Ident name srcSpan) = addReference (pack name) srcSpan
+addReferenceIdent = uncurry addReference . getSymbol
 
 
 annotateTokens :: Module SrcSpan -> [Token] -> [(String, Maybe (Annotation ID))]
