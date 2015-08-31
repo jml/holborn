@@ -21,7 +21,10 @@ data HolbornToken a = HolbornToken { _lexerToken :: Token
 --
 -- For definitions, we store something that will help us find the definition
 -- again. For references, we store the location of the definition.
-data Annotation a = Binding a | Reference a deriving (Eq, Show)
+data Annotation a = Binding a
+                  | Reference a
+                  | UnresolvedReference
+                  deriving (Eq, Show)
 
 
 -- | An identifier found in code.

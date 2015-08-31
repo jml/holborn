@@ -29,14 +29,11 @@ Currently missing support for a few necessary features
 
 -}
 
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 module Holborn.Scope ( Scoped
                      , calculateAnnotations
                      , enterScope
                      , exitScope
                      , ID
-                     , Annotation(..)
                      , addReference
                      , bind
                      , Interpreter(..)
@@ -83,8 +80,9 @@ calculateAnnotations :: (Ord a, Interpreter m a) => m a -> Map a (Annotation ID)
 calculateAnnotations ast = flattenScope $ execScoped (interpret ast) newScope
 
 
-type Symbol = Text
 type ID = Int
+type Symbol = Text
+
 
 -- Natural way to build the model is to have a stack of environments, and
 -- every time we come across a binding to insert that into the model, and also
@@ -107,7 +105,7 @@ type ID = Int
 
 
 data Environment a = Env { definitions :: Map Symbol (ID, a)
-                         , references :: [(ID, a)]
+                         , references :: [(Maybe ID, a)]
                          }
 
 newEnvironment :: Environment a
@@ -118,13 +116,17 @@ flattenEnvironment :: Ord a => Environment a -> Map a (Annotation ID)
 flattenEnvironment env =
   M.fromList $
   [(srcSpan, Binding i) | (i, srcSpan) <- M.elems (definitions env)] ++
-  [(srcSpan, Reference i) | (i, srcSpan) <- references env]
+  map getReference (references env)
+  where
+    getReference (Just i, srcSpan) = (srcSpan, Reference i)
+    getReference (Nothing, srcSpan) = (srcSpan, UnresolvedReference)
 
 
 insertBinding :: Symbol -> ID -> a -> Environment a -> Environment a
 insertBinding symbol bindID srcSpan (Env env refs) = Env (M.insert symbol (bindID, srcSpan) env) refs
 
-insertReference :: Symbol -> ID -> a -> Environment a -> Environment a
+
+insertReference :: Symbol -> Maybe ID -> a -> Environment a -> Environment a
 insertReference _ refID srcSpan (Env env refs) = Env env ((refID, srcSpan):refs)
 
 
@@ -219,6 +221,4 @@ bind symbol srcSpan = do
 addReference :: Symbol -> a -> Scoped a ()
 addReference symbol srcSpan = do
   definition <- findDefinition symbol <$> get
-  case definition of
-    Just i -> modify (modifyEnvironment (insertReference symbol i srcSpan))
-    _ -> return ()
+  modify (modifyEnvironment (insertReference symbol definition srcSpan))
