@@ -5,7 +5,7 @@ module PythonBindings (tests) where
 
 import BasicPrelude
 import Control.Applicative (Alternative)
-import Data.Foldable (Foldable, asum)
+import Data.Foldable (asum)
 
 import Test.Tasty (TestTree, TestName, testGroup)
 import Test.Tasty.HUnit
@@ -76,6 +76,20 @@ simpleTest =
       , n "def" , b "f" 2, n "(" , b "y" 3, n ") :"
       , n "return" , r "x" 1, n "+" , r "y" 3
       , r "f" 2, n "( 3 )"
+      ]
+
+
+augmentedAssignment :: TestTree
+augmentedAssignment =
+  testAST "x += 2" input output
+  where
+    input =
+      [ "x = 0"
+      , "x += 1"
+      ]
+    output =
+      [ b "x" 1, n "= 0"
+      , r "x" 1, n "+= 1"
       ]
 
 
@@ -239,6 +253,7 @@ tests :: TestTree
 tests =
   testGroup "scope tests"
   [ simpleTest
+  , augmentedAssignment
   , whileLoop
   , classDefinition
   , simpleImport

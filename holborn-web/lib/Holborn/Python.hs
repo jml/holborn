@@ -158,7 +158,8 @@ instance Interpreter Statement a where
     mapM_ bindIdent $ concatMap getAssignees toExprs
     interpret fromExpr
   interpret (AugmentedAssign toExpr _ fromExpr _) = do
-    mapM_ bindIdent $ getAssignees toExpr
+    -- Treat augmented assignment as a modification rather than a binding.
+    interpret toExpr
     interpret fromExpr
   interpret (Decorated decorators defn _) = do
     interpretSequence decorators
