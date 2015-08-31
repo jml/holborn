@@ -179,7 +179,7 @@ instance Interpreter Statement a where
   interpret (Pass {}) = return ()
   interpret (Break {}) = return ()
   interpret (Continue {}) = return ()
-  interpret (Delete {}) = _unhandled "Delete"
+  interpret (Delete exprs _) = interpretSequence exprs
   interpret (StmtExpr expr _) = interpret expr
   interpret (Global {}) = _unhandled "Global"
   interpret (NonLocal {}) = _unhandled "NonLocal"

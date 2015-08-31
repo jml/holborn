@@ -272,6 +272,22 @@ raise =
       ]
 
 
+del :: TestTree
+del =
+  testAST "del" input output
+  where
+    input =
+      [ "foo = 2"
+      , "del foo"
+--      , "print foo"
+      ]
+    output =
+      [ b "foo" 1, n "= 2"
+      , n "delete", r "foo" 1
+--      , n "print", u "foo"
+      ]
+
+
 -- XXX: Add a test for nested functions: would be a handy proof-of-concept for
 -- scope stuff.
 
@@ -291,4 +307,5 @@ tests =
   , raise
   , decoratedWithArgs
   , redefinition
+  , del
   ]
