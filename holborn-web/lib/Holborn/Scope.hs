@@ -104,6 +104,8 @@ type Symbol = Text
 -- references to attributes on objects. We can think of those references as
 -- partial functions that can only be resolved when given other information.
 
+data Binding a = Bind ID a | Unbind
+
 
 data Environment a =
   Env {
@@ -111,7 +113,7 @@ data Environment a =
     -- symbol can be redefined within an environment, we store a list. The
     -- first element of the list is the latest binding. The list is never
     -- empty.
-    definitions :: Map Symbol [Maybe (ID, a)],
+    definitions :: Map Symbol [Binding a],
     -- | References found in the environment. @Just x@ means we could find a
     -- matching symbol in scope, @Nothing@ means we couldn't.
     references :: [(Maybe ID, a)]
@@ -127,7 +129,7 @@ flattenEnvironment env =
   where
     bindings = do
       xs <- M.elems (definitions env)
-      Just (i, srcSpan) <- xs
+      Bind i srcSpan <- xs
       return (srcSpan, Binding i)
     getReference (Just i, srcSpan) = (srcSpan, Reference i)
     getReference (Nothing, srcSpan) = (srcSpan, UnresolvedReference)
@@ -135,12 +137,12 @@ flattenEnvironment env =
 
 insertBinding :: Symbol -> ID -> a -> Environment a -> Environment a
 insertBinding symbol bindID srcSpan (Env env refs) =
-  Env (addToKey symbol (Just (bindID, srcSpan)) env) refs
+  Env (addToKey symbol (Bind bindID srcSpan) env) refs
 
 
 insertUnbinding :: Symbol -> Environment a -> Environment a
 insertUnbinding symbol (Env env refs) =
-  Env (addToKey symbol Nothing env) refs
+  Env (addToKey symbol Unbind env) refs
 
 
 addToKey :: Ord k => k -> a -> Map k [a] -> Map k [a]
@@ -159,8 +161,8 @@ getBinding symbol env =
   case M.lookup symbol (definitions env) of
     Nothing -> Nothing
     Just [] -> Nothing
-    Just (Nothing:_) -> Nothing
-    Just (Just (i, _):_) -> Just i
+    Just (Unbind:_) -> Nothing
+    Just (Bind i _ : _) -> Just i
 
 
 data Scope a = Scope { _stack :: [Environment a]
