@@ -78,7 +78,7 @@ class Interpreter m location where
 
 -- | Given an AST, return a map from locations to annotations.
 calculateAnnotations :: (Ord a, Interpreter m a) => m a -> Map a (Annotation ID)
-calculateAnnotations ast = flattenScope $ execScoped (interpret ast) newScope
+calculateAnnotations ast = allAnnotations $ execScoped (interpret ast) newScope
 
 
 type ID = Int
@@ -178,8 +178,8 @@ currentStack scope = _stack scope ++ [_root scope]
 newScope :: Scope a
 newScope = Scope [] newEnvironment 1 []
 
-flattenScope :: Ord a => Scope a -> Map a (Annotation ID)
-flattenScope scope = mconcat (map flattenEnvironment (currentStack scope ++ _past scope))
+allAnnotations :: Ord a => Scope a -> Map a (Annotation ID)
+allAnnotations scope = mconcat (map flattenEnvironment (currentStack scope ++ _past scope))
 
 findDefinition :: Symbol -> Scope a -> Maybe ID
 findDefinition symbol = msum . map (getBinding symbol) . currentStack
