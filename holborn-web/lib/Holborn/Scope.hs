@@ -155,14 +155,13 @@ insertReference :: Symbol -> Maybe ID -> a -> Environment a -> Environment a
 insertReference _ refID srcSpan (Env env refs) = Env env ((refID, srcSpan):refs)
 
 
-getBinding :: Symbol -> Environment a -> Maybe ID
+getBinding :: Symbol -> Environment a -> Maybe (Binding a)
 getBinding symbol env =
   -- XXX: There's almost certainly a shorter, clearer way of writing this.
   case M.lookup symbol (definitions env) of
     Nothing -> Nothing
     Just [] -> Nothing
-    Just (Unbind:_) -> Nothing
-    Just (Bind i _ : _) -> Just i
+    Just (x:_) -> Just x
 
 
 data Scope a = Scope { _stack :: [Environment a]
@@ -182,7 +181,11 @@ allAnnotations :: Ord a => Scope a -> Map a (Annotation ID)
 allAnnotations scope = mconcat (map flattenEnvironment (currentStack scope ++ _past scope))
 
 findDefinition :: Symbol -> Scope a -> Maybe ID
-findDefinition symbol = msum . map (getBinding symbol) . currentStack
+findDefinition symbol =
+  msum . map (bindingToMaybe <=< getBinding symbol) . currentStack
+  where
+    bindingToMaybe (Bind i _) = Just i
+    bindingToMaybe Unbind = Nothing
 
 pushEnvironment :: Environment a -> Scope a -> Scope a
 pushEnvironment env (Scope stack root x past) = Scope (env:stack) root x past
