@@ -172,25 +172,17 @@ data Scope a = Scope { _stack :: [Environment a]
                      }
 
 
--- XXX: I don't understand why I can't just make Scope implement Foldable. I
--- think it's because that's for structures that don't know anything about
--- their contents. Calling this foldMapScope to disambiguate, as some versions
--- of basic-prelude export it.
-foldMapScope :: Monoid m => (Environment a -> m) -> Scope a -> m
-foldMapScope f scope =
-  case popEnvironment scope of
-    (Left env, _) -> f env
-    (Right env, scope') -> f env `mappend` foldMapScope f scope'
-
+currentStack :: Scope a -> [Environment a]
+currentStack scope = _stack scope ++ [_root scope]
 
 newScope :: Scope a
 newScope = Scope [] newEnvironment 1 []
 
 flattenScope :: Ord a => Scope a -> Map a (Annotation ID)
-flattenScope scope = foldMapScope flattenEnvironment scope `mappend` mconcat (map flattenEnvironment (_past scope))
+flattenScope scope = mconcat (map flattenEnvironment (currentStack scope ++ _past scope))
 
 findDefinition :: Symbol -> Scope a -> Maybe ID
-findDefinition symbol = listToMaybe . foldMapScope (maybeToList . getBinding symbol)
+findDefinition symbol = msum . map (getBinding symbol) . currentStack
 
 pushEnvironment :: Environment a -> Scope a -> Scope a
 pushEnvironment env (Scope stack root x past) = Scope (env:stack) root x past
