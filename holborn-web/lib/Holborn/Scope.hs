@@ -182,7 +182,7 @@ allAnnotations scope = mconcat (map flattenEnvironment (currentStack scope ++ _p
 
 findDefinition :: Symbol -> Scope a -> Maybe ID
 findDefinition symbol =
-  msum . map (bindingToMaybe <=< getBinding symbol) . currentStack
+  bindingToMaybe <=< msum . map (getBinding symbol) . currentStack
   where
     bindingToMaybe (Bind i _) = Just i
     bindingToMaybe Unbind = Nothing

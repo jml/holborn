@@ -288,6 +288,26 @@ del =
       ]
 
 
+nestedDel :: TestTree
+nestedDel =
+  testAST "nested del" input output
+  where
+    input =
+      [ "foo = 2"
+      , "def f():"
+      , "  foo = 3"
+      , "  del foo"
+      , "  print foo"
+      ]
+    output =
+      [ b "foo" 1, n "= 2"
+      , n "def", b "f" 2, n "( ) :"
+      , b "foo" 3, n "= 3"
+      , n "delete", r "foo" 3
+      , n "print", u "foo"
+      ]
+
+
 -- XXX: Add a test for nested functions: would be a handy proof-of-concept for
 -- scope stuff.
 
@@ -308,4 +328,5 @@ tests =
   , decoratedWithArgs
   , redefinition
   , del
+  , nestedDel
   ]
