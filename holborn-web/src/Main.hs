@@ -3,7 +3,8 @@ module Main where
 import BasicPrelude
 import Web.Spock.Safe
 
-import Holborn.Web (codePage, renderPythonCode)
+import Holborn.HtmlFormat ()
+import Holborn.Web (codePage, annotatePythonCode)
 import Text.Blaze.Html.Renderer.Utf8 (renderHtml)
 import Text.Blaze.Html (Html)
 
@@ -17,4 +18,4 @@ blaze = lazyBytes . renderHtml
 main :: IO ()
 main =
     runSpock 8080 $ spockT id $
-    get root $ blaze $ codePage $ renderPythonCode examplePython
+    get root $ blaze $ codePage $ annotatePythonCode examplePython

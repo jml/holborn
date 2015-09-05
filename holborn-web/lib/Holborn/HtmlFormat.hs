@@ -1,9 +1,12 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 {- | Adapted version of highlighter2 syntax highlighter.  -}
 
-module Holborn.HtmlFormat (format, formatInline) where
+module Holborn.HtmlFormat (format) where
 
 import BasicPrelude hiding (div, span)
 
+import Text.Blaze (ToMarkup(..))
 import Text.Blaze.Html5 (Html, (!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
@@ -13,6 +16,7 @@ import Text.Highlighter.Types
 
 import Holborn.Scope (Annotation(..))
 import Holborn.Types (
+  AnnotatedSource(..),
   HolbornToken,
   tokenAnnotation,
   tokenName,
@@ -34,27 +38,26 @@ format ls ts
     | otherwise =
         H.div ! A.class_ "highlight" $
             H.pre $ highlight ts
-
-
-formatInline :: (H.ToValue a, Show a) => [HolbornToken a] -> Html
-formatInline = H.code . highlight
-
-
-highlightToken :: (H.ToValue a, Show a) => HolbornToken a -> Html
-highlightToken token =
-  case tokenAnnotation token of
-    Nothing -> baseToken
-    Just (Binding i) -> H.a ! A.href (H.toValue findReferencesUrl) ! A.id (H.toValue i) $ baseToken
-    Just (Reference i) -> H.a ! A.href (H.toValue (bindingUrl i)) $ baseToken
   where
-    baseToken = H.span ! A.class_ (H.toValue . shortName . tokenType $ token) $ H.toHtml contents
-    contents = decodeUtf8 (tokenName token)
-    findReferencesUrl = "https://google.com/?q=" ++ decodeUtf8 (tokenName token)
-    bindingUrl i = "#" ++ show i
+    highlight = mconcat . map toMarkup
 
 
-highlight :: (H.ToValue a, Show a) => [HolbornToken a] -> Html
-highlight = mconcat . map highlightToken
+instance (H.ToValue a, Show a) => ToMarkup (HolbornToken a) where
+  toMarkup token =
+    case tokenAnnotation token of
+      Nothing -> baseToken
+      Just (Binding i) -> H.a ! A.href (H.toValue findReferencesUrl) ! A.id (H.toValue i) $ baseToken
+      Just (Reference i) -> H.a ! A.href (H.toValue (bindingUrl i)) $ baseToken
+    where
+      baseToken = H.span ! A.class_ (H.toValue . shortName . tokenType $ token) $ H.toHtml contents
+      contents = decodeUtf8 (tokenName token)
+      findReferencesUrl = "https://google.com/?q=" ++ decodeUtf8 (tokenName token)
+      bindingUrl i = "#" ++ show i
+
+
+instance (H.ToValue a, Show a) => ToMarkup (AnnotatedSource a) where
+
+  toMarkup (AnnotatedSource tokens) = format False tokens
 
 
 countLines :: [HolbornToken a] -> Int
