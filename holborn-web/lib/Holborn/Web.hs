@@ -24,7 +24,7 @@ import Text.Show.Pretty (ppShow)
 
 import Holborn.HtmlFormat (format)
 import Holborn.Style (monokai)
-import Holborn.Types (Annotation, HolbornToken(..))
+import Holborn.Types (Annotation, AnnotatedSource(..), HolbornToken(..))
 
 import qualified Holborn.Python as P
 
@@ -69,14 +69,14 @@ renderPythonCode :: Text -> Html
 renderPythonCode code =
   let annotations = assertRight "Could not parse" (P.annotateSourceCode code)
       highlighterTokens = lexPythonCode code
-      annotatedTokens = annotateTokens highlighterTokens annotations
+      (AnnotatedSource annotatedTokens) = annotateTokens highlighterTokens annotations
   in
     formatHtmlBlock annotatedTokens
 
 
-annotateTokens :: Show a => [Token] -> [(String, Maybe (Annotation a))] -> [HolbornToken a]
+annotateTokens :: Show a => [Token] -> [(String, Maybe (Annotation a))] -> AnnotatedSource a
 annotateTokens highlighterTokens semanticTokens =
-  map (uncurry mergeTokens) (assertRight "Could not match AST data to tokenized data" mergeResult)
+  AnnotatedSource $ map (uncurry mergeTokens) (assertRight "Could not match AST data to tokenized data" mergeResult)
   where
     mergeResult = leftMergeBy matchToken highlighterTokens (justSecond semanticTokens)
     matchToken token (name, _) = unpack (tText token) == name
