@@ -1,7 +1,7 @@
-{ mkDerivation, base, basic-prelude, blaze-html, bytestring
-, containers, errors, highlighter2, language-python, mtl
-, pretty-show, servant, servant-blaze, servant-docs, servant-server
-, Spock, stdenv, tasty, tasty-hunit, tasty-quickcheck, text
+{ mkDerivation, base, basic-prelude, blaze-html, blaze-markup
+, bytestring, containers, highlighter2, language-python, mtl
+, pretty-show, servant, servant-blaze, servant-server, stdenv
+, tasty, tasty-hunit, tasty-quickcheck, text, wai, warp
 }:
 mkDerivation {
   pname = "holborn-web";
@@ -10,9 +10,9 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   buildDepends = [
-    base basic-prelude blaze-html bytestring containers errors
+    base basic-prelude blaze-html blaze-markup bytestring containers
     highlighter2 language-python mtl pretty-show servant servant-blaze
-    servant-docs servant-server Spock text
+    servant-server text wai warp
   ];
   testDepends = [
     base basic-prelude tasty tasty-hunit tasty-quickcheck

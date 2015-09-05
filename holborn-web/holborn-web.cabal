@@ -29,11 +29,6 @@ library
                      , language-python >= 0.5.0 && <0.6
                      , containers >= 0.5 && <0.6
                      , mtl >= 2.2 && <2.3
-                     , errors
-                     , servant
-                     , servant-server
-                     , servant-blaze
-                     , servant-docs
                      , pretty-show
   hs-source-dirs:      lib
   default-language:    Haskell2010
@@ -47,11 +42,15 @@ executable holborn
   default-language:    Haskell2010
   other-modules:       ExampleData
   build-depends:       base >=4.8 && <4.9
-                     , Spock >= 0.8 && <0.9
                      , basic-prelude >= 0.3.13 && <0.6
                      , blaze-html >= 0.8 && <0.9
-                     , holborn-web
                      , bytestring >= 0.10.0
+                     , servant >= 0.4 && <0.5
+                     , servant-blaze >= 0.4 && <0.5
+                     , servant-server >= 0.4 && <0.5
+                     , wai >= 3.0 && <3.1
+                     , warp >= 3.1 && <3.2
+                     , holborn-web
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
 

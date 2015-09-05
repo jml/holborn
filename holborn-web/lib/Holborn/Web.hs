@@ -30,6 +30,7 @@ import Holborn.Types (Annotation, AnnotatedSource(..), HolbornToken(..))
 import qualified Holborn.Python as P
 
 
+-- TODO: Move this to a utilities module.
 leftMergeBy :: (a -> b -> Bool) -> [a] -> [b] -> Either [b] [(a, Maybe b)]
 leftMergeBy _ [] [] = return []
 leftMergeBy _ [] ys = Left ys
@@ -40,13 +41,8 @@ leftMergeBy match (x:xs) allY@(y:ys) = do
   return $ (x, matched):rest
 
 
-
-lexPythonCode :: Text -> [Token]
-lexPythonCode code =
-  fromRight $ runLexer pythonLexer (encodeUtf8 code)
-  where pythonLexer = fromJust $ List.lookup ".py" lexers
-
-
+-- TODO: Use the pretty-error package for this:
+-- https://hackage.haskell.org/package/pretty-error
 assertRight :: Show a => Text -> Either a b -> b
 assertRight _ (Right r) = r
 assertRight message (Left e) = terror $ message ++ ": " ++ decodeUtf8 (pack (ppShow e))
@@ -57,9 +53,12 @@ fromRight (Left e) = terror $ show e
 fromRight (Right r) = r
 
 
--- XXX: Actually handle cases where code won't lex or we can't find a lexer
+-- TODO: Move these to the Python module
+lexPythonCode :: Text -> [Token]
+lexPythonCode code =
+  fromRight $ runLexer pythonLexer (encodeUtf8 code)
+  where pythonLexer = fromJust $ List.lookup ".py" lexers
 
--- XXX: Is Text the right type?
 
 annotatePythonCode :: Text -> AnnotatedSource ID
 annotatePythonCode code =
