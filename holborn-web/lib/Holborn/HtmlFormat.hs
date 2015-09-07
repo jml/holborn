@@ -14,8 +14,8 @@ import qualified Data.ByteString as BS
 
 import Text.Highlighter.Types
 
-import Holborn.Scope (Annotation(..))
 import Holborn.Types (
+  Annotation(..),
   AnnotatedSource(..),
   HolbornToken,
   tokenAnnotation,
@@ -46,15 +46,17 @@ format ls ts =
 
 instance (H.ToValue a, Show a) => ToMarkup (HolbornToken a) where
   toMarkup token =
-    case tokenAnnotation token of
-      Nothing -> baseToken
-      Just (Binding i) -> H.a ! A.href (H.toValue findReferencesUrl) ! A.id (H.toValue i) $ baseToken
-      Just (Reference i) -> H.a ! A.href (H.toValue (bindingUrl i)) $ baseToken
-    where
-      baseToken = H.span ! A.class_ (H.toValue . shortName . tokenType $ token) $ H.toHtml contents
-      contents = decodeUtf8 (tokenName token)
-      findReferencesUrl = "https://google.com/?q=" ++ decodeUtf8 (tokenName token)
-      bindingUrl i = "#" ++ show i
+   case tokenAnnotation token of
+     Nothing -> baseToken
+     Just (Binding i) -> H.a ! A.href (H.toValue findReferencesUrl) ! A.id (H.toValue i) $ baseToken
+     Just (Reference i) -> H.a ! A.href (H.toValue (bindingUrl i)) $ baseToken
+     -- XXX: What do we actually want to do for unresolved references? Some sort of styling?
+     Just UnresolvedReference -> H.span ! A.class_ (H.toValue ("unresolved" :: Text)) $ baseToken
+   where
+     baseToken = H.span ! A.class_ (H.toValue . shortName . tokenType $ token) $ H.toHtml contents
+     contents = decodeUtf8 (tokenName token)
+     findReferencesUrl = "https://google.com/?q=" ++ decodeUtf8 (tokenName token)
+     bindingUrl i = "#" ++ show i
 
 
 instance (H.ToValue a, Show a) => ToMarkup (AnnotatedSource a) where

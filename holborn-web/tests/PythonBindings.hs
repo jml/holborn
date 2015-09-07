@@ -5,13 +5,14 @@ module PythonBindings (tests) where
 
 import BasicPrelude
 import Control.Applicative (Alternative)
-import Data.Foldable (Foldable, asum)
+import Data.Foldable (asum)
 
 import Test.Tasty (TestTree, TestName, testGroup)
 import Test.Tasty.HUnit
 
 import Holborn.Python (annotateSourceCode)
-import Holborn.Scope (Annotation(..), ID)
+import Holborn.Scope (ID)
+import Holborn.Types (Annotation(..))
 
 
 -- These look weird, but they allow us a relatively succinct way of expressing
@@ -49,6 +50,14 @@ r :: Applicative m => a -> b -> m (a, Maybe (Annotation b))
 r x i = pure (x, Just (Reference i))
 
 
+-- | An unresolved reference.
+--
+-- >>> u "x"
+-- ("x", Just UnresolvedReference)
+u :: Alternative m => a -> m (a, Maybe (Annotation b))
+u x = pure (x, Just UnresolvedReference)
+
+
 -- | Helper for constructing tests.
 testAST :: Foldable t => TestName  -- ^ The name of the test
         -> [Text]  -- ^ The input source code, where each line is an element of the list
@@ -79,6 +88,20 @@ simpleTest =
       ]
 
 
+augmentedAssignment :: TestTree
+augmentedAssignment =
+  testAST "x += 2" input output
+  where
+    input =
+      [ "x = 0"
+      , "x += 1"
+      ]
+    output =
+      [ b "x" 1, n "= 0"
+      , r "x" 1, n "+= 1"
+      ]
+
+
 whileLoop :: TestTree
 whileLoop =
   testAST "while/else loop" input output
@@ -90,7 +113,7 @@ whileLoop =
       , "  print x"
       ]
     output =
-      [ n "while True :"
+      [ n "while",  u "True",  n ":"
       , b "x" 1, n "= 1"
       , n "else :"
       , n "print", r "x" 1
@@ -107,7 +130,7 @@ classDefinition =
       , "  pass"
       ]
     output =
-      [ b "Bar" 1, n "= int"
+      [ b "Bar" 1, n "=", u "int"
       , n "class", b "Foo" 2, n "(", r "Bar" 1, n ") :"
       , n "pass"
       ]
@@ -139,7 +162,7 @@ aliasImport =
       ]
     output =
       [ n "import foo as", b "bar" 1
-      , n "foo"
+      , u "foo"
       , r "bar" 1
       ]
 
@@ -155,7 +178,7 @@ fromImport =
       ]
     output =
       [ n "from foo import", b "bar" 1
-      , n "foo"
+      , u "foo"
       , r "bar" 1
       ]
 
@@ -172,8 +195,8 @@ fromImportAlias =
       ]
     output =
       [ n "from foo import bar as", b "baz" 1
-      , n "foo"
-      , n "bar"
+      , u "foo"
+      , u "bar"
       , r "baz" 1
       ]
 
@@ -190,7 +213,7 @@ decorated =
       , "  print x"
       ]
     output =
-      [ b "foo" 1, n "= None"
+      [ b "foo" 1, n "=", u "None"
       , n "at", r "foo" 1 -- XXX: Why is this "at" and not "@"?
       , n "def", b "f" 2, n "(", b "x" 3, n ") :"
       , n "print", r "x" 3
@@ -209,8 +232,8 @@ decoratedWithArgs =
       , "  print x"
       ]
     output =
-      [ b "foo" 1, n "= None"
-      , b "bar" 2, n "= None"
+      [ b "foo" 1, n "=", u "None"
+      , b "bar" 2, n "=", u "None"
       , n "at", r "foo" 1, n "(", r "bar" 2, n ")"
       , n "def", b "f" 3, n "(", b "x" 4, n ") :"
       , n "print", r "x" 4
@@ -226,7 +249,7 @@ raise =
       , "raise foo"
       ]
     output =
-      [ b "foo" 1, n "= ValueError ( 1 )"
+      [ b "foo" 1, n "=",  u "ValueError",  n"( 1 )"
       , n "raise", r "foo" 1
       ]
 
@@ -239,6 +262,7 @@ tests :: TestTree
 tests =
   testGroup "scope tests"
   [ simpleTest
+  , augmentedAssignment
   , whileLoop
   , classDefinition
   , simpleImport
