@@ -157,10 +157,9 @@ insertReference _ refID srcSpan (Env env refs) = Env env ((refID, srcSpan):refs)
 
 getBinding :: Symbol -> Environment a -> Maybe (Binding a)
 getBinding symbol env =
-  -- XXX: There's almost certainly a shorter, clearer way of writing this.
   case M.lookup symbol (definitions env) of
     Nothing -> Nothing
-    Just [] -> Nothing
+    Just [] -> terror $ "Empty definition list for " ++ show symbol
     Just (x:_) -> Just x
 
 
