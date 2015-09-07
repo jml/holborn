@@ -102,6 +102,24 @@ augmentedAssignment =
       ]
 
 
+redefinition :: TestTree
+redefinition =
+  testAST "redefinition" input output
+  where
+    input =
+      [ "x = 0"
+      , "y = x + 1"
+      , "x = 1"
+      , "z = x + y"
+      ]
+    output =
+      [ b "x" 1, n "= 0"
+      , b "y" 2, n "=", r "x" 1, n "+ 1"
+      , b "x" 3, n "= 1"
+      , b "z" 4, n "=", r "x" 3, n "+", r "y" 2
+      ]
+
+
 whileLoop :: TestTree
 whileLoop =
   testAST "while/else loop" input output
@@ -272,4 +290,5 @@ tests =
   , decorated
   , raise
   , decoratedWithArgs
+  , redefinition
   ]

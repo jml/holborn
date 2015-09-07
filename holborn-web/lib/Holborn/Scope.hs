@@ -104,9 +104,17 @@ type Symbol = Text
 -- partial functions that can only be resolved when given other information.
 
 
-data Environment a = Env { definitions :: Map Symbol (ID, a)
-                         , references :: [(Maybe ID, a)]
-                         }
+data Environment a =
+  Env {
+    -- | The definitions that have been made in this environment. Because a
+    -- symbol can be redefined within an environment, we store a list. The
+    -- first element of the list is the latest binding. The list is never
+    -- empty.
+    definitions :: Map Symbol [(ID, a)],
+    -- | References found in the environment. @Just x@ means we could find a
+    -- matching symbol in scope, @Nothing@ means we couldn't.
+    references :: [(Maybe ID, a)]
+    }
 
 newEnvironment :: Environment a
 newEnvironment = Env M.empty []
@@ -114,16 +122,25 @@ newEnvironment = Env M.empty []
 
 flattenEnvironment :: Ord a => Environment a -> Map a (Annotation ID)
 flattenEnvironment env =
-  M.fromList $
-  [(srcSpan, Binding i) | (i, srcSpan) <- M.elems (definitions env)] ++
-  map getReference (references env)
+  M.fromList $ bindings ++ map getReference (references env)
   where
+    bindings = do
+      xs <- M.elems (definitions env)
+      (i, srcSpan) <- xs
+      return (srcSpan, Binding i)
     getReference (Just i, srcSpan) = (srcSpan, Reference i)
     getReference (Nothing, srcSpan) = (srcSpan, UnresolvedReference)
 
 
 insertBinding :: Symbol -> ID -> a -> Environment a -> Environment a
-insertBinding symbol bindID srcSpan (Env env refs) = Env (M.insert symbol (bindID, srcSpan) env) refs
+insertBinding symbol bindID srcSpan (Env env refs) =
+  Env (addToKey symbol (bindID, srcSpan) env) refs
+
+
+addToKey :: Ord k => k -> a -> Map k [a] -> Map k [a]
+addToKey key value =
+  M.alter f key
+  where f = Just . (value:) . fromMaybe []
 
 
 insertReference :: Symbol -> Maybe ID -> a -> Environment a -> Environment a
@@ -131,7 +148,8 @@ insertReference _ refID srcSpan (Env env refs) = Env env ((refID, srcSpan):refs)
 
 
 getBinding :: Symbol -> Environment a -> Maybe ID
-getBinding symbol environment = fst <$> M.lookup symbol (definitions environment)
+getBinding symbol =
+  listToMaybe . map fst . fromMaybe [] . M.lookup symbol . definitions
 
 
 data Scope a = Scope { _stack :: [Environment a]
