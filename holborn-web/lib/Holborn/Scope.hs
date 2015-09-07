@@ -36,6 +36,7 @@ module Holborn.Scope ( Scoped
                      , ID
                      , addReference
                      , bind
+                     , unbind
                      , Interpreter(..)
                      ) where
 
@@ -77,7 +78,7 @@ class Interpreter m location where
 
 -- | Given an AST, return a map from locations to annotations.
 calculateAnnotations :: (Ord a, Interpreter m a) => m a -> Map a (Annotation ID)
-calculateAnnotations ast = flattenScope $ execScoped (interpret ast) newScope
+calculateAnnotations ast = allAnnotations $ execScoped (interpret ast) newScope
 
 
 type ID = Int
@@ -103,6 +104,8 @@ type Symbol = Text
 -- references to attributes on objects. We can think of those references as
 -- partial functions that can only be resolved when given other information.
 
+data Binding a = Bind ID a | Unbind
+
 
 data Environment a =
   Env {
@@ -110,7 +113,7 @@ data Environment a =
     -- symbol can be redefined within an environment, we store a list. The
     -- first element of the list is the latest binding. The list is never
     -- empty.
-    definitions :: Map Symbol [(ID, a)],
+    definitions :: Map Symbol [Binding a],
     -- | References found in the environment. @Just x@ means we could find a
     -- matching symbol in scope, @Nothing@ means we couldn't.
     references :: [(Maybe ID, a)]
@@ -126,7 +129,7 @@ flattenEnvironment env =
   where
     bindings = do
       xs <- M.elems (definitions env)
-      (i, srcSpan) <- xs
+      Bind i srcSpan <- xs
       return (srcSpan, Binding i)
     getReference (Just i, srcSpan) = (srcSpan, Reference i)
     getReference (Nothing, srcSpan) = (srcSpan, UnresolvedReference)
@@ -134,7 +137,12 @@ flattenEnvironment env =
 
 insertBinding :: Symbol -> ID -> a -> Environment a -> Environment a
 insertBinding symbol bindID srcSpan (Env env refs) =
-  Env (addToKey symbol (bindID, srcSpan) env) refs
+  Env (addToKey symbol (Bind bindID srcSpan) env) refs
+
+
+insertUnbinding :: Symbol -> Environment a -> Environment a
+insertUnbinding symbol (Env env refs) =
+  Env (addToKey symbol Unbind env) refs
 
 
 addToKey :: Ord k => k -> a -> Map k [a] -> Map k [a]
@@ -147,9 +155,12 @@ insertReference :: Symbol -> Maybe ID -> a -> Environment a -> Environment a
 insertReference _ refID srcSpan (Env env refs) = Env env ((refID, srcSpan):refs)
 
 
-getBinding :: Symbol -> Environment a -> Maybe ID
-getBinding symbol =
-  listToMaybe . map fst . fromMaybe [] . M.lookup symbol . definitions
+getBinding :: Symbol -> Environment a -> Maybe (Binding a)
+getBinding symbol env =
+  case M.lookup symbol (definitions env) of
+    Nothing -> Nothing
+    Just [] -> terror $ "Empty definition list for " ++ show symbol
+    Just (x:_) -> Just x
 
 
 data Scope a = Scope { _stack :: [Environment a]
@@ -159,25 +170,21 @@ data Scope a = Scope { _stack :: [Environment a]
                      }
 
 
--- XXX: I don't understand why I can't just make Scope implement Foldable. I
--- think it's because that's for structures that don't know anything about
--- their contents. Calling this foldMapScope to disambiguate, as some versions
--- of basic-prelude export it.
-foldMapScope :: Monoid m => (Environment a -> m) -> Scope a -> m
-foldMapScope f scope =
-  case popEnvironment scope of
-    (Left env, _) -> f env
-    (Right env, scope') -> f env `mappend` foldMapScope f scope'
-
+currentStack :: Scope a -> [Environment a]
+currentStack scope = _stack scope ++ [_root scope]
 
 newScope :: Scope a
 newScope = Scope [] newEnvironment 1 []
 
-flattenScope :: Ord a => Scope a -> Map a (Annotation ID)
-flattenScope scope = foldMapScope flattenEnvironment scope `mappend` mconcat (map flattenEnvironment (_past scope))
+allAnnotations :: Ord a => Scope a -> Map a (Annotation ID)
+allAnnotations scope = mconcat (map flattenEnvironment (currentStack scope ++ _past scope))
 
 findDefinition :: Symbol -> Scope a -> Maybe ID
-findDefinition symbol = listToMaybe . foldMapScope (maybeToList . getBinding symbol)
+findDefinition symbol =
+  bindingToMaybe <=< msum . map (getBinding symbol) . currentStack
+  where
+    bindingToMaybe (Bind i _) = Just i
+    bindingToMaybe Unbind = Nothing
 
 pushEnvironment :: Environment a -> Scope a -> Scope a
 pushEnvironment env (Scope stack root x past) = Scope (env:stack) root x past
@@ -232,6 +239,11 @@ bind symbol srcSpan = do
   nextID <- incrementID
   modify (modifyEnvironment (insertBinding symbol nextID srcSpan))
   return nextID
+
+
+-- | Declare that a symbol is no longer bound in the current scope.
+unbind :: Symbol -> Scoped location ()
+unbind symbol = modify (modifyEnvironment (insertUnbinding symbol))
 
 
 -- | Declare that symbol is a reference to a previously bound variable, using

@@ -66,6 +66,7 @@ import Holborn.Scope ( Scoped
                      , calculateAnnotations
                      , enterScope
                      , exitScope
+                     , unbind
                      , Interpreter(..)
                      )
 import Holborn.Types (Annotation)
@@ -87,12 +88,20 @@ annotateSourceCode sourceCode = do
   where filename = "<stdin>"
 
 
+getSymbol :: Ident a -> (Text, a)
+getSymbol (Ident name srcSpan) = (pack name, srcSpan)
+
+
 bindIdent :: Ident a -> Scoped a ()
-bindIdent (Ident name srcSpan) = void (bind (pack name) srcSpan)
+bindIdent = void . uncurry bind . getSymbol
+
+
+unbindIdent :: Ident a -> Scoped a ()
+unbindIdent = unbind . fst . getSymbol
 
 
 addReferenceIdent :: Ident a -> Scoped a ()
-addReferenceIdent (Ident name srcSpan) = addReference (pack name) srcSpan
+addReferenceIdent = uncurry addReference . getSymbol
 
 
 annotateTokens :: Module SrcSpan -> [Token] -> [(String, Maybe (Annotation ID))]
@@ -108,17 +117,17 @@ annotateTokens moduleSpan tokens =
 -- Doesn't raise any errors if the expression is not a valid thing to bind to
 -- (e.g. `2`), on the (possibly erroneous) assumption that by the time this is
 -- called we're guaranteed to have valid Python.
-getAssignees :: Expr a -> [Ident a]
-getAssignees (Var ident _) = [ident]
-getAssignees (Tuple exprs _) = concatMap getAssignees exprs
-getAssignees (List exprs _) = concatMap getAssignees exprs
+--
+-- Implements https://docs.python.org/2/reference/simple_stmts.html#grammar-token-target
+getTargets :: Expr a -> [Ident a]
+getTargets (Var ident _) = [ident]
+getTargets (Tuple exprs _) = concatMap getTargets exprs
+getTargets (List exprs _) = concatMap getTargets exprs
 -- Valid assignees that we're not bothering to track
-getAssignees (Dot {}) = []  -- We don't handle attributes yet
-getAssignees (Subscript {}) = []   -- xs[0] = 'foo' shouldn't bind to anything
-getAssignees (SlicedExpr {}) = []  -- xs[0:1] = 'foo' likewise
--- Everything else is (jml thinks) an invalid binding:
--- See https://docs.python.org/2/reference/simple_stmts.html#grammar-token-assignment_stmt
-getAssignees _ = []
+getTargets (Dot {}) = []  -- We don't handle attributes yet
+getTargets (Subscript {}) = []   -- xs[0] = 'foo' shouldn't bind to anything
+getTargets (SlicedExpr {}) = []  -- xs[0:1] = 'foo' likewise
+getTargets _ = []
 
 
 instance Interpreter Module a where
@@ -133,7 +142,7 @@ instance Interpreter Statement a where
     interpretSequence body
     interpretSequence elseSuite
   interpret (For targets generator body elseSuite _) = do
-    mapM_ bindIdent $ concatMap getAssignees targets
+    mapM_ bindIdent $ concatMap getTargets targets
     interpret generator
     interpretSequence body
     interpretSequence elseSuite
@@ -155,7 +164,7 @@ instance Interpreter Statement a where
       interpretSequence suite
     interpretSequence elseSuite
   interpret (Assign toExprs fromExpr _) = do
-    mapM_ bindIdent $ concatMap getAssignees toExprs
+    mapM_ bindIdent $ concatMap getTargets toExprs
     interpret fromExpr
   interpret (AugmentedAssign toExpr _ fromExpr _) = do
     -- Treat augmented assignment as a modification rather than a binding.
@@ -174,12 +183,14 @@ instance Interpreter Statement a where
   interpret (With contexts suite _) = do
     forM_ contexts $ \(context, binding) -> do
       interpret context
-      maybe (return ()) (mapM_ bindIdent . getAssignees) binding
+      maybe (return ()) (mapM_ bindIdent . getTargets) binding
     interpretSequence suite
   interpret (Pass {}) = return ()
   interpret (Break {}) = return ()
   interpret (Continue {}) = return ()
-  interpret (Delete {}) = _unhandled "Delete"
+  interpret (Delete exprs _) = do
+    interpretSequence exprs
+    mapM_ unbindIdent $ concatMap getTargets exprs
   interpret (StmtExpr expr _) = interpret expr
   interpret (Global {}) = _unhandled "Global"
   interpret (NonLocal {}) = _unhandled "NonLocal"
@@ -215,7 +226,7 @@ instance Interpreter ExceptClause a where
     case e of
       Just (exception, binding) -> do
         interpret exception
-        maybe (return ()) (mapM_ bindIdent . getAssignees) binding
+        maybe (return ()) (mapM_ bindIdent . getTargets) binding
       Nothing -> return ()
 
 
