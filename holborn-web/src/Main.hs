@@ -16,6 +16,7 @@ import Servant
   )
 import Servant.HTML.Blaze
 
+-- Get the typeclass instances for converting Holborn stuff to HTML.
 import Holborn.HtmlFormat ()
 import Holborn.Scope (ID)
 import Holborn.Types (AnnotatedSource)
