@@ -1,5 +1,6 @@
 module Holborn.Types
        ( Annotation(..)
+       , AnnotatedSource(..)
        , Identifier(..)
        , HolbornToken(..)
        , tokenAnnotation
@@ -9,6 +10,10 @@ module Holborn.Types
 
 import BasicPrelude
 import Text.Highlighter.Types (Token(..), TokenType)
+
+
+-- | A file that has been tokenized and annotated.
+data AnnotatedSource a = AnnotatedSource [HolbornToken a]
 
 -- | A token with extra semantic information. More data to be added later.
 data HolbornToken a = HolbornToken { _lexerToken :: Token
