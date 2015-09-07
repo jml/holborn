@@ -24,20 +24,22 @@ import Holborn.Types (
   )
 
 
-format :: (H.ToValue a, Show a) => Bool -> [HolbornToken a] -> Html
-format ls ts
-    | ls =
-        H.table ! A.class_ "highlighttable" $ H.tr $ do
-            H.td ! A.class_ "linenos" $
-                H.div ! A.class_ "linenodiv" $
-                    H.pre (lineNos (countLines ts))
+data LineNumbersOption = ShowLineNumbers | HideLineNumbers
 
-            H.td ! A.class_ "code" $
-                H.div ! A.class_ "highlight" $
-                    H.pre $ highlight ts
-    | otherwise =
-        H.div ! A.class_ "highlight" $
-            H.pre $ highlight ts
+
+format :: (H.ToValue a, Show a) => LineNumbersOption -> [HolbornToken a] -> Html
+format ls ts =
+  case ls of
+    ShowLineNumbers ->
+      H.table ! A.class_ "highlighttable" $ H.tr $ do
+        H.td ! A.class_ "linenos" $
+          H.div ! A.class_ "linenodiv" $ H.pre (lineNos (countLines ts))
+
+        H.td ! A.class_ "code" $
+          H.div ! A.class_ "highlight" $
+          H.pre $ highlight ts
+    HideLineNumbers ->
+        H.div ! A.class_ "highlight" $ H.pre $ highlight ts
   where
     highlight = mconcat . map toMarkup
 
@@ -57,7 +59,7 @@ instance (H.ToValue a, Show a) => ToMarkup (HolbornToken a) where
 
 instance (H.ToValue a, Show a) => ToMarkup (AnnotatedSource a) where
 
-  toMarkup (AnnotatedSource tokens) = format False tokens
+  toMarkup (AnnotatedSource tokens) = format HideLineNumbers tokens
 
 
 countLines :: [HolbornToken a] -> Int
