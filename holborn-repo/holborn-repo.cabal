@@ -29,13 +29,13 @@ library
                      , servant >= 0.4 && <0.5
                      , either
                      , servant-server >= 0.4 && <0.5
-                     , pipes-wai
                      , pipes-shell
                      , pipes-safe
                      , wai
                      , pipes
                      , http-types
                      , blaze-builder
+                     , bytestring
 
 
 executable holborn
