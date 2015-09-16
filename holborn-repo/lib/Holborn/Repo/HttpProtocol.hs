@@ -28,6 +28,7 @@ import Pipes ((>->), runEffect, await, yield, (>~))
 import Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import Pipes.Safe (SafeT)
 import Blaze.ByteString.Builder (Builder, fromByteString)
+import Text.Printf (printf)
 
 type RepoAPI =
     Capture "userOrOrg" Text
@@ -46,15 +47,19 @@ repoAPI = Proxy
 repoServer :: Server RepoAPI
 repoServer =
     showHead
-    :<|> initiateProtocol
+    :<|> smartHandshake
 
 showHead :: Text -> Text -> EitherT ServantErr IO ()
 showHead userOrOrg repo = return ()
 
 backupResponse = responseLBS ok200 [] "problem?"
 
-initiateProtocol :: Text -> Text -> Maybe Text -> Server Raw
-initiateProtocol userOrOrg repo service =
+-- | Render in pkg format (4 byte hex prefix for total line length including header)
+pktString s =
+    fromString (printf "%04x" ((length s) + 4) ++ s)
+
+smartHandshake :: Text -> Text -> Maybe Text -> Server Raw
+smartHandshake userOrOrg repo service =
     localrespond
   where
     localrespond :: Application
@@ -63,29 +68,38 @@ initiateProtocol userOrOrg repo service =
         liftIO $ print repo
         liftIO $ print service
         case service of
-         Nothing -> respond backupResponse
-         Just "git-upload-pack" -> respond $ responseStream ok200 gitHeaders (gitPack "git-upload-pack")
+            Nothing -> respond backupResponse
+            Just "git-upload-pack" ->
+                respond $ responseStream ok200 (gitHeaders "git-upload-pack") (gitPack "git-upload-pack")
+            Just "git-receive-pack" ->
+                respond $ responseStream ok200 (gitHeaders "git-receive-pack") (gitPack "git-receive-pack")
 
     gitPack :: String -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack command moreData flush =
-        runShell $ (banner >> (producerCmd ("git-upload-pack --stateless-rpc --advertise-refs /tmp/g0/") >-> filterStdErr) >> footer) >-> runChunks
+    gitPack service moreData flush =
+        runShell $ (
+            (banner service)
+            >> (producerCmd (service ++ " --stateless-rpc --advertise-refs /tmp/g0/") >-> filterStdErr)
+            >> footer) >-> sendChunks
       where
-        runChunks :: Consumer ByteString (SafeT IO) ()
-        runChunks = do
+        sendChunks :: Consumer ByteString (SafeT IO) ()
+        sendChunks = do
             chunk <- await
             liftIO $ moreData (fromByteString chunk)
-            runChunks
+            sendChunks
 
-    gitHeaders =
-        [ ("Content-Type", "application/x-git-upload-pack-advertisement")
+    gitHeaders service =
+        [ ("Content-Type", "application/x-" ++ service ++ "-advertisement")
         , ("Pragma", "no-cache")
         , ("Server", "git")
         , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
         ]
 
-    banner = do
-        yield "001e# service=git-upload-pack\n"
+    -- git requires a service header that just repeats the service it
+    -- asked for. It also requires `0000` to indicate a boundary.
+    banner service = do
+        yield (pktString ("# service=" ++ service ++ "\n"))
         yield "0000"
+    -- protocol requires messages end with 0000
     footer = do
         yield "0000\n"
 
@@ -93,6 +107,7 @@ initiateProtocol userOrOrg repo service =
     filterStdErr = do
         x <- await
         case x of
+            -- TODO send errors to journald && maybe measure
             Left err -> terror (decodeUtf8 err)
             Right data_ -> do
                 yield data_
