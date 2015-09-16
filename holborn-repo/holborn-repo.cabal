@@ -35,6 +35,7 @@ library
                      , wai
                      , pipes
                      , http-types
+                     , blaze-builder
 
 
 executable holborn

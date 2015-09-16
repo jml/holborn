@@ -5,6 +5,7 @@
 
 -- | Implement the git http protocol (smart only):
 -- https://git-scm.com/book/en/v2/Git-Internals-Transfer-Protocols
+-- https://gist.github.com/schacon/6092633
 --
 -- Verbose git clone over http:
 -- GIT_CURL_VERBOSE=1 git clone http://127.0.0.1:8080/teh/test
@@ -19,13 +20,14 @@ import BasicPrelude
 
 import Servant ((:>), (:<|>)(..), Get, Post, Capture, QueryParam, Proxy(..), ServantErr, Server, OctetStream, Raw)
 import Control.Monad.Trans.Either (EitherT)
-import Pipes.Wai (responseRawProducer)
+import Pipes.Wai (responseProducer, Flush(..))
 import Network.HTTP.Types.Status (ok200)
-import Network.Wai (responseLBS, Application)
+import Network.Wai (responseLBS, Application, responseStream)
 import Pipes.Core (Consumer, Producer, Pipe)
 import Pipes ((>->), runEffect, await, yield, (>~))
-import Pipes.Shell (pipeCmd, runShell, (>?>))
+import Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import Pipes.Safe (SafeT)
+import Blaze.ByteString.Builder (Builder, fromByteString)
 
 type RepoAPI =
     Capture "userOrOrg" Text
@@ -41,6 +43,11 @@ type RepoAPI =
 repoAPI :: Proxy RepoAPI
 repoAPI = Proxy
 
+repoServer :: Server RepoAPI
+repoServer =
+    showHead
+    :<|> initiateProtocol
+
 showHead :: Text -> Text -> EitherT ServantErr IO ()
 showHead userOrOrg repo = return ()
 
@@ -52,36 +59,41 @@ initiateProtocol userOrOrg repo service =
   where
     localrespond :: Application
     localrespond req respond = do
-        liftIO $ print "localrespond"
         liftIO $ print userOrOrg
         liftIO $ print repo
         liftIO $ print service
         case service of
          Nothing -> respond backupResponse
-         Just "git-upload-pack" -> respond (responseRawProducer (gitPack "git-upload-pack") backupResponse)
-         Just "git-receive-pack" -> respond (responseRawProducer (gitPack "git-receive-pack") backupResponse)
+         Just "git-upload-pack" -> respond $ responseStream ok200 gitHeaders (gitPack "git-upload-pack")
 
-    gitPack :: String -> Producer ByteString IO () -> Consumer ByteString (SafeT IO) () -> IO ()
-    gitPack command _ outgoingData =
-        runShell $ (headers >> (yield "" >?> pipeCmd (command ++ " /home/tom/testbed/g0") >-> outgoing)) >-> outgoingData
+    gitPack :: String -> (Builder -> IO ()) -> IO () -> IO ()
+    gitPack command moreData flush =
+        runShell $ (banner >> (producerCmd ("git-upload-pack --stateless-rpc --advertise-refs /tmp/g0/") >-> filterStdErr) >> footer) >-> runChunks
+      where
+        runChunks :: Consumer ByteString (SafeT IO) ()
+        runChunks = do
+            chunk <- await
+            liftIO $ moreData (fromByteString chunk)
+            runChunks
 
-    headers = do
-        yield "HTTP/1.1 200 OK\r\n"
-	yield "Content-Type: application/x-git-upload-pack-advertisement\r\n"
-        yield "Transfer-Encoding: chunked\r\n"
-	yield "Cache-Control: no-cache\r\n\r\n"
+    gitHeaders =
+        [ ("Content-Type", "application/x-git-upload-pack-advertisement")
+        , ("Pragma", "no-cache")
+        , ("Server", "git")
+        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
+        ]
+
+    banner = do
         yield "001e# service=git-upload-pack\n"
+        yield "0000"
+    footer = do
+        yield "0000\n"
 
-outgoing :: (MonadIO m) => Pipe (Either ByteString ByteString) ByteString m ()
-outgoing = do
-    x <- await
-    -- TODO log stderr to journald
-    liftIO $ print x
-    case x of
-     Left err -> yield ""
-     Right data_ -> yield data_
-
-repoServer :: Server RepoAPI
-repoServer =
-    showHead
-    :<|> initiateProtocol
+    filterStdErr :: Pipe (Either ByteString ByteString) ByteString (SafeT IO) ()
+    filterStdErr = do
+        x <- await
+        case x of
+            Left err -> terror (decodeUtf8 err)
+            Right data_ -> do
+                yield data_
+                filterStdErr
