@@ -1,5 +1,6 @@
-{ mkDerivation, base, basic-prelude, either, pipes-cliff, pipes-wai
-, servant, servant-server, stdenv, wai, warp
+{ mkDerivation, base, basic-prelude, either, http-types, pipes
+, pipes-shell, pipes-wai, servant, servant-server, stdenv, wai
+, warp
 }:
 mkDerivation {
   pname = "holborn-repo";
@@ -8,8 +9,8 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   buildDepends = [
-    base basic-prelude either pipes-cliff pipes-wai servant
-    servant-server wai warp
+    base basic-prelude either http-types pipes pipes-shell pipes-wai
+    servant servant-server wai warp
   ];
   license = stdenv.lib.licenses.unfree;
 }

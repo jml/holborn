@@ -30,7 +30,8 @@ library
                      , either
                      , servant-server >= 0.4 && <0.5
                      , pipes-wai
-                     , pipes-cliff
+                     , pipes-shell
+                     , pipes-safe
                      , wai
                      , pipes
                      , http-types
