@@ -21,15 +21,16 @@ import           BasicPrelude
 import           Blaze.ByteString.Builder (Builder, fromByteString)
 import           Control.Monad.Trans.Either (EitherT)
 import qualified Data.ByteString as BS
+import           Network.HTTP.Types.Header (hContentEncoding, RequestHeaders)
 import           Network.HTTP.Types.Status (ok200)
-import           Network.Wai (responseLBS, Application, responseStream, requestBody, Request, Response)
+import           Network.Wai (responseLBS, Application, responseStream, requestBody, requestHeaders, Request, Response)
 import           Pipes ((>->), await, yield)
 import           Pipes.Core (Consumer, Producer, Pipe)
+import           Pipes.GZip (decompress)
 import           Pipes.Safe (SafeT)
 import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import           Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..), ServantErr, Server, Raw)
 import           Text.Printf (printf)
-
 
 type RepoAPI =
     Capture "userOrOrg" Text
@@ -71,6 +72,8 @@ pktString :: (IsString s) => String -> s
 pktString s =
     fromString (printf "%04x" ((length s) + 4) ++ s)
 
+isGzipEncoded :: RequestHeaders -> Bool
+isGzipEncoded = any ( == (hContentEncoding, "gzip"))
 
 smartHandshake :: Text -> Text -> Maybe Text -> Server Raw
 smartHandshake userOrOrg repo service =
@@ -93,7 +96,7 @@ smartHandshake userOrOrg repo service =
     gitPack service moreData flush =
         runShell $ (
             (banner service)
-            >> (producerCmd (service ++ " --stateless-rpc --advertise-refs /home/tom/testbed/g0") >-> filterStdErr)
+            >> (producerCmd (service ++ " --stateless-rpc --advertise-refs /home/tom/src/nixpkgs") >-> filterStdErr)
             >> footer) >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()
@@ -132,14 +135,15 @@ filterStdErr = do
 
 producerRequestBody :: Request -> Producer ByteString (SafeT IO) ()
 producerRequestBody req =
-    loop
+    case isGzipEncoded (requestHeaders req) of
+        True -> decompress loop
+        False -> loop
   where
     loop = do
         data_ <- liftIO (requestBody req)
         unless (BS.null data_) $ do
             yield data_
             loop
-
 
 gitRecievePack :: Text -> Text -> Server Raw
 gitRecievePack userOrOrg repo =
@@ -150,7 +154,6 @@ gitRecievePack userOrOrg repo =
         liftIO $ print userOrOrg
         liftIO $ print repo
         respond $ responseStream ok200 headers (gitPack "git-receive-pack" (producerRequestBody req))
-        -- todo header checking
 
     headers =
         [ ("Content-Type", "application/x-git-receive-pack-result")
@@ -162,7 +165,7 @@ gitRecievePack userOrOrg repo =
     gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack service postDataProducer moreData flush =
         runShell $
-        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc /home/tom/testbed/g0") >-> filterStdErr
+        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc /home/tom/src/nixpkgs") >-> filterStdErr
             >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()
@@ -192,7 +195,7 @@ gitUploadPack userOrOrg repo =
     gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack service postDataProducer moreData flush =
         runShell $
-        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc /home/tom/testbed/g0") >-> filterStdErr
+        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc /home/tom/src/nixpkgs") >-> filterStdErr
             >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()
