@@ -5,7 +5,7 @@
 
 -- | Implement the git http protocol (smart only):
 -- https://git-scm.com/book/en/v2/Git-Internals-Transfer-Protocols
--- https://gist.github.com/schacon/6092633
+-- https://github.com/git/git/blob/master/Documentation/technical/http-protocol.txt
 --
 -- Verbose git clone over http:
 -- GIT_CURL_VERBOSE=1 git clone http://127.0.0.1:8080/teh/test
@@ -16,19 +16,20 @@ module Holborn.Repo.HttpProtocol
        , repoAPI
        ) where
 
-import BasicPrelude
+import           BasicPrelude
 
-import Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..), ServantErr, Server, Raw)
-import Control.Monad.Trans.Either (EitherT)
-import Network.HTTP.Types.Status (ok200)
-import Network.Wai (responseLBS, Application, responseStream, requestBody, Request, Response)
-import Pipes.Core (Consumer, Producer, Pipe)
-import Pipes ((>->), await, yield)
-import Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
-import Pipes.Safe (SafeT)
-import Blaze.ByteString.Builder (Builder, fromByteString)
-import Text.Printf (printf)
+import           Blaze.ByteString.Builder (Builder, fromByteString)
+import           Control.Monad.Trans.Either (EitherT)
 import qualified Data.ByteString as BS
+import           Network.HTTP.Types.Status (ok200)
+import           Network.Wai (responseLBS, Application, responseStream, requestBody, Request, Response)
+import           Pipes ((>->), await, yield)
+import           Pipes.Core (Consumer, Producer, Pipe)
+import           Pipes.Safe (SafeT)
+import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
+import           Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..), ServantErr, Server, Raw)
+import           Text.Printf (printf)
+
 
 type RepoAPI =
     Capture "userOrOrg" Text
@@ -43,6 +44,10 @@ type RepoAPI =
         :> Capture "repo" Text
         :> "git-upload-pack"
         :> Raw
+    :<|> Capture "userOrOrg" Text
+        :> Capture "repo" Text
+        :> "git-receive-pack"
+        :> Raw
 
 repoAPI :: Proxy RepoAPI
 repoAPI = Proxy
@@ -52,6 +57,7 @@ repoServer =
     showHead
     :<|> smartHandshake
     :<|> gitUploadPack
+    :<|> gitRecievePack
 
 showHead :: Text -> Text -> EitherT ServantErr IO ()
 showHead userOrOrg repo = return ()
@@ -87,7 +93,7 @@ smartHandshake userOrOrg repo service =
     gitPack service moreData flush =
         runShell $ (
             (banner service)
-            >> (producerCmd (service ++ " --stateless-rpc --advertise-refs /tmp/g0/") >-> filterStdErr)
+            >> (producerCmd (service ++ " --stateless-rpc --advertise-refs /home/tom/testbed/g0") >-> filterStdErr)
             >> footer) >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()
@@ -99,7 +105,7 @@ smartHandshake userOrOrg repo service =
     gitHeaders service =
         [ ("Content-Type", "application/x-" ++ service ++ "-advertisement")
         , ("Pragma", "no-cache")
-        , ("Server", "git")
+        , ("Server", "holborn")
         , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
         ]
 
@@ -135,6 +141,36 @@ producerRequestBody req =
             loop
 
 
+gitRecievePack :: Text -> Text -> Server Raw
+gitRecievePack userOrOrg repo =
+    localrespond
+  where
+    localrespond :: Application
+    localrespond req respond = do
+        liftIO $ print userOrOrg
+        liftIO $ print repo
+        respond $ responseStream ok200 headers (gitPack "git-receive-pack" (producerRequestBody req))
+        -- todo header checking
+
+    headers =
+        [ ("Content-Type", "application/x-git-receive-pack-result")
+        , ("Pragma", "no-cache")
+        , ("Server", "holborn")
+        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
+        ]
+
+    gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
+    gitPack service postDataProducer moreData flush =
+        runShell $
+        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc /home/tom/testbed/g0") >-> filterStdErr
+            >-> sendChunks
+      where
+        sendChunks :: Consumer ByteString (SafeT IO) ()
+        sendChunks = do
+            chunk <- await
+            liftIO $ moreData (fromByteString chunk)
+            sendChunks
+
 gitUploadPack :: Text -> Text -> Server Raw
 gitUploadPack userOrOrg repo =
     localrespond
@@ -149,14 +185,14 @@ gitUploadPack userOrOrg repo =
     headers =
         [ ("Content-Type", "application/x-git-upload-pack-result")
         , ("Pragma", "no-cache")
-        , ("Server", "git")
+        , ("Server", "holborn")
         , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
         ]
 
     gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack service postDataProducer moreData flush =
         runShell $
-        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc /tmp/g0/") >-> filterStdErr
+        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc /home/tom/testbed/g0") >-> filterStdErr
             >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()
