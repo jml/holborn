@@ -37,6 +37,8 @@ data Config = Config
     { repoRoot :: String
     }
 
+-- | The git pull & push repository API. The URL schema is borrowed
+-- from github, i.e. `/user/repo` or `/org/repo`.
 type RepoAPI =
     Capture "userOrOrg" Text
         :> Capture "repo" Text
@@ -44,7 +46,7 @@ type RepoAPI =
     :<|> Capture "userOrOrg" Text
         :> Capture "repo" Text
         :> "info" :> "refs"
-        :> QueryParam "service" Text
+        :> QueryParam "service" Text -- `git-upload-pack` or `git-receive-pack`
         :> Raw
     :<|> Capture "userOrOrg" Text
         :> Capture "repo" Text
@@ -60,16 +62,18 @@ repoAPI = Proxy
 
 repoServer :: Config -> Server RepoAPI
 repoServer config =
-    showHead
+    showNormal
     :<|> (smartHandshake config)
     :<|> (gitUploadPack config)
     :<|> (gitRecievePack config)
 
-showHead :: Text -> Text -> EitherT ServantErr IO ()
-showHead userOrOrg repo = return ()
+-- | Placeholder for "normal" HTTP traffic - without a service. This
+-- is where we plug in holborn-web output.
+showNormal :: Text -> Text -> EitherT ServantErr IO ()
+showNormal userOrOrg repo = return ()
 
 backupResponse :: Response
-backupResponse = responseLBS ok200 [] "todo - make this an error"
+backupResponse = terror "I have no idea whether we can reach this state."
 
 -- | Render in pkg format (4 byte hex prefix for total line length
 -- including header)
@@ -77,10 +81,10 @@ pktString :: (IsString s) => String -> s
 pktString s =
     fromString (printf "%04x" ((length s) + 4) ++ s)
 
-isGzipEncoded :: RequestHeaders -> Bool
-isGzipEncoded = any ( == (hContentEncoding, "gzip"))
+acceptGzip :: RequestHeaders -> Bool
+acceptGzip = any ( == (hContentEncoding, "gzip"))
 
-smartHandshake :: Config -> Text -> Text -> Maybe Text -> Server Raw
+smartHandshake :: Config -> Text -> Text -> Maybe Text -> Application
 smartHandshake config userOrOrg repo service =
     localrespond
   where
@@ -90,12 +94,11 @@ smartHandshake config userOrOrg repo service =
         liftIO $ print repo
         liftIO $ print service
         respond $ case service of
-            Nothing -> backupResponse
             Just "git-upload-pack" ->
                 responseStream ok200 (gitHeaders "git-upload-pack") (gitPack "git-upload-pack")
             Just "git-receive-pack" ->
                 responseStream ok200 (gitHeaders "git-receive-pack") (gitPack "git-receive-pack")
-            Just _ -> backupResponse
+            _ -> backupResponse
 
     gitPack :: String -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack service moreData flush =
@@ -122,35 +125,38 @@ smartHandshake config userOrOrg repo service =
     banner service = do
         yield (pktString ("# service=" ++ service ++ "\n"))
         yield "0000"
-    -- protocol requires messages end with 0000
+    -- Yield an empty footer to be explicit about what we are not
+    -- sending.
     footer = do
         yield ""
 
-
+-- | The shell library we are using to invoke git returns a Left for
+-- stderr output and a Right for stdout output. We don't expect stderr
+-- (Left) output in normal operation so we error out (for now).
 filterStdErr :: Pipe (Either ByteString ByteString) ByteString (SafeT IO) ()
 filterStdErr = do
     x <- await
     case x of
          -- TODO send errors to journald && maybe measure
          Left err -> terror (decodeUtf8 err)
-         Right data_ -> do
-             yield data_
+         Right data' -> do
+             yield data'
              filterStdErr
 
 
 producerRequestBody :: Request -> Producer ByteString (SafeT IO) ()
 producerRequestBody req =
-    case isGzipEncoded (requestHeaders req) of
+    case acceptGzip (requestHeaders req) of
         True -> decompress loop
         False -> loop
   where
     loop = do
-        data_ <- liftIO (requestBody req)
-        unless (BS.null data_) $ do
-            yield data_
+        data' <- liftIO (requestBody req)
+        unless (BS.null data') $ do
+            yield data'
             loop
 
-gitRecievePack :: Config -> Text -> Text -> Server Raw
+gitRecievePack :: Config -> Text -> Text -> Application
 gitRecievePack config userOrOrg repo =
     localrespond
   where
@@ -179,7 +185,7 @@ gitRecievePack config userOrOrg repo =
             liftIO $ moreData (fromByteString chunk)
             sendChunks
 
-gitUploadPack :: Config -> Text -> Text -> Server Raw
+gitUploadPack :: Config -> Text -> Text -> Application
 gitUploadPack config userOrOrg repo =
     localrespond
   where
