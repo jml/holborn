@@ -39,7 +39,6 @@ library
                      , bytestring
                      , time
 
-
 executable holborn
   main-is:             Main.hs
   hs-source-dirs:      src
@@ -53,3 +52,4 @@ executable holborn
                      , servant-server >= 0.4 && <0.5
                      , wai
                      , warp
+                     , envparse >=0.2
