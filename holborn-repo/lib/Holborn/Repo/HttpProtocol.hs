@@ -14,6 +14,7 @@
 module Holborn.Repo.HttpProtocol
        ( repoServer
        , repoAPI
+       , Config(..)
        ) where
 
 import           BasicPrelude
@@ -31,6 +32,10 @@ import           Pipes.Safe (SafeT)
 import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import           Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..), ServantErr, Server, Raw)
 import           Text.Printf (printf)
+
+data Config = Config
+    { repoRoot :: String
+    }
 
 type RepoAPI =
     Capture "userOrOrg" Text
@@ -53,12 +58,12 @@ type RepoAPI =
 repoAPI :: Proxy RepoAPI
 repoAPI = Proxy
 
-repoServer :: Server RepoAPI
-repoServer =
+repoServer :: Config -> Server RepoAPI
+repoServer config =
     showHead
-    :<|> smartHandshake
-    :<|> gitUploadPack
-    :<|> gitRecievePack
+    :<|> (smartHandshake config)
+    :<|> (gitUploadPack config)
+    :<|> (gitRecievePack config)
 
 showHead :: Text -> Text -> EitherT ServantErr IO ()
 showHead userOrOrg repo = return ()
@@ -75,8 +80,8 @@ pktString s =
 isGzipEncoded :: RequestHeaders -> Bool
 isGzipEncoded = any ( == (hContentEncoding, "gzip"))
 
-smartHandshake :: Text -> Text -> Maybe Text -> Server Raw
-smartHandshake userOrOrg repo service =
+smartHandshake :: Config -> Text -> Text -> Maybe Text -> Server Raw
+smartHandshake config userOrOrg repo service =
     localrespond
   where
     localrespond :: Application
@@ -96,7 +101,7 @@ smartHandshake userOrOrg repo service =
     gitPack service moreData flush =
         runShell $ (
             (banner service)
-            >> (producerCmd (service ++ " --stateless-rpc --advertise-refs /home/tom/src/nixpkgs") >-> filterStdErr)
+            >> (producerCmd (service ++ " --stateless-rpc --advertise-refs " ++ (repoRoot config)) >-> filterStdErr)
             >> footer) >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()
@@ -145,8 +150,8 @@ producerRequestBody req =
             yield data_
             loop
 
-gitRecievePack :: Text -> Text -> Server Raw
-gitRecievePack userOrOrg repo =
+gitRecievePack :: Config -> Text -> Text -> Server Raw
+gitRecievePack config userOrOrg repo =
     localrespond
   where
     localrespond :: Application
@@ -165,7 +170,7 @@ gitRecievePack userOrOrg repo =
     gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack service postDataProducer moreData flush =
         runShell $
-        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc /home/tom/src/nixpkgs") >-> filterStdErr
+        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ (repoRoot config)) >-> filterStdErr
             >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()
@@ -174,8 +179,8 @@ gitRecievePack userOrOrg repo =
             liftIO $ moreData (fromByteString chunk)
             sendChunks
 
-gitUploadPack :: Text -> Text -> Server Raw
-gitUploadPack userOrOrg repo =
+gitUploadPack :: Config -> Text -> Text -> Server Raw
+gitUploadPack config userOrOrg repo =
     localrespond
   where
     localrespond :: Application
@@ -195,7 +200,7 @@ gitUploadPack userOrOrg repo =
     gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack service postDataProducer moreData flush =
         runShell $
-        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc /home/tom/src/nixpkgs") >-> filterStdErr
+        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ (repoRoot config)) >-> filterStdErr
             >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()

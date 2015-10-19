@@ -37,6 +37,7 @@ library
                      , http-types
                      , blaze-builder
                      , bytestring
+                     , time
 
 
 executable holborn
