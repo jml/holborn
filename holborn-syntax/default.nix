@@ -4,7 +4,7 @@
 , tasty, tasty-hunit, tasty-quickcheck, text, wai, warp
 }:
 mkDerivation {
-  pname = "holborn-web";
+  pname = "holborn-syntax";
   version = "0.1.0.0";
   src = ./.;
   isLibrary = true;
@@ -17,7 +17,7 @@ mkDerivation {
   testDepends = [
     base basic-prelude tasty tasty-hunit tasty-quickcheck
   ];
-  homepage = "https://github.com/jml/holborn";
+  homepage = "https://bitbucket.com/mumak/holborn";
   description = "Code search";
-  license = stdenv.lib.licenses.gpl3;
+  license = stdenv.lib.licenses.unfree;
 }

@@ -1,14 +1,13 @@
-name:                holborn-web
+name:                holborn-syntax
 version:             0.1.0.0
 synopsis:            Code search
-description:         Web service for browseable, clickable code
-homepage:            https://github.com/jml/holborn
-license:             GPL-3
-license-file:        LICENSE
+description:         Syntax analysis for source code
+homepage:            https://bitbucket.com/mumak/holborn
+license:             AllRightsReserved
 author:              Jonathan M. Lange and Thomas Hunger
 maintainer:          jml@mumak.net
 copyright:           Jonathan M. Lange and Thomas Hunger
-category:            Web
+category:            Language
 build-type:          Simple
 cabal-version:       >=1.10
 
@@ -50,7 +49,7 @@ executable holborn
                      , servant-server >= 0.4 && <0.5
                      , wai >= 3.0 && <3.1
                      , warp >= 3.1 && <3.2
-                     , holborn-web
+                     , holborn-syntax
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
 
@@ -62,7 +61,7 @@ Test-Suite holborn-test
                      , tasty-hunit >= 0.9.0 && <0.10
                      , tasty-quickcheck >= 0.8 && <0.9
                      , basic-prelude >= 0.3.13 && <0.6
-                     , holborn-web
+                     , holborn-syntax
   hs-source-dirs:      tests
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
