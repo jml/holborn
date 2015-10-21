@@ -1,7 +1,7 @@
 # Run like:
 # nix-build  integration-tests.nix
 
-# Use unstable channel from Wed 19th of August:
+# Use Nix 15.09
 with (import (fetchTarball https://github.com/NixOS/nixpkgs-channels/archive/nixos-15.09.tar.gz) {}).pkgs;
 
 let
