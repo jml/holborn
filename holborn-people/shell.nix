@@ -1,5 +1,6 @@
-with (import (fetchTarball https://github.com/NixOS/nixpkgs-channels/archive/cdee2b74eeb6a6bf53a8dabe1c8cba109bf2a4e6.tar.gz) {}).pkgs;
+with (import (fetchTarball https://github.com/NixOS/nixpkgs-channels/archive/nixos-15.09.tar.gz) {}).pkgs;
 let
+# XXX: We probably don't need this any more
   hypothesis = pythonPackages.buildPythonPackage rec {
     name = "hypothesis-1.10.6";
     doCheck = false;
