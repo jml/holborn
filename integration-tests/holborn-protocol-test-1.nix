@@ -12,7 +12,7 @@ let
 in
 stdenv.mkDerivation {
   name = "integration-tests";
-  buildDepends = [ holborn-repo git systemd ];
+  buildDepends = [ holborn-repo git ];
   srcs = ./.;
   phases = "unpackPhase buildPhase";
   buildPhase = ''
