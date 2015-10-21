@@ -6,6 +6,7 @@ with (import (fetchTarball https://github.com/NixOS/nixpkgs-channels/archive/nix
 
 let
   holborn-repo = haskellPackages.callPackage ../holborn-repo {};
+  holborn-api = haskellPackages.callPackage ../holborn-api {};
   test-repo = callPackage ./test-repo.nix {};
   holborn-openssh-source = fetchgitPrivate {
     url = "git@bitbucket.org:tehunger/holborn-ssh.git";
@@ -39,17 +40,18 @@ stdenv.mkDerivation {
       # Run ssh + repo server
       ${holborn-ssh}/bin/sshd -D -e -f ${holborn-ssh-testconfig} &
       REPO=${test-repo} ${holborn-repo}/bin/holborn &
+      REPO=${test-repo} ${holborn-api}/bin/holborn-api-server &
 
       # Kill server when test is done
       trap 'kill $(jobs -p)' EXIT
 
       # TODO wait for servers to respond instead of sleep 1
-      sleep 1s
+      sleep 2s
 
       # Clone the test repository
       mkdir $out
       pushd $out
-      git clone --verbose ssh://127.0.0.1:3333/org/hello >> $out/integration-test-log
+      git clone --verbose git://127.0.0.1:3333/org/hello >> $out/integration-test-log
       popd
 
       # The same content?

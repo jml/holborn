@@ -6,7 +6,6 @@ version:             0.1.0.0
 -- synopsis:
 -- description:
 license:             AllRightsReserved
-license-file:        LICENSE
 author:              Jonathan M. Lange and Thomas Hunger
 maintainer:          tehunger@gmail.com
 -- copyright:
