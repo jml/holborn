@@ -28,7 +28,7 @@ library
                      , language-python >= 0.5.0 && <0.6
                      , containers >= 0.5 && <0.6
                      , mtl >= 2.2 && <2.3
-                     , pretty-show
+                     , pretty-error
   hs-source-dirs:      lib
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude

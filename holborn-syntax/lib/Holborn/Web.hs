@@ -8,9 +8,11 @@ module Holborn.Web
 
 import BasicPrelude
 
-import Data.ByteString.Char8 (pack, unpack)
+import Data.ByteString.Char8 (unpack)
 import qualified Data.List as List
 import Data.Maybe (fromJust)
+
+import PrettyError (assertRight, fromRight)
 
 import Text.Blaze (ToMarkup)
 import Text.Blaze.Html (Html, toHtml)
@@ -21,7 +23,6 @@ import qualified Text.Blaze.Html5.Attributes as A
 import Text.Highlighter.Lexer (runLexer)
 import Text.Highlighter.Lexers (lexers)
 import Text.Highlighter.Types (Token(tText))
-import Text.Show.Pretty (ppShow)
 
 import Holborn.Scope (ID)
 import Holborn.Style (monokai)
@@ -39,18 +40,6 @@ leftMergeBy match (x:xs) allY@(y:ys) = do
   let (matched, ys') = if match x y then (Just y, ys) else (Nothing, allY)
   rest <- leftMergeBy match xs ys'
   return $ (x, matched):rest
-
-
--- TODO: Use the pretty-error package for this:
--- https://hackage.haskell.org/package/pretty-error
-assertRight :: Show a => Text -> Either a b -> b
-assertRight _ (Right r) = r
-assertRight message (Left e) = terror $ message ++ ": " ++ decodeUtf8 (pack (ppShow e))
-
-
-fromRight :: Show a => Either a b -> b
-fromRight (Left e) = terror $ show e
-fromRight (Right r) = r
 
 
 -- TODO: Move these to the Python module
