@@ -32,6 +32,7 @@ import           Pipes.Safe (SafeT)
 import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import           Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..), ServantErr, Server, Raw)
 import           Text.Printf (printf)
+import System.IO (stdout, hFlush)
 
 data Config = Config
     { repoRoot :: String

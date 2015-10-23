@@ -1,6 +1,9 @@
-{ mkDerivation, base, basic-prelude, blaze-builder, bytestring
-, either, envparse, http-types, pipes, pipes-safe, pipes-shell
-, pipes-zlib, servant, servant-server, stdenv, time, wai, warp
+{ mkDerivation, aeson, async, base, basic-prelude, blaze-builder
+, bytestring, either, envparse, http-types, lens-family-core, mtl
+, network, network-simple, pipes, pipes-aeson, pipes-bytestring
+, pipes-cliff, pipes-concurrency, pipes-network, pipes-parse
+, pipes-safe, pipes-shell, pipes-zlib, process, servant
+, servant-server, stdenv, stm, stm-chans, time, wai, warp
 }:
 mkDerivation {
   pname = "holborn-repo";
@@ -9,9 +12,11 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   buildDepends = [
-    base basic-prelude blaze-builder bytestring either envparse
-    http-types pipes pipes-safe pipes-shell pipes-zlib servant
-    servant-server time wai warp
+    aeson async base basic-prelude blaze-builder bytestring either
+    envparse http-types lens-family-core mtl network network-simple
+    pipes pipes-aeson pipes-bytestring pipes-cliff pipes-concurrency
+    pipes-network pipes-parse pipes-safe pipes-shell pipes-zlib process
+    servant servant-server stm stm-chans time wai warp
   ];
   license = stdenv.lib.licenses.unfree;
 }

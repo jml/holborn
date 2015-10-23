@@ -27,7 +27,7 @@ let
 in
 stdenv.mkDerivation {
   name = "integration-tests";
-  buildDepends = [ holborn-repo git holborn-ssh ];
+  buildDepends = [ git holborn-ssh ];
   srcs = ./.;
   phases = "unpackPhase buildPhase";
   buildPhase = ''
@@ -39,8 +39,8 @@ stdenv.mkDerivation {
 
       # Run ssh + repo server
       ${holborn-ssh}/bin/sshd -D -e -f ${holborn-ssh-testconfig} &
-      REPO=${test-repo} ${holborn-repo}/bin/holborn &
       REPO=${test-repo} ${holborn-api}/bin/holborn-api-server &
+      REPO=${test-repo} ${holborn-repo}/bin/holborn &
 
       # Kill server when test is done
       trap 'kill $(jobs -p)' EXIT
@@ -51,7 +51,7 @@ stdenv.mkDerivation {
       # Clone the test repository
       mkdir $out
       pushd $out
-      git clone --verbose git://127.0.0.1:3333/org/hello >> $out/integration-test-log
+      git clone --verbose ssh://127.0.0.1:3333/org/hello >> $out/integration-test-log
       popd
 
       # The same content?

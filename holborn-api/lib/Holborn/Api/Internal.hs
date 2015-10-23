@@ -62,7 +62,8 @@ checkKey r = do
 checkRepoAccess :: CheckRepoAccessRequest -> EitherT ServantErr IO CheckRepoAccessResponse
 checkRepoAccess r = do
     liftIO $ print ("checkRepoAccess", r)
-    return $ CheckRepoAccessResponse True "nc 127.0.0.1 8080"
+    liftIO $ hFlush stdout
+    return $ CheckRepoAccessResponse True "(echo -n '{\"name\": \"testme\"}' && cat) | nc 127.0.0.1 8082"
 
 server :: Server API
 server = checkKey
