@@ -21,6 +21,8 @@ import Data.Aeson (FromJSON, ToJSON(..), (.=), object)
 import Servant ((:>), (:<|>)(..), Post, ReqBody, JSON, ServantErr, Server)
 import qualified Data.Map.Strict as DMS
 import Control.Monad.Trans.Either (EitherT)
+import qualified Data.Attoparsec.Text as AT
+import qualified Data.Attoparsec.Combinator as AT
 
 import System.IO (stdout, hFlush)
 
@@ -59,11 +61,73 @@ checkKey r = do
        Just username -> CheckKeyResponse True username
        _ -> terror "TODO return error for checkKey"
 
+
+data SSHCommandLine =
+      GitReceivePack { orgOrUser :: Text, repo :: Text }
+    | GitUploadPack { orgOrUser :: Text, repo :: Text }
+    | Invalid Text
+    deriving Show
+
+-- There are two acceptable commands:
+--   "git-upload-pack '/org/hello'"
+--   "git-receive-pack '/org/hello'"
+-- For all other commands we can send back futurama quotes.
+--
+-- TODO TODO - this is a security sensitive piece (gatekeeper for a
+-- remote ssh trying to run random commands) and as such it needs
+-- quickchecking!
+parseSSHCommand :: AT.Parser SSHCommandLine
+parseSSHCommand =
+    upload <|> receive <|> (fmap Invalid AT.takeText)
+  where
+    upload = do
+        _ <- AT.string "git-upload-pack '"
+        (org, user) <- repo
+        return (GitUploadPack org user)
+    receive = do
+        _ <- AT.string "git-receive-pack '"
+        (org, user) <- repo
+        return (GitReceivePack org user)
+    repo = do
+        AT.skipWhile (== '/') -- skip optional leading /
+        org <- AT.takeWhile1 (/= '/')
+        _ <- AT.char '/'
+        user <- AT.takeWhile1 (/= '\'')
+        _ <- AT.char '\''
+        AT.endOfInput
+        return (org, user)
+
 checkRepoAccess :: CheckRepoAccessRequest -> EitherT ServantErr IO CheckRepoAccessResponse
-checkRepoAccess r = do
-    liftIO $ print ("checkRepoAccess", r)
+checkRepoAccess request = do
+    let Right cmd = AT.parseOnly parseSSHCommand (command request)
+    liftIO $ print ("checkRepoAccess", request)
+    liftIO $ print cmd
     liftIO $ hFlush stdout
-    return $ CheckRepoAccessResponse True "(echo -n '{\"name\": \"testme\"}' && cat) | nc 127.0.0.1 8082"
+    -- TODO - this is where we'd stick actual access controls, rate
+    -- limiting etc.
+
+    -- OpenSSH runs the command we send in bash, so we can use common
+    -- shell muckery to first send the metadata and then do a
+    -- bidirectional pipe.
+    return $ case cmd of
+        GitReceivePack org repo ->
+            CheckRepoAccessResponse True (
+                concat ["(echo -n '{\"command\": \"git-receive-pack\", \"org\": \""
+                       , org
+                       , "\", \"repo\": \""
+                       , repo
+                       ,"\"}' && cat) | nc 127.0.0.1 8082"
+                       ])
+        GitUploadPack org repo ->
+            CheckRepoAccessResponse True (
+                concat ["(echo -n '{\"command\": \"git-upload-pack\", \"org\": \""
+                       , org
+                       , "\", \"repo\": \""
+                       , repo
+                       ,"\"}' && cat) | nc 127.0.0.1 8082"
+                       ])
+        Invalid _ ->
+            CheckRepoAccessResponse True "echo 'a meal is a meal'"
 
 server :: Server API
 server = checkKey

@@ -25,6 +25,7 @@ library
                      , aeson >=0.9
                      , containers >=0.5
                      , either >4.2
+                     , attoparsec >=0.12
 
   hs-source-dirs:      lib
   default-language:    Haskell2010
