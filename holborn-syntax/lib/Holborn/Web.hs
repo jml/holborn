@@ -7,9 +7,9 @@ module Holborn.Web
 
 import BasicPrelude
 
+import Control.Error (fmapL, note)
 import Data.ByteString.Char8 (unpack)
 import qualified Data.List as List
-import Data.Maybe (fromJust)
 
 import PrettyError (assertRight, fromRight)
 
@@ -32,18 +32,12 @@ import qualified Holborn.Python as P
 
 
 -- TODO: Move these to the Python module
-lexPythonCode :: Text -> [Token]
-lexPythonCode code =
-  fromRight $ runLexer pythonLexer (encodeUtf8 code)
-  where pythonLexer = fromJust $ List.lookup ".py" lexers
-
-
 annotatePythonCode :: Text -> AnnotatedSource ID
-annotatePythonCode code =
-  let annotations = assertRight "Could not parse" (P.annotateSourceCode code)
-      highlighterTokens = lexPythonCode code
-  in
-    annotateTokens highlighterTokens annotations
+annotatePythonCode code = fromRight $ do
+  pythonLexer <- note "Could not load Python lexer" $ List.lookup ".py" lexers
+  highlighterTokens <- fmapL show $ runLexer pythonLexer (encodeUtf8 code)
+  annotations <- fmapL show $ P.annotateSourceCode code
+  return $ annotateTokens highlighterTokens annotations
 
 
 annotateTokens :: Show a => [Token] -> [(String, Maybe (Annotation a))] -> AnnotatedSource a
