@@ -15,6 +15,7 @@ library
   exposed-modules:     Holborn.Web
                      , Holborn.Style
                      , Holborn.HtmlFormat
+                     , Holborn.Internal
                      , Holborn.Types
                      , Holborn.Scope
                      , Holborn.Python

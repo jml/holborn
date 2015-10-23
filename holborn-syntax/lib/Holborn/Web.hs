@@ -3,7 +3,6 @@ module Holborn.Web
        , codePage
        , annotatePythonCode
        , annotateTokens
-       , leftMergeBy
        ) where
 
 import BasicPrelude
@@ -24,22 +23,12 @@ import Text.Highlighter.Lexer (runLexer)
 import Text.Highlighter.Lexers (lexers)
 import Text.Highlighter.Types (Token(tText))
 
+import Holborn.Internal (leftMergeBy)
 import Holborn.Scope (ID)
 import Holborn.Style (monokai)
 import Holborn.Types (Annotation, AnnotatedSource(..), HolbornToken(..))
 
 import qualified Holborn.Python as P
-
-
--- TODO: Move this to a utilities module.
-leftMergeBy :: (a -> b -> Bool) -> [a] -> [b] -> Either [b] [(a, Maybe b)]
-leftMergeBy _ [] [] = return []
-leftMergeBy _ [] ys = Left ys
-leftMergeBy _ xs [] = return [(x, Nothing) | x <- xs]
-leftMergeBy match (x:xs) allY@(y:ys) = do
-  let (matched, ys') = if match x y then (Just y, ys) else (Nothing, allY)
-  rest <- leftMergeBy match xs ys'
-  return $ (x, matched):rest
 
 
 -- TODO: Move these to the Python module
