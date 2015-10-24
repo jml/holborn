@@ -308,6 +308,22 @@ nestedDel =
       ]
 
 
+-- | language-python < 0.5.2 does not handle unicode literals. Make sure that
+-- the version we are using does.
+unicodeLiterals :: TestTree
+unicodeLiterals =
+  testAST "unicode literals" input output
+  where
+    input =
+      [ "foo = u'foo'"
+      , "bar = u\"bar\""
+      ]
+    output =
+      [ b "foo" 1, n "= u'foo'"
+      , b "bar" 2, n "= u\"bar\""
+      ]
+
+
 -- XXX: Add a test for nested functions: would be a handy proof-of-concept for
 -- scope stuff.
 
@@ -329,4 +345,5 @@ tests =
   , redefinition
   , del
   , nestedDel
+  , unicodeLiterals
   ]
