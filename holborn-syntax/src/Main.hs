@@ -19,8 +19,8 @@ import Servant.HTML.Blaze
 -- Get the typeclass instances for converting Holborn stuff to HTML.
 import Holborn.HtmlFormat ()
 import Holborn.Scope (ID)
+import Holborn.Syntax (annotatePythonCode)
 import Holborn.Types (AnnotatedSource)
-import Holborn.Web (annotatePythonCode)
 
 
 -- Simplistic demo that renders a single Python file with links from its
@@ -46,9 +46,6 @@ server = return (annotatePythonCode examplePython)
 
 app :: Application
 app = serve rootAPI server
-
---    runSpock 8080 $ spockT id $
---    get root $ blaze $ codePage $ annotatePythonCode examplePython
 
 main :: IO ()
 main = run 8080 app
