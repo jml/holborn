@@ -8,19 +8,9 @@ import BasicPrelude
 
 import Network.Wai (Application)
 import Network.Wai.Handler.Warp (run)
-import Servant
-  ( serve
-  , Get
-  , Proxy(..)
-  , Server
-  )
-import Servant.HTML.Blaze
+import Servant (serve)
 
--- Get the typeclass instances for converting Holborn stuff to HTML.
-import Holborn.HtmlFormat ()
-import Holborn.Scope (ID)
-import Holborn.Syntax (annotatePythonCode)
-import Holborn.Types (AnnotatedSource)
+import Holborn.Web (rootAPI, server)
 
 
 -- Simplistic demo that renders a single Python file with links from its
@@ -35,17 +25,8 @@ import Holborn.Types (AnnotatedSource)
 import ExampleData (examplePython)
 
 
-type RootAPI = Get '[HTML] (AnnotatedSource ID)
-
-
-rootAPI :: Proxy RootAPI
-rootAPI = Proxy
-
-server :: Server RootAPI
-server = return (annotatePythonCode examplePython)
-
 app :: Application
-app = serve rootAPI server
+app = serve rootAPI (server examplePython)
 
 main :: IO ()
 main = run 8080 app
