@@ -13,8 +13,10 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Holborn.Web
+                     , Holborn.Syntax
                      , Holborn.Style
                      , Holborn.HtmlFormat
+                     , Holborn.Internal
                      , Holborn.Types
                      , Holborn.Scope
                      , Holborn.Python
@@ -23,12 +25,16 @@ library
                      , highlighter2 >= 0.2 && <0.3
                      , blaze-html >= 0.8 && <0.9
                      , blaze-markup >= 0.7 && <0.8
+                     , errors >= 2.0
                      , text >= 1.2 && <1.3
                      , bytestring >= 0.10 && <0.11
                      , language-python >= 0.5.0 && <0.6
+                     , servant >= 0.4 && <0.5
+                     , servant-blaze >= 0.4 && <0.5
+                     , servant-server >= 0.4 && <0.5
                      , containers >= 0.5 && <0.6
                      , mtl >= 2.2 && <2.3
-                     , pretty-show
+                     , pretty-error
   hs-source-dirs:      lib
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
@@ -44,8 +50,6 @@ executable holborn
                      , basic-prelude >= 0.3.13 && <0.6
                      , blaze-html >= 0.8 && <0.9
                      , bytestring >= 0.10.0
-                     , servant >= 0.4 && <0.5
-                     , servant-blaze >= 0.4 && <0.5
                      , servant-server >= 0.4 && <0.5
                      , wai >= 3.0 && <3.1
                      , warp >= 3.1 && <3.2

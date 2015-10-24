@@ -1,6 +1,6 @@
 { mkDerivation, base, basic-prelude, blaze-html, blaze-markup
-, bytestring, containers, highlighter2, language-python, mtl
-, pretty-show, servant, servant-blaze, servant-server, stdenv
+, bytestring, containers, errors, highlighter2, language-python
+, mtl, pretty-error, servant, servant-blaze, servant-server, stdenv
 , tasty, tasty-hunit, tasty-quickcheck, text, wai, warp
 }:
 mkDerivation {
@@ -11,8 +11,8 @@ mkDerivation {
   isExecutable = true;
   buildDepends = [
     base basic-prelude blaze-html blaze-markup bytestring containers
-    highlighter2 language-python mtl pretty-show servant servant-blaze
-    servant-server text wai warp
+    errors highlighter2 language-python mtl pretty-error servant
+    servant-blaze servant-server text wai warp
   ];
   testDepends = [
     base basic-prelude tasty tasty-hunit tasty-quickcheck

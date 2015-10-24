@@ -1,16 +1,29 @@
+{-| Web frontend to syntax analyzer.
+
+Intended to provide:
+  1. An API for other, user-facing frontends to call out to.
+  2. A development server for iterating on syntax highlighting.
+
+-}
+
+{-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE TypeFamilies  #-}
+{-# LANGUAGE TypeOperators #-}
+
 module Holborn.Web
-       ( HolbornToken
-       , codePage
-       , annotatePythonCode
-       , annotateTokens
-       , leftMergeBy
+       ( RootAPI
+       , rootAPI
+       , server
        ) where
 
 import BasicPrelude
 
-import Data.ByteString.Char8 (pack, unpack)
-import qualified Data.List as List
-import Data.Maybe (fromJust)
+import Servant
+  ( Get
+  , Proxy(..)
+  , Server
+  )
+import Servant.HTML.Blaze
 
 import Text.Blaze (ToMarkup)
 import Text.Blaze.Html (Html, toHtml)
@@ -18,69 +31,26 @@ import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
-import Text.Highlighter.Lexer (runLexer)
-import Text.Highlighter.Lexers (lexers)
-import Text.Highlighter.Types (Token(tText))
-import Text.Show.Pretty (ppShow)
-
+-- Get the typeclass instances for converting Holborn stuff to HTML.
+import Holborn.HtmlFormat ()
 import Holborn.Scope (ID)
 import Holborn.Style (monokai)
-import Holborn.Types (Annotation, AnnotatedSource(..), HolbornToken(..))
-
-import qualified Holborn.Python as P
-
-
--- TODO: Move this to a utilities module.
-leftMergeBy :: (a -> b -> Bool) -> [a] -> [b] -> Either [b] [(a, Maybe b)]
-leftMergeBy _ [] [] = return []
-leftMergeBy _ [] ys = Left ys
-leftMergeBy _ xs [] = return [(x, Nothing) | x <- xs]
-leftMergeBy match (x:xs) allY@(y:ys) = do
-  let (matched, ys') = if match x y then (Just y, ys) else (Nothing, allY)
-  rest <- leftMergeBy match xs ys'
-  return $ (x, matched):rest
+import Holborn.Syntax (annotatePythonCode)
+import Holborn.Types (AnnotatedSource)
 
 
--- TODO: Use the pretty-error package for this:
--- https://hackage.haskell.org/package/pretty-error
-assertRight :: Show a => Text -> Either a b -> b
-assertRight _ (Right r) = r
-assertRight message (Left e) = terror $ message ++ ": " ++ decodeUtf8 (pack (ppShow e))
+type RootAPI = Get '[HTML] (AnnotatedSource ID)
 
 
-fromRight :: Show a => Either a b -> b
-fromRight (Left e) = terror $ show e
-fromRight (Right r) = r
+rootAPI :: Proxy RootAPI
+rootAPI = Proxy
 
 
--- TODO: Move these to the Python module
-lexPythonCode :: Text -> [Token]
-lexPythonCode code =
-  fromRight $ runLexer pythonLexer (encodeUtf8 code)
-  where pythonLexer = fromJust $ List.lookup ".py" lexers
+server :: Text -> Server RootAPI
+server pythonSourceCode = return (annotatePythonCode pythonSourceCode)
 
 
-annotatePythonCode :: Text -> AnnotatedSource ID
-annotatePythonCode code =
-  let annotations = assertRight "Could not parse" (P.annotateSourceCode code)
-      highlighterTokens = lexPythonCode code
-  in
-    annotateTokens highlighterTokens annotations
-
-
-annotateTokens :: Show a => [Token] -> [(String, Maybe (Annotation a))] -> AnnotatedSource a
-annotateTokens highlighterTokens semanticTokens =
-  AnnotatedSource $ map (uncurry mergeTokens) (assertRight "Could not match AST data to tokenized data" mergeResult)
-  where
-    mergeResult = leftMergeBy matchToken highlighterTokens (justSecond semanticTokens)
-    matchToken token (name, _) = unpack (tText token) == name
-    mergeTokens token = HolbornToken token . map getReference
-    getReference (_, annotation) = annotation
-    justSecond = mapMaybe (\(x, y) -> (,) x <$> y)
-
-
--- | Given a rendered HTML block of code and return a full HTML with
--- highlighting.
+-- | Given a rendered HTML block of code, return a full HTML with highlighting.
 codePage :: ToMarkup a => a -> Html
 codePage codeHtml = do
   H.head $ do
