@@ -59,7 +59,25 @@ syntaxAPI = Proxy
 -- regular character set).
 type PathSegment = Text
 
-data Directory = Dir FilePath [PathSegment]
+data Directory = Directory { _rootDir    :: FilePath
+                           , _currentDir :: [PathSegment]
+                           , _children   :: [PathSegment]
+                           }
+
+
+makeDirectory :: FilePath -> [PathSegment] -> IO Directory
+makeDirectory rootDirectory segments = do
+  children <- getDirectoryContents (rootDirectory </> joinSegments segments)
+  return $ Directory rootDirectory segments [fromString child | child@(x:_) <- children, x /= '.']
+
+
+directoryChildren :: Directory -> [PathSegment]
+directoryChildren = _children
+
+
+directoryPath :: Directory -> FilePath
+directoryPath dir = (_rootDir dir) </> joinSegments (_currentDir dir)
+
 
 -- TODO: Crappy, temporary API. We actually want to allow for multiple path
 -- segments, but that requires some mucking around with Servant which is more
@@ -73,13 +91,18 @@ type PathAPI =
   :<|> Capture "4a" PathSegment :> Capture "4b" PathSegment :> Capture "4c" PathSegment :> Capture "4d" PathSegment :> Get '[HTML] HolbornSource
   :<|> Capture "5a" PathSegment :> Capture "5b" PathSegment :> Capture "5c" PathSegment :> Capture "5d" PathSegment :> Capture "5e" PathSegment :> Get '[HTML] HolbornSource
 
+
 type PathHandler = EitherT ServantErr IO
+
+
+joinSegments :: [PathSegment] -> FilePath
+joinSegments = joinPath . map textToString
 
 
 -- | Given a base path and a list of path segments, render the code found on
 -- disk at that path.
 renderCode :: FilePath -> [PathSegment] -> PathHandler HolbornSource
-renderCode base segments = renderCode' $ base </> joinPath (map textToString segments)
+renderCode base segments = renderCode' $ base </> joinSegments segments
 
 
 -- | Given a path to a file on disk, render the code.
@@ -99,11 +122,11 @@ browseCode basePath =
   :<|> (\a b c d e -> renderCode basePath [a, b, c, d, e])
 
 
+-- XXX: I've fallen victim to one of the classic blunders. Current
+-- implementation allows ".." to jailbreak path.
+-- TODO: Linkify these
 browseFiles :: FilePath -> PathHandler Directory
-browseFiles basePath = do
-  files <- liftIO $ getDirectoryContents basePath
-  return (Dir basePath (map fromString files))
-
+browseFiles basePath = liftIO $ makeDirectory basePath []
 
 -- | Create a server for SyntaxAPI
 server :: Text -> FilePath -> Server SyntaxAPI
@@ -124,6 +147,13 @@ codePage codeHtml = do
 
 instance ToMarkup Directory where
 
-  toMarkup (Dir basePath segments) = do
-    H.h1 (H.toHtml basePath)
-    H.ul (mapM_ (H.li . H.toHtml) segments)
+  toMarkup directory = do
+    H.h1 (H.toHtml (directoryPath directory))
+    H.ul (mapM_ (H.li . linkify) (directoryChildren directory))
+    where
+      -- TODO: Use safe links
+      -- TODO: Correctly link to child page, rather than sibling page, when
+      -- there's no trailing slash.
+      linkify segment =
+        H.a ! A.href (H.toValue url) $ H.toHtml segment
+        where url = segment

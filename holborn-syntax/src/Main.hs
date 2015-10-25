@@ -33,6 +33,7 @@ loadConfig =
   Env.parse (Env.header "run a holborn syntax server") $
   Config <$> Env.var Env.auto "PORT"       (Env.def 8080 <> Env.help "Port to listen on")
          -- XXX: Better name than "FILES_PATH"
+         -- XXX: Handle the case where it's not a directory / doesn't exist, etc.
          <*> Env.var Env.str  "FILES_PATH" (Env.def "."  <> Env.help "Location of source files to browse")
 
 
