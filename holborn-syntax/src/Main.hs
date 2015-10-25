@@ -22,7 +22,7 @@ import ExampleData (examplePython)
 -- a Warp.Settings, and another thing that handles application- or
 -- library-specific settings. This would then allow a standard /configz style
 -- page, which would be super-useful for debugging. However, keep it simple
--- for now: just pass relevant stuff as arguments to functions.
+-- for now: just pass relevant stuff as arguments to functions. -- jml
 
 data Config = Config { _port :: Warp.Port
                      , _codePath :: FilePath
@@ -42,7 +42,9 @@ app demoCode basePath = serve syntaxAPI (server demoCode basePath)
 
 warpSettings :: Warp.Port -> Warp.Settings
 warpSettings port =
-  (Warp.setPort port Warp.defaultSettings)
+  Warp.setBeforeMainLoop printPort (Warp.setPort port Warp.defaultSettings)
+  where
+    printPort = putStrLn $ "holborn-syntax running at http://localhost:" ++ (show port) ++ "/"
 
 
 main :: IO ()
