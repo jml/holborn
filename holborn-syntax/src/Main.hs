@@ -16,7 +16,6 @@ import Holborn.Web (rootAPI, server)
 -- Simplistic demo that renders a single Python file with links from its
 -- references to its bindings.
 
--- TODO: Read the Python file from disk
 -- TODO: Render multiple Python files
 -- TODO: Have this be a purely JSON API and have client-side code do the rendering
 -- TODO: Specify the path to Python files via an environment variable
@@ -25,8 +24,8 @@ import Holborn.Web (rootAPI, server)
 import ExampleData (examplePython)
 
 
-app :: Application
-app = serve rootAPI (server examplePython)
+app :: Text -> FilePath -> Application
+app demoCode basePath = serve rootAPI (server demoCode basePath)
 
 main :: IO ()
-main = run 8080 app
+main = run 8080 (app examplePython ".")

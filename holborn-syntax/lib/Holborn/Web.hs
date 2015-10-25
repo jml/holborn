@@ -18,12 +18,10 @@ module Holborn.Web
 
 import BasicPrelude
 
+import Control.Monad.Trans.Either (EitherT)
 import Servant
-  ( Get
-  , Proxy(..)
-  , Server
-  )
 import Servant.HTML.Blaze
+import System.FilePath (joinPath)
 
 import Text.Blaze (ToMarkup)
 import Text.Blaze.Html (Html, toHtml)
@@ -39,17 +37,57 @@ import Holborn.Syntax (annotatePythonCode)
 import Holborn.Types (AnnotatedSource)
 
 
-type RootAPI = Get '[HTML] (AnnotatedSource ID)
+-- TODO: Use a Config structure like we've used for holborn-repo.
+
+-- QUESTION: Can we compose configuration structures so that the
+-- server-specific stuff (like PORT) is separate from the application-specific
+-- stuff (like path to code)? Is it even worth it?
+
+-- QUESTION: Should we have a Config object (and presumably ReaderT monad), or
+-- should we just pass parameters around as needed?
+
+-- TODO: We can probably get rid of 'demo' real soon now.
+-- TODO: RootAPI is a terrible name. Change to SyntaxAPI, maybe?
+type RootAPI =
+       "demo"  :> Get '[HTML] (AnnotatedSource ID)
+  :<|> "files" :> PathAPI
 
 
 rootAPI :: Proxy RootAPI
 rootAPI = Proxy
 
 
-server :: Text -> Server RootAPI
-server pythonSourceCode = return (annotatePythonCode pythonSourceCode)
+-- TODO: Is there a better type for this (e.g. one that ensures no slashes,
+-- regular character set).
+type PathSegment = Text
+
+-- TODO: Crappy, temporary API. We actually want to allow for multiple path
+-- segments, but that requires some mucking around with Servant which is more
+-- than we want to do right now.
+type PathAPI = Capture "single" PathSegment :> Get '[HTML] (AnnotatedSource ID)
+
+type PathHandler = EitherT ServantErr IO
 
 
+-- | Given a base path and a list of path segments, render the code found on
+-- disk at that path.
+renderCode :: FilePath -> [PathSegment] -> PathHandler (AnnotatedSource ID)
+renderCode base segments = renderCode' $ base </> joinPath (map textToString segments)
+
+
+-- | Given a path to a file on disk, render the code.
+renderCode' :: FilePath -> PathHandler (AnnotatedSource ID)
+renderCode' path = do
+  sourceCode <- liftIO $ readFile path  -- TODO: Handle error.
+  return $ annotatePythonCode sourceCode
+
+
+-- | Create a server for RootAPI
+server :: Text -> FilePath -> Server RootAPI
+server pythonSourceCode basePath = return (annotatePythonCode pythonSourceCode) :<|> \x -> renderCode basePath [x]
+
+
+-- TODO: Either use this or kill it with fire.
 -- | Given a rendered HTML block of code, return a full HTML with highlighting.
 codePage :: ToMarkup a => a -> Html
 codePage codeHtml = do
