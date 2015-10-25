@@ -31,10 +31,10 @@ import qualified Text.Blaze.Html5.Attributes as A
 
 -- Get the typeclass instances for converting Holborn stuff to HTML.
 import Holborn.HtmlFormat ()
-import Holborn.Scope (ID)
 import Holborn.Style (monokai)
-import Holborn.Syntax (annotatePythonCode)
-import Holborn.Types (AnnotatedSource)
+import Holborn.Syntax ( HolbornSource
+                      , annotatePythonCode
+                      )
 
 
 -- TODO: Use a Config structure like we've used for holborn-repo.
@@ -49,7 +49,7 @@ import Holborn.Types (AnnotatedSource)
 -- TODO: We can probably get rid of 'demo' real soon now.
 -- TODO: RootAPI is a terrible name. Change to SyntaxAPI, maybe?
 type RootAPI =
-       "demo"  :> Get '[HTML] (AnnotatedSource ID)
+       "demo"  :> Get '[HTML] HolbornSource
   :<|> "files" :> PathAPI
 
 
@@ -65,21 +65,21 @@ type PathSegment = Text
 -- segments, but that requires some mucking around with Servant which is more
 -- than we want to do right now.
 type PathAPI =
-       Capture "single" PathSegment :> Get '[HTML] (AnnotatedSource ID)
-  :<|> Capture "double1" PathSegment :> Capture "double2" PathSegment :> Get '[HTML] (AnnotatedSource ID)
-  :<|> Capture "triple1" PathSegment :> Capture "triple2" PathSegment :> Capture "triple3" PathSegment :> Get '[HTML] (AnnotatedSource ID)
+       Capture "single" PathSegment :> Get '[HTML] HolbornSource
+  :<|> Capture "double1" PathSegment :> Capture "double2" PathSegment :> Get '[HTML] HolbornSource
+  :<|> Capture "triple1" PathSegment :> Capture "triple2" PathSegment :> Capture "triple3" PathSegment :> Get '[HTML] HolbornSource
 
 type PathHandler = EitherT ServantErr IO
 
 
 -- | Given a base path and a list of path segments, render the code found on
 -- disk at that path.
-renderCode :: FilePath -> [PathSegment] -> PathHandler (AnnotatedSource ID)
+renderCode :: FilePath -> [PathSegment] -> PathHandler HolbornSource
 renderCode base segments = renderCode' $ base </> joinPath (map textToString segments)
 
 
 -- | Given a path to a file on disk, render the code.
-renderCode' :: FilePath -> PathHandler (AnnotatedSource ID)
+renderCode' :: FilePath -> PathHandler HolbornSource
 renderCode' path = do
   sourceCode <- liftIO $ readFile path  -- TODO: Handle error.
   return $ annotatePythonCode sourceCode
