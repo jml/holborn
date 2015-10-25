@@ -22,10 +22,7 @@ import Control.Monad.Except (throwError)
 import Control.Monad.Trans.Either (EitherT)
 import Servant
 import Servant.HTML.Blaze
-import System.Directory ( getDirectoryContents
-                        , doesDirectoryExist
-                        , doesFileExist
-                        )
+import System.Directory (getDirectoryContents)
 import System.FilePath (joinPath)
 
 import Text.Blaze (ToMarkup(..))
@@ -36,6 +33,7 @@ import qualified Text.Blaze.Html5.Attributes as A
 
 -- Get the typeclass instances for converting Holborn stuff to HTML.
 import Holborn.HtmlFormat ()
+import Holborn.Internal (FileType(..), getFileType)
 import Holborn.Style (monokai)
 import Holborn.Syntax ( HolbornSource
                       , annotatePythonCode
@@ -109,11 +107,11 @@ joinSegments = joinPath . map textToString
 -- found on disk at that path or a directory listing for that path.
 renderResource :: FilePath -> [PathSegment] -> PathHandler PathResource
 renderResource base segments = do
-  (isDir, isFile) <- liftIO $ (,) <$> doesDirectoryExist fullPath <*> doesFileExist fullPath
-  case (isDir, isFile) of
-    (True, False) -> liftIO (DirResource <$> makeFolder base segments)
-    (False, True) -> FileResource <$> renderCode fullPath
-    _ -> throwError $ err404 { errBody = "no such resource" }
+  fileType <- liftIO (getFileType fullPath)
+  case fileType of
+    Just File -> FileResource <$> renderCode fullPath
+    Just Directory -> liftIO (DirResource <$> makeFolder base segments)
+    Nothing -> throwError $ err404 { errBody = "no such resource" }
 
   where
     fullPath = base </> joinSegments segments
