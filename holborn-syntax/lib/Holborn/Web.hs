@@ -59,30 +59,30 @@ syntaxAPI :: Proxy SyntaxAPI
 syntaxAPI = Proxy
 
 
-data PathResource = DirResource Directory | FileResource HolbornSource
+data PathResource = DirResource Folder | FileResource HolbornSource
 
 -- TODO: Is there a better type for this (e.g. one that ensures no slashes,
 -- regular character set).
 type PathSegment = Text
 
-data Directory = Directory { _rootDir    :: FilePath
+data Folder = Folder { _rootDir    :: FilePath
                            , _currentDir :: [PathSegment]
                            , _children   :: [PathSegment]
                            }
 
 
-makeDirectory :: FilePath -> [PathSegment] -> IO Directory
-makeDirectory rootDirectory segments = do
+makeFolder :: FilePath -> [PathSegment] -> IO Folder
+makeFolder rootDirectory segments = do
   children <- getDirectoryContents (rootDirectory </> joinSegments segments)
-  return $ Directory rootDirectory segments [fromString child | child@(x:_) <- children, x /= '.']
+  return $ Folder rootDirectory segments [fromString child | child@(x:_) <- children, x /= '.']
 
 
-directoryChildren :: Directory -> [PathSegment]
-directoryChildren = _children
+folderChildren :: Folder -> [PathSegment]
+folderChildren = _children
 
 
-directoryPath :: Directory -> FilePath
-directoryPath dir = (_rootDir dir) </> joinSegments (_currentDir dir)
+folderPath :: Folder -> FilePath
+folderPath dir = (_rootDir dir) </> joinSegments (_currentDir dir)
 
 
 -- TODO: Crappy, temporary API. We actually want to allow for multiple path
@@ -90,7 +90,7 @@ directoryPath dir = (_rootDir dir) </> joinSegments (_currentDir dir)
 -- than we want to do right now. We've chosen max depth of 5 segments because
 -- we want to self-host and that's as deep as the repo goes.
 type PathAPI =
-       Get '[HTML] Directory
+       Get '[HTML] Folder
   :<|> Capture "1a" PathSegment :> Get '[HTML] PathResource
   :<|> Capture "2a" PathSegment :> Capture "2b" PathSegment :> Get '[HTML] PathResource
   :<|> Capture "3a" PathSegment :> Capture "3b" PathSegment :> Capture "3c" PathSegment :> Get '[HTML] PathResource
@@ -111,7 +111,7 @@ renderResource :: FilePath -> [PathSegment] -> PathHandler PathResource
 renderResource base segments = do
   (isDir, isFile) <- liftIO $ (,) <$> doesDirectoryExist fullPath <*> doesFileExist fullPath
   case (isDir, isFile) of
-    (True, False) -> liftIO (DirResource <$> makeDirectory base segments)
+    (True, False) -> liftIO (DirResource <$> makeFolder base segments)
     (False, True) -> FileResource <$> renderCode fullPath
     _ -> throwError $ err404 { errBody = "no such resource" }
 
@@ -139,8 +139,8 @@ browseCode basePath =
 -- XXX: I've fallen victim to one of the classic blunders. Current
 -- implementation allows ".." to jailbreak path.
 -- TODO: Linkify these
-browseFiles :: FilePath -> PathHandler Directory
-browseFiles basePath = liftIO $ makeDirectory basePath []
+browseFiles :: FilePath -> PathHandler Folder
+browseFiles basePath = liftIO $ makeFolder basePath []
 
 -- | Create a server for SyntaxAPI
 server :: Text -> FilePath -> Server SyntaxAPI
@@ -165,11 +165,11 @@ instance ToMarkup PathResource where
   toMarkup (DirResource f)  = toMarkup f
 
 
-instance ToMarkup Directory where
+instance ToMarkup Folder where
 
   toMarkup directory = do
-    H.h1 (H.toHtml (directoryPath directory))
-    H.ul (mapM_ (H.li . linkify) (directoryChildren directory))
+    H.h1 (H.toHtml (folderPath directory))
+    H.ul (mapM_ (H.li . linkify) (folderChildren directory))
     where
       -- TODO: Use safe links
       -- TODO: Correctly link to child page, rather than sibling page, when
