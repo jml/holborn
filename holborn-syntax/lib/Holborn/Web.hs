@@ -83,6 +83,12 @@ folderPath :: Folder -> FilePath
 folderPath dir = (_rootDir dir) </> joinSegments (_currentDir dir)
 
 
+-- XXX: Ideally we'd use safe links here, but we need to de-horribilify the
+-- API types first.
+childURL :: Folder -> PathSegment -> Text
+childURL dir segment = intercalate "/" (["", "files"] ++ _currentDir dir ++ [segment])
+
+
 -- TODO: Crappy, temporary API. We actually want to allow for multiple path
 -- segments, but that requires some mucking around with Servant which is more
 -- than we want to do right now. We've chosen max depth of 5 segments because
@@ -136,7 +142,6 @@ browseCode basePath =
 
 -- XXX: I've fallen victim to one of the classic blunders. Current
 -- implementation allows ".." to jailbreak path.
--- TODO: Linkify these
 browseFiles :: FilePath -> PathHandler Folder
 browseFiles basePath = liftIO $ makeFolder basePath []
 
@@ -170,8 +175,6 @@ instance ToMarkup Folder where
     H.ul (mapM_ (H.li . linkify) (folderChildren directory))
     where
       -- TODO: Use safe links
-      -- TODO: Correctly link to child page, rather than sibling page, when
-      -- there's no trailing slash.
       linkify segment =
-        H.a ! A.href (H.toValue url) $ H.toHtml segment
-        where url = segment
+        H.a ! A.href (H.toValue (url segment)) $ H.toHtml segment
+      url segment = childURL directory segment
