@@ -127,7 +127,14 @@ checkRepoAccess request = do
                        ,"\"}' && cat) | nc 127.0.0.1 8082"
                        ])
         Invalid _ ->
-            CheckRepoAccessResponse True "echo 'a meal is a meal'"
+            CheckRepoAccessResponse True (quotes !! 0)
+  where
+    quotes :: [Text]
+    quotes =
+        [ "echo 'A meal is a meal'"
+        , "echo 'I\'m swelling with patriotic mucus'"
+        , "echo 'Look at me. I\'m Dr. Zoidberg, homeowner'"
+        ]
 
 server :: Server API
 server = checkKey
