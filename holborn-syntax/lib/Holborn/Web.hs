@@ -109,14 +109,11 @@ joinSegments = joinPath . map textToString
 -- found on disk at that path or a directory listing for that path.
 renderResource :: FilePath -> [PathSegment] -> PathHandler PathResource
 renderResource base segments = do
-  isDir <- liftIO $ doesDirectoryExist fullPath
-  if isDir
-    then liftIO (Dir <$> makeDirectory base segments)
-    else do
-      isFile <- liftIO $ doesFileExist fullPath
-      if isFile
-        then File <$> renderCode fullPath
-        else throwError $ err404 { errBody = "no such resource" }
+  (isDir, isFile) <- liftIO $ (,) <$> doesDirectoryExist fullPath <*> doesFileExist fullPath
+  case (isDir, isFile) of
+    (True, False) -> liftIO (Dir <$> makeDirectory base segments)
+    (False, True) -> File <$> renderCode fullPath
+    _ -> throwError $ err404 { errBody = "no such resource" }
 
   where
     fullPath = base </> joinSegments segments
