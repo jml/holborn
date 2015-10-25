@@ -18,10 +18,14 @@ module Holborn.Web
 
 import BasicPrelude
 
+import Control.Monad.Except (throwError)
 import Control.Monad.Trans.Either (EitherT)
 import Servant
 import Servant.HTML.Blaze
-import System.Directory (getDirectoryContents)
+import System.Directory ( getDirectoryContents
+                        , doesDirectoryExist
+                        , doesFileExist
+                        )
 import System.FilePath (joinPath)
 
 import Text.Blaze (ToMarkup(..))
@@ -55,6 +59,8 @@ syntaxAPI :: Proxy SyntaxAPI
 syntaxAPI = Proxy
 
 
+data PathResource = Dir Directory | File HolbornSource
+
 -- TODO: Is there a better type for this (e.g. one that ensures no slashes,
 -- regular character set).
 type PathSegment = Text
@@ -85,11 +91,11 @@ directoryPath dir = (_rootDir dir) </> joinSegments (_currentDir dir)
 -- we want to self-host and that's as deep as the repo goes.
 type PathAPI =
        Get '[HTML] Directory
-  :<|> Capture "1a" PathSegment :> Get '[HTML] HolbornSource
-  :<|> Capture "2a" PathSegment :> Capture "2b" PathSegment :> Get '[HTML] HolbornSource
-  :<|> Capture "3a" PathSegment :> Capture "3b" PathSegment :> Capture "3c" PathSegment :> Get '[HTML] HolbornSource
-  :<|> Capture "4a" PathSegment :> Capture "4b" PathSegment :> Capture "4c" PathSegment :> Capture "4d" PathSegment :> Get '[HTML] HolbornSource
-  :<|> Capture "5a" PathSegment :> Capture "5b" PathSegment :> Capture "5c" PathSegment :> Capture "5d" PathSegment :> Capture "5e" PathSegment :> Get '[HTML] HolbornSource
+  :<|> Capture "1a" PathSegment :> Get '[HTML] PathResource
+  :<|> Capture "2a" PathSegment :> Capture "2b" PathSegment :> Get '[HTML] PathResource
+  :<|> Capture "3a" PathSegment :> Capture "3b" PathSegment :> Capture "3c" PathSegment :> Get '[HTML] PathResource
+  :<|> Capture "4a" PathSegment :> Capture "4b" PathSegment :> Capture "4c" PathSegment :> Capture "4d" PathSegment :> Get '[HTML] PathResource
+  :<|> Capture "5a" PathSegment :> Capture "5b" PathSegment :> Capture "5c" PathSegment :> Capture "5d" PathSegment :> Capture "5e" PathSegment :> Get '[HTML] PathResource
 
 
 type PathHandler = EitherT ServantErr IO
@@ -99,15 +105,26 @@ joinSegments :: [PathSegment] -> FilePath
 joinSegments = joinPath . map textToString
 
 
--- | Given a base path and a list of path segments, render the code found on
--- disk at that path.
-renderCode :: FilePath -> [PathSegment] -> PathHandler HolbornSource
-renderCode base segments = renderCode' $ base </> joinSegments segments
+-- | Given a base path and a list of path segments, render eithre the code
+-- found on disk at that path or a directory listing for that path.
+renderResource :: FilePath -> [PathSegment] -> PathHandler PathResource
+renderResource base segments = do
+  isDir <- liftIO $ doesDirectoryExist fullPath
+  if isDir
+    then liftIO (Dir <$> makeDirectory base segments)
+    else do
+      isFile <- liftIO $ doesFileExist fullPath
+      if isFile
+        then File <$> renderCode fullPath
+        else throwError $ err404 { errBody = "no such resource" }
+
+  where
+    fullPath = base </> joinSegments segments
 
 
 -- | Given a path to a file on disk, render the code.
-renderCode' :: FilePath -> PathHandler HolbornSource
-renderCode' path = do
+renderCode :: FilePath -> PathHandler HolbornSource
+renderCode path = do
   sourceCode <- liftIO $ readFile path  -- TODO: Handle error.
   return $ annotatePythonCode sourceCode
 
@@ -115,11 +132,11 @@ renderCode' path = do
 browseCode :: FilePath -> Server PathAPI
 browseCode basePath =
   (browseFiles basePath)
-  :<|> (\a         -> renderCode basePath [a])
-  :<|> (\a b       -> renderCode basePath [a, b])
-  :<|> (\a b c     -> renderCode basePath [a, b, c])
-  :<|> (\a b c d   -> renderCode basePath [a, b, c, d])
-  :<|> (\a b c d e -> renderCode basePath [a, b, c, d, e])
+  :<|> (\a         -> renderResource basePath [a])
+  :<|> (\a b       -> renderResource basePath [a, b])
+  :<|> (\a b c     -> renderResource basePath [a, b, c])
+  :<|> (\a b c d   -> renderResource basePath [a, b, c, d])
+  :<|> (\a b c d e -> renderResource basePath [a, b, c, d, e])
 
 
 -- XXX: I've fallen victim to one of the classic blunders. Current
@@ -143,6 +160,12 @@ codePage codeHtml = do
     -- XXX: Embedding styling here is terrible.
     H.style ! A.type_ (H.toValue ("text/css" :: Text)) $ toHtml (".codehilite { background-color: #333; }" :: Text)
   H.body $ H.div ! A.class_ (H.toValue ("codehilite" :: Text)) $ toHtml codeHtml
+
+
+instance ToMarkup PathResource where
+
+  toMarkup (File f) = toMarkup f
+  toMarkup (Dir f)  = toMarkup f
 
 
 instance ToMarkup Directory where
