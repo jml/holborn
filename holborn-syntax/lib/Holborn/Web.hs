@@ -59,7 +59,7 @@ syntaxAPI :: Proxy SyntaxAPI
 syntaxAPI = Proxy
 
 
-data PathResource = Dir Directory | File HolbornSource
+data PathResource = DirResource Directory | FileResource HolbornSource
 
 -- TODO: Is there a better type for this (e.g. one that ensures no slashes,
 -- regular character set).
@@ -111,8 +111,8 @@ renderResource :: FilePath -> [PathSegment] -> PathHandler PathResource
 renderResource base segments = do
   (isDir, isFile) <- liftIO $ (,) <$> doesDirectoryExist fullPath <*> doesFileExist fullPath
   case (isDir, isFile) of
-    (True, False) -> liftIO (Dir <$> makeDirectory base segments)
-    (False, True) -> File <$> renderCode fullPath
+    (True, False) -> liftIO (DirResource <$> makeDirectory base segments)
+    (False, True) -> FileResource <$> renderCode fullPath
     _ -> throwError $ err404 { errBody = "no such resource" }
 
   where
@@ -161,8 +161,8 @@ codePage codeHtml = do
 
 instance ToMarkup PathResource where
 
-  toMarkup (File f) = toMarkup f
-  toMarkup (Dir f)  = toMarkup f
+  toMarkup (FileResource f) = toMarkup f
+  toMarkup (DirResource f)  = toMarkup f
 
 
 instance ToMarkup Directory where
