@@ -21,6 +21,7 @@ import BasicPrelude
 import Control.Monad.Trans.Either (EitherT)
 import Servant
 import Servant.HTML.Blaze
+import System.Directory (getDirectoryContents)
 import System.FilePath (joinPath)
 
 import Text.Blaze (ToMarkup(..))
@@ -99,7 +100,9 @@ browseCode basePath =
 
 
 browseFiles :: FilePath -> PathHandler Directory
-browseFiles basePath = return (Dir basePath ["foo", "bar", "baz"])
+browseFiles basePath = do
+  files <- liftIO $ getDirectoryContents basePath
+  return (Dir basePath (map fromString files))
 
 
 -- | Create a server for SyntaxAPI
