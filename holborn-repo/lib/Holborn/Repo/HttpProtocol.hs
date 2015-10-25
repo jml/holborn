@@ -65,7 +65,7 @@ repoServer config =
     showNormal
     :<|> (smartHandshake config)
     :<|> (gitUploadPack config)
-    :<|> (gitRecievePack config)
+    :<|> (gitReceivePack config)
 
 -- | Placeholder for "normal" HTTP traffic - without a service. This
 -- is where we plug in holborn-web output.
@@ -156,8 +156,8 @@ producerRequestBody req =
             yield data'
             loop
 
-gitRecievePack :: Config -> Text -> Text -> Application
-gitRecievePack config userOrOrg repo =
+gitReceivePack :: Config -> Text -> Text -> Application
+gitReceivePack config userOrOrg repo =
     localrespond
   where
     localrespond :: Application
