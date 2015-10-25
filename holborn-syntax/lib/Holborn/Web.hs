@@ -64,7 +64,10 @@ type PathSegment = Text
 -- TODO: Crappy, temporary API. We actually want to allow for multiple path
 -- segments, but that requires some mucking around with Servant which is more
 -- than we want to do right now.
-type PathAPI = Capture "single" PathSegment :> Get '[HTML] (AnnotatedSource ID)
+type PathAPI =
+       Capture "single" PathSegment :> Get '[HTML] (AnnotatedSource ID)
+  :<|> Capture "double1" PathSegment :> Capture "double2" PathSegment :> Get '[HTML] (AnnotatedSource ID)
+  :<|> Capture "triple1" PathSegment :> Capture "triple2" PathSegment :> Capture "triple3" PathSegment :> Get '[HTML] (AnnotatedSource ID)
 
 type PathHandler = EitherT ServantErr IO
 
@@ -82,9 +85,16 @@ renderCode' path = do
   return $ annotatePythonCode sourceCode
 
 
+browseCode :: FilePath -> Server PathAPI
+browseCode basePath =
+       (\x     -> renderCode basePath [x])
+  :<|> (\x y   -> renderCode basePath [x, y])
+  :<|> (\x y z -> renderCode basePath [x, y, z])
+
+
 -- | Create a server for RootAPI
 server :: Text -> FilePath -> Server RootAPI
-server pythonSourceCode basePath = return (annotatePythonCode pythonSourceCode) :<|> \x -> renderCode basePath [x]
+server pythonSourceCode basePath = return (annotatePythonCode pythonSourceCode) :<|> browseCode basePath
 
 
 -- TODO: Either use this or kill it with fire.
