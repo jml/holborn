@@ -34,6 +34,7 @@ import qualified Text.Blaze.Html5.Attributes as A
 -- Get the typeclass instances for converting Holborn stuff to HTML.
 import Holborn.HtmlFormat ()
 import Holborn.Internal (FileType(..), getFileType)
+import Holborn.ServantExtensions (CaptureAll)
 import Holborn.Style (monokai)
 import Holborn.Syntax ( HolbornSource
                       , annotatePythonCode
@@ -82,24 +83,15 @@ folderChildren = _children
 folderPath :: Folder -> FilePath
 folderPath dir = (_rootDir dir) </> joinSegments (_currentDir dir)
 
-
--- XXX: Ideally we'd use safe links here, but we need to de-horribilify the
--- API types first.
+-- XXX: Ideally we'd use safe links here, but haskell-servant/servant#257
+-- prevents us.
 childURL :: Folder -> PathSegment -> Text
 childURL dir segment = intercalate "/" (["", "files"] ++ _currentDir dir ++ [segment])
 
 
--- TODO: Crappy, temporary API. We actually want to allow for multiple path
--- segments, but that requires some mucking around with Servant which is more
--- than we want to do right now. We've chosen max depth of 5 segments because
--- we want to self-host and that's as deep as the repo goes.
 type PathAPI =
        Get '[HTML] Folder
-  :<|> Capture "1a" PathSegment :> Get '[HTML] PathResource
-  :<|> Capture "2a" PathSegment :> Capture "2b" PathSegment :> Get '[HTML] PathResource
-  :<|> Capture "3a" PathSegment :> Capture "3b" PathSegment :> Capture "3c" PathSegment :> Get '[HTML] PathResource
-  :<|> Capture "4a" PathSegment :> Capture "4b" PathSegment :> Capture "4c" PathSegment :> Capture "4d" PathSegment :> Get '[HTML] PathResource
-  :<|> Capture "5a" PathSegment :> Capture "5b" PathSegment :> Capture "5c" PathSegment :> Capture "5d" PathSegment :> Capture "5e" PathSegment :> Get '[HTML] PathResource
+  :<|> CaptureAll "path" :> Get '[HTML] PathResource
 
 
 type PathHandler = EitherT ServantErr IO
@@ -131,13 +123,7 @@ renderCode path = do
 
 
 browseCode :: FilePath -> Server PathAPI
-browseCode basePath =
-  (browseFiles basePath)
-  :<|> (\a         -> renderResource basePath [a])
-  :<|> (\a b       -> renderResource basePath [a, b])
-  :<|> (\a b c     -> renderResource basePath [a, b, c])
-  :<|> (\a b c d   -> renderResource basePath [a, b, c, d])
-  :<|> (\a b c d e -> renderResource basePath [a, b, c, d, e])
+browseCode basePath = (browseFiles basePath) :<|> (renderResource basePath)
 
 
 -- XXX: I've fallen victim to one of the classic blunders. Current
