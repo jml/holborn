@@ -6,26 +6,44 @@ module Main where
 
 import BasicPrelude
 
+import qualified Env
 import Network.Wai (Application)
-import Network.Wai.Handler.Warp (run)
+import qualified Network.Wai.Handler.Warp as Warp
 import Servant (serve)
 
 import Holborn.Web (syntaxAPI, server)
 
-
--- Simplistic demo that renders a single Python file with links from its
--- references to its bindings.
-
--- TODO: Render multiple Python files
--- TODO: Have this be a purely JSON API and have client-side code do the rendering
--- TODO: Specify the path to Python files via an environment variable
--- TODO: Specify port as an environment variable
-
 import ExampleData (examplePython)
+
+
+-- XXX: I can imagine a more elaborate version of this, where we have one
+-- thing that parses Warp-related settings out of the environment and returns
+-- a Warp.Settings, and another thing that handles application- or
+-- library-specific settings. However, keep it simple for now: just pass
+-- relevant stuff as arguments to functions.
+
+data Config = Config { _port :: Warp.Port
+                     , _codePath :: FilePath
+                     }
+
+loadConfig :: IO Config
+loadConfig =
+  Env.parse (Env.header "run a holborn syntax server") $
+  Config <$> Env.var Env.auto "PORT"       (Env.def 8080 <> Env.help "Port to listen on")
+         -- XXX: Better name than "FILES_PATH"
+         <*> Env.var Env.str  "FILES_PATH" (Env.def "."  <> Env.help "Location of source files to browse")
 
 
 app :: Text -> FilePath -> Application
 app demoCode basePath = serve syntaxAPI (server demoCode basePath)
 
+
+warpSettings :: Warp.Port -> Warp.Settings
+warpSettings port =
+  (Warp.setPort port Warp.defaultSettings)
+
+
 main :: IO ()
-main = run 8080 (app examplePython ".")
+main = do
+  config <- loadConfig
+  Warp.runSettings (warpSettings (_port config)) (app examplePython (_codePath config))

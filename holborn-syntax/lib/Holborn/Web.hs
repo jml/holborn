@@ -37,8 +37,6 @@ import Holborn.Syntax ( HolbornSource
                       )
 
 
--- TODO: Use a Config structure like we've used for holborn-repo.
-
 -- QUESTION: Can we compose configuration structures so that the
 -- server-specific stuff (like PORT) is separate from the application-specific
 -- stuff (like path to code)? Is it even worth it?
