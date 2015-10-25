@@ -60,11 +60,14 @@ type PathSegment = Text
 
 -- TODO: Crappy, temporary API. We actually want to allow for multiple path
 -- segments, but that requires some mucking around with Servant which is more
--- than we want to do right now.
+-- than we want to do right now. We've chosen max depth of 5 segments because
+-- we want to self-host and that's as deep as the repo goes.
 type PathAPI =
-       Capture "single" PathSegment :> Get '[HTML] HolbornSource
-  :<|> Capture "double1" PathSegment :> Capture "double2" PathSegment :> Get '[HTML] HolbornSource
-  :<|> Capture "triple1" PathSegment :> Capture "triple2" PathSegment :> Capture "triple3" PathSegment :> Get '[HTML] HolbornSource
+       Capture "1a" PathSegment :> Get '[HTML] HolbornSource
+  :<|> Capture "2a" PathSegment :> Capture "2b" PathSegment :> Get '[HTML] HolbornSource
+  :<|> Capture "3a" PathSegment :> Capture "3b" PathSegment :> Capture "3c" PathSegment :> Get '[HTML] HolbornSource
+  :<|> Capture "4a" PathSegment :> Capture "4b" PathSegment :> Capture "4c" PathSegment :> Capture "4d" PathSegment :> Get '[HTML] HolbornSource
+  :<|> Capture "5a" PathSegment :> Capture "5b" PathSegment :> Capture "5c" PathSegment :> Capture "5d" PathSegment :> Capture "5e" PathSegment :> Get '[HTML] HolbornSource
 
 type PathHandler = EitherT ServantErr IO
 
@@ -84,9 +87,11 @@ renderCode' path = do
 
 browseCode :: FilePath -> Server PathAPI
 browseCode basePath =
-       (\x     -> renderCode basePath [x])
-  :<|> (\x y   -> renderCode basePath [x, y])
-  :<|> (\x y z -> renderCode basePath [x, y, z])
+       (\a         -> renderCode basePath [a])
+  :<|> (\a b       -> renderCode basePath [a, b])
+  :<|> (\a b c     -> renderCode basePath [a, b, c])
+  :<|> (\a b c d   -> renderCode basePath [a, b, c, d])
+  :<|> (\a b c d e -> renderCode basePath [a, b, c, d, e])
 
 
 -- | Create a server for SyntaxAPI
