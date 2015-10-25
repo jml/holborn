@@ -10,7 +10,7 @@ import Network.Wai (Application)
 import Network.Wai.Handler.Warp (run)
 import Servant (serve)
 
-import Holborn.Web (rootAPI, server)
+import Holborn.Web (syntaxAPI, server)
 
 
 -- Simplistic demo that renders a single Python file with links from its
@@ -25,7 +25,7 @@ import ExampleData (examplePython)
 
 
 app :: Text -> FilePath -> Application
-app demoCode basePath = serve rootAPI (server demoCode basePath)
+app demoCode basePath = serve syntaxAPI (server demoCode basePath)
 
 main :: IO ()
 main = run 8080 (app examplePython ".")

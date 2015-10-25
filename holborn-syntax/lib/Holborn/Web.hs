@@ -11,8 +11,8 @@ Intended to provide:
 {-# LANGUAGE TypeOperators #-}
 
 module Holborn.Web
-       ( RootAPI
-       , rootAPI
+       ( SyntaxAPI
+       , syntaxAPI
        , server
        ) where
 
@@ -47,14 +47,13 @@ import Holborn.Syntax ( HolbornSource
 -- should we just pass parameters around as needed?
 
 -- TODO: We can probably get rid of 'demo' real soon now.
--- TODO: RootAPI is a terrible name. Change to SyntaxAPI, maybe?
-type RootAPI =
+type SyntaxAPI =
        "demo"  :> Get '[HTML] HolbornSource
   :<|> "files" :> PathAPI
 
 
-rootAPI :: Proxy RootAPI
-rootAPI = Proxy
+syntaxAPI :: Proxy SyntaxAPI
+syntaxAPI = Proxy
 
 
 -- TODO: Is there a better type for this (e.g. one that ensures no slashes,
@@ -92,8 +91,8 @@ browseCode basePath =
   :<|> (\x y z -> renderCode basePath [x, y, z])
 
 
--- | Create a server for RootAPI
-server :: Text -> FilePath -> Server RootAPI
+-- | Create a server for SyntaxAPI
+server :: Text -> FilePath -> Server SyntaxAPI
 server pythonSourceCode basePath = return (annotatePythonCode pythonSourceCode) :<|> browseCode basePath
 
 
