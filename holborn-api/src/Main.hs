@@ -14,9 +14,9 @@ import Servant
   , Proxy(..)
   , Server
   )
-import Holborn.Api.Internal (API, server)
+import Holborn.Api.Internal (AuthAPI, server)
 
-rootAPI :: Proxy API
+rootAPI :: Proxy AuthAPI
 rootAPI = Proxy
 
 app :: Application
