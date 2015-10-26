@@ -1,9 +1,4 @@
-# Run like:
-# nix-build  integration-tests.nix
-
-# Use Nix 15.09
-with (import (fetchTarball https://github.com/NixOS/nixpkgs-channels/archive/nixos-15.09.tar.gz) {}).pkgs;
-
+{ haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText }:
 let
   holborn-repo = haskellPackages.callPackage ../holborn-repo {};
 

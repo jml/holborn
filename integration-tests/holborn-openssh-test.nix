@@ -1,8 +1,4 @@
-# Run like
-# NIX_PATH=. nix-build  holborn-openssh-test.nix
-#
-# (NIX_PATH is required so fetchgitPrivate can find "ssh-config-file".
-with (import (fetchTarball https://github.com/NixOS/nixpkgs-channels/archive/nixos-15.09.tar.gz) {}).pkgs;
+{ haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText }:
 
 let
   holborn-repo = haskellPackages.callPackage ../holborn-repo {};
@@ -32,7 +28,7 @@ stdenv.mkDerivation {
   phases = "unpackPhase buildPhase";
   buildPhase = ''
       # Make this script more readable by placing git into PATH
-      export PATH=$PATH:${git}/bin:${openssh}/bin
+      export PATH=$PATH:${git}/bin:${holborn-ssh}/bin
 
       # GIT_SSH_COMMAND requires at least git 2.3
       export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
