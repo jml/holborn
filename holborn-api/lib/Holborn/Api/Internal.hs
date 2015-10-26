@@ -82,13 +82,13 @@ parseSSHCommand =
   where
     upload = do
         _ <- AT.string "git-upload-pack '"
-        (org, user) <- repo
+        (org, user) <- repoPath
         return (GitUploadPack org user)
     receive = do
         _ <- AT.string "git-receive-pack '"
-        (org, user) <- repo
+        (org, user) <- repoPath
         return (GitReceivePack org user)
-    repo = do
+    repoPath = do
         AT.skipWhile (== '/') -- skip optional leading /
         org <- AT.takeWhile1 (/= '/')
         _ <- AT.char '/'
@@ -116,7 +116,7 @@ checkRepoAccess request = do
                        , org
                        , "\", \"repo\": \""
                        , repo
-                       ,"\"}' && cat) | nc 127.0.0.1 8082"
+                       ,"\"}' && cat) | nc 127.0.0.1 8081"
                        ])
         GitUploadPack org repo ->
             CheckRepoAccessResponse True (
@@ -124,7 +124,7 @@ checkRepoAccess request = do
                        , org
                        , "\", \"repo\": \""
                        , repo
-                       ,"\"}' && cat) | nc 127.0.0.1 8082"
+                       ,"\"}' && cat) | nc 127.0.0.1 8081"
                        ])
         Invalid _ ->
             CheckRepoAccessResponse True (quotes !! 0)

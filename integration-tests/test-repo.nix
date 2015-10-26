@@ -5,8 +5,8 @@ stdenv.mkDerivation {
   phases = "installPhase";
   installPhase = ''
       export PATH=$PATH:${git}/bin
-      mkdir $out
-      cd $out
+      mkdir -p $out/org/hello
+      cd $out/org/hello
       git init
       echo "hello" > hello
       git add hello

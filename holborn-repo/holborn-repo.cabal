@@ -17,12 +17,13 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Holborn.Repo.HttpProtocol
                      , Holborn.Repo.RawProtocol
-                     , Holborn.Repo.GabrielProcess
+                     , Holborn.Repo.Config
+                     , Holborn.Repo.Process
   hs-source-dirs:      lib
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
-  ghc-options:         -Wall -threaded
+  ghc-options:         -Wall -threaded -rtsopts
   build-depends:       base >=4.8 && <5
                      , basic-prelude >= 0.5 && <0.6
                      , servant >= 0.4 && <0.5
@@ -40,23 +41,21 @@ library
                      , network >= 2.5
                      , pipes-network
                      , pipes-aeson
+                     , text
                      , aeson >=0.9
                      , pipes-parse
-                     , pipes-concurrency
-                     , mtl >=2.2
-                     , lens-family-core
+                     , mtl
                      , network-simple >=0.4
                      , pipes-bytestring
-                     , async
-                     , stm
-                     , stm-chans
                      , process
+                     , async
+                     , pipes-bytestring
 
 executable holborn
   main-is:             Main.hs
   hs-source-dirs:      src
   default-language:    Haskell2010
-  ghc-options:         -Wall -threaded
+  ghc-options:         -Wall -threaded -rtsopts
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
   build-depends:       base >=4.8 && <4.9

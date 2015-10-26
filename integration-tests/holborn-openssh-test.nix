@@ -7,7 +7,7 @@ with (import (fetchTarball https://github.com/NixOS/nixpkgs-channels/archive/nix
 let
   holborn-repo = haskellPackages.callPackage ../holborn-repo {};
   holborn-api = haskellPackages.callPackage ../holborn-api {};
-  test-repo = callPackage ./test-repo.nix {};
+  test-repos = callPackage ./test-repo.nix {};
   holborn-openssh-source = fetchgitPrivate {
     url = "git@bitbucket.org:tehunger/holborn-ssh.git";
     sha256 = "91e998af03249db570d00262aa5b7b39720b2899b1aa3e86e76bfd10d0299a37";
@@ -21,7 +21,7 @@ let
     HostKey=${holborn-ssh}/etc/ssh/ssh_host_dsa_key
     Port=3333
     PidFile=/dev/null
-    HolbornApiEndpoint=http://127.0.0.1:8081
+    HolbornApiEndpoint=http://127.0.0.1:8082
   '';
 
 in
@@ -39,8 +39,9 @@ stdenv.mkDerivation {
 
       # Run ssh + repo server
       ${holborn-ssh}/bin/sshd -D -e -f ${holborn-ssh-testconfig} &
-      REPO=${test-repo} ${holborn-api}/bin/holborn-api-server &
-      REPO=${test-repo} ${holborn-repo}/bin/holborn &
+      ${holborn-api}/bin/holborn-api-server &
+      echo "REPOROOT ${test-repos}"
+      REPOROOT=${test-repos} ${holborn-repo}/bin/holborn &
 
       # Kill server when test is done
       trap 'kill $(jobs -p)' EXIT
@@ -55,6 +56,6 @@ stdenv.mkDerivation {
       popd
 
       # The same content?
-      diff ${test-repo}/hello $out/hello/hello
+      diff ${test-repos}/org/hello/hello $out/hello/hello
   '';
 }
