@@ -41,13 +41,6 @@ import Holborn.Syntax ( HolbornSource
                       )
 
 
--- QUESTION: Can we compose configuration structures so that the
--- server-specific stuff (like PORT) is separate from the application-specific
--- stuff (like path to code)? Is it even worth it?
-
--- QUESTION: Should we have a Config object (and presumably ReaderT monad), or
--- should we just pass parameters around as needed?
-
 -- TODO: We can probably get rid of 'demo' real soon now.
 type SyntaxAPI =
        "demo"  :> Get '[HTML] HolbornSource
@@ -65,9 +58,9 @@ data PathResource = DirResource Folder | FileResource HolbornSource
 type PathSegment = Text
 
 data Folder = Folder { _rootDir    :: FilePath
-                           , _currentDir :: [PathSegment]
-                           , _children   :: [PathSegment]
-                           }
+                     , _currentDir :: [PathSegment]
+                     , _children   :: [PathSegment]
+                     }
 
 
 makeFolder :: FilePath -> [PathSegment] -> IO Folder
@@ -101,7 +94,7 @@ joinSegments :: [PathSegment] -> FilePath
 joinSegments = joinPath . map textToString
 
 
--- | Given a base path and a list of path segments, render eithre the code
+-- | Given a base path and a list of path segments, render either the code
 -- found on disk at that path or a directory listing for that path.
 renderResource :: FilePath -> [PathSegment] -> PathHandler PathResource
 renderResource base segments = do
@@ -126,7 +119,7 @@ browseCode :: FilePath -> Server PathAPI
 browseCode basePath = (browseFiles basePath) :<|> (renderResource basePath)
 
 
--- XXX: I've fallen victim to one of the classic blunders. Current
+-- PUPPY: I've fallen victim to one of the classic blunders. Current
 -- implementation allows ".." to jailbreak path.
 browseFiles :: FilePath -> PathHandler Folder
 browseFiles basePath = liftIO $ makeFolder basePath []
