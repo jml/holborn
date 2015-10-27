@@ -4,7 +4,8 @@ This module is the main entry point to the rest of the library.
 
 -}
 module Holborn.Syntax
-       ( annotatePythonCode
+       ( HolbornSource
+       , annotatePythonCode
        ) where
 
 import BasicPrelude
@@ -23,7 +24,11 @@ import Holborn.Scope (ID)
 import Holborn.Types (Annotation, AnnotatedSource(..), HolbornToken(..))
 
 
-annotatePythonCode :: Text -> AnnotatedSource ID
+-- | Source code that we've annotated with our intelligent parser.
+type HolbornSource = AnnotatedSource ID
+
+
+annotatePythonCode :: Text -> HolbornSource
 annotatePythonCode code = fromRight $ do
   pythonLexer <- note "Could not load Python lexer" $ List.lookup ".py" lexers
   highlighterTokens <- fmapL show $ runLexer pythonLexer (encodeUtf8 code)
