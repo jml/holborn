@@ -22,6 +22,9 @@ import Servant
 import Servant.Server.Internal (processedPathInfo)
 
 
+-- This really ought to be in servant itself.
+-- https://github.com/haskell-servant/servant/issues/257
+
 data CaptureAll (sym :: Symbol) deriving (Typeable)
 
 instance (KnownSymbol capture, HasServer sublayout)
