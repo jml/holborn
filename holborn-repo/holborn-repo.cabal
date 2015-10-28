@@ -6,7 +6,6 @@ version:             0.1.0.0
 -- synopsis:
 -- description:
 -- license:
-license-file:        LICENSE
 author:              Tom Hunger
 maintainer:          tehunger@gmail.com
 -- copyright:
@@ -17,13 +16,18 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Holborn.Repo.HttpProtocol
+                     , Holborn.Repo.RawProtocol
+                     , Holborn.Repo.Config
+                     , Holborn.Repo.Process
   hs-source-dirs:      lib
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
-  -- we need `-threaded` for pipes-cliff (and generally for
-  -- good subprocess communication)
-  ghc-options:         -Wall -threaded
+                     -- `threaded` because System.Process needs it for
+                     -- certain functions (e.g. waiting for process)
+                     -- `rtsopts` so we can print system stats (gc
+                     -- time etc) when testing cloning.
+  ghc-options:         -Wall -threaded -rtsopts
   build-depends:       base >=4.8 && <5
                      , basic-prelude >= 0.5 && <0.6
                      , servant >= 0.4 && <0.5
@@ -38,11 +42,24 @@ library
                      , blaze-builder
                      , bytestring
                      , time
+                     , network >= 2.5
+                     , pipes-network
+                     , pipes-aeson
+                     , text
+                     , aeson >=0.9
+                     , pipes-parse
+                     , mtl
+                     , network-simple >=0.4
+                     , pipes-bytestring
+                     , process
+                     , async
+                     , pipes-bytestring
 
 executable holborn
   main-is:             Main.hs
   hs-source-dirs:      src
   default-language:    Haskell2010
+  ghc-options:         -Wall -threaded -rtsopts
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
   build-depends:       base >=4.8 && <4.9
@@ -53,3 +70,4 @@ executable holborn
                      , wai
                      , warp
                      , envparse >=0.2
+                     , pipes-safe

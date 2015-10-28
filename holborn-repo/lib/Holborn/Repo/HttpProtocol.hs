@@ -14,7 +14,6 @@
 module Holborn.Repo.HttpProtocol
        ( repoServer
        , repoAPI
-       , Config(..)
        ) where
 
 import           BasicPrelude
@@ -32,10 +31,9 @@ import           Pipes.Safe (SafeT)
 import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import           Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..), ServantErr, Server, Raw)
 import           Text.Printf (printf)
+import System.IO (stdout, hFlush)
 
-data Config = Config
-    { repoRoot :: String
-    }
+import Holborn.Repo.Config (Config, buildRepoPath)
 
 -- | The git pull & push repository API. The URL schema is borrowed
 -- from github, i.e. `/user/repo` or `/org/repo`.
@@ -88,11 +86,12 @@ smartHandshake :: Config -> Text -> Text -> Maybe Text -> Application
 smartHandshake config userOrOrg repo service =
     localrespond
   where
+    repoPath = buildRepoPath config userOrOrg repo
     localrespond :: Application
     localrespond req respond = do
-        liftIO $ print userOrOrg
-        liftIO $ print repo
         liftIO $ print service
+        liftIO $ print repoPath
+
         respond $ case service of
             Just "git-upload-pack" ->
                 responseStream ok200 (gitHeaders "git-upload-pack") (gitPack "git-upload-pack")
@@ -104,7 +103,7 @@ smartHandshake config userOrOrg repo service =
     gitPack service moreData flush =
         runShell $ (
             (banner service)
-            >> (producerCmd (service ++ " --stateless-rpc --advertise-refs " ++ (repoRoot config)) >-> filterStdErr)
+            >> (producerCmd (service ++ " --stateless-rpc --advertise-refs " ++ repoPath) >-> filterStdErr)
             >> footer) >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()
@@ -160,6 +159,7 @@ gitReceivePack :: Config -> Text -> Text -> Application
 gitReceivePack config userOrOrg repo =
     localrespond
   where
+    repoPath = buildRepoPath config userOrOrg repo
     localrespond :: Application
     localrespond req respond = do
         liftIO $ print userOrOrg
@@ -176,7 +176,7 @@ gitReceivePack config userOrOrg repo =
     gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack service postDataProducer moreData flush =
         runShell $
-        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ (repoRoot config)) >-> filterStdErr
+        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
             >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()
@@ -189,6 +189,7 @@ gitUploadPack :: Config -> Text -> Text -> Application
 gitUploadPack config userOrOrg repo =
     localrespond
   where
+    repoPath = buildRepoPath config userOrOrg repo
     localrespond :: Application
     localrespond req respond = do
         liftIO $ print userOrOrg
@@ -206,7 +207,7 @@ gitUploadPack config userOrOrg repo =
     gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack service postDataProducer moreData flush =
         runShell $
-        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ (repoRoot config)) >-> filterStdErr
+        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
             >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()

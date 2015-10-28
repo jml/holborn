@@ -1,31 +1,13 @@
-# Run like:
-# nix-build  integration-tests.nix
-
-# Use Nix 15.09
-with (import (fetchTarball https://github.com/NixOS/nixpkgs-channels/archive/nixos-15.09.tar.gz) {}).pkgs;
-
+{ haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText }:
 let
   holborn-repo = haskellPackages.callPackage ../holborn-repo {};
 
-  test-repo = stdenv.mkDerivation {
-  name = "test-repo";
-  srcs = ./holborn-protocol-test-1.nix;
-  phases = "installPhase";
-  installPhase = ''
-      export PATH=$PATH:${git}/bin
-      mkdir $out
-      cd $out
-      git init
-      echo "hello" > hello
-      git add hello
-      git commit -m"hello"
-  '';
-  };
+  test-repos = callPackage ./test-repo.nix {};
 
 in
 stdenv.mkDerivation {
   name = "integration-tests";
-  buildDepends = [ holborn-repo git systemd ];
+  buildDepends = [ holborn-repo git ];
   srcs = ./.;
   phases = "unpackPhase buildPhase";
   buildPhase = ''
@@ -33,7 +15,7 @@ stdenv.mkDerivation {
       export PATH=$PATH:${git}/bin
 
       # 2) Run server
-      REPO=${test-repo} ${holborn-repo}/bin/holborn &
+      REPO_ROOT=${test-repos} ${holborn-repo}/bin/holborn &
 
       # Kill server when test is done
       trap 'kill $(jobs -p)' EXIT
@@ -48,6 +30,6 @@ stdenv.mkDerivation {
       popd
 
       # The same content?
-      diff ${test-repo}/hello $out/hello/hello
+      diff ${test-repos}/org/hello/hello $out/hello/hello
   '';
 }
