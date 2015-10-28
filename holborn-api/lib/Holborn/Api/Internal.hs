@@ -73,7 +73,7 @@ data SSHCommandLine =
 --   "git-receive-pack '/org/hello'"
 -- For all other commands we can send back futurama quotes.
 --
--- TODO TODO - this is a security sensitive piece (gatekeeper for a
+-- PUPPY - this is a security sensitive piece (gatekeeper for a
 -- remote ssh trying to run random commands) and as such it needs
 -- quickchecking!
 parseSSHCommand :: AT.Parser SSHCommandLine
