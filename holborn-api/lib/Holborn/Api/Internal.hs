@@ -45,11 +45,11 @@ fakeDB = DMS.fromList
      [ (CheckKeyRequest
             { key = "AAAAB3NzaC1yc2EAAAABIwAAAQEAtq8LpgrnFQWpIcK5YdrQNzu22sPrbkHKD83g8v/s7Nu3Omb7h5TLBOZ6DYPSorGMKGjDFqo0witXRagWq95HaA9epFXmhJlO3NTxyTAzIZSzql+oJkqszNpmYY09L00EIplE/YKXPlY2a+sGx3CdJxbglGfTcqf0J2DW4wO2ikZSOXRiLEbztyDwc+TNwYJ3WtzTFWhG/9hbbHGZtpwQl6X5l5d2Mhl2tlKJ/zQYWV1CVXLSyKhkb4cQPkL05enguCQgijuI/WsUE6pqdl4ypziXGjlHAfH+zO06s6EDMQYr50xgYRuCBicF86GF8/fOuDJS5CJ8/FWr16fiWLa2Aw=="
             , key_type = "RSA"
-            }, "teh")
+            }, "git")
      , (CheckKeyRequest
             { key = "AAAAB3NzaC1yc2EAAAADAQABAAACAQC8Wa+xniYeoJQWtpSGIL833jtLqOudcpmSwCzaLMfo/JVF6jwXIVcPQW6GIOGPEA+2B6gqYhISqYGg8zPcP6PLMLxDXFo8MvcyYG8cJD53rmT/ZkNgIJYC7ayBCHGn8DX4Y833Ej6C+2EGEk6btt9XQVaayxFGtI8FrHNzeRDu6SQp/oIOtDvhA3IMjDLjOWMlJlPEJpx6BzGw/v5i5n594DYuq5xDWCsg1KHM5c5z4nGYB4WTM2Ba0zauTCW/VlBxa3gkljqsomU31q9Ylf0Da0/YAt82WwqS2066XO3ea+quR7utkThsTGCEbt00AJZgl5RVr4691W5U4yS8+HRPklFFX30fzcK9FaQvp5da/86MaimdNtGrMVWvOzX26I22SELJvZCL9A4KIHMJS6cc3i6lkxT1L2CKXtvwV+++g1KoPWuoyhlqXazpmXmI5P+Ks5NjT3KkU+oTruiKFIdLNz7ediU06AqAQS4iqOF8o5k6zmB2ojtYLqR+MG4jteWQLO/azbGdxXAO54nGtp1kx3MTEuQTAbaEOkjphQNV5FvJkw2abk2grcEfN2p5oKP3m1en2Liri5GsWHOB/bSnhfvMRkeY5yPIOg2rlu4oiJ7uPThm16XiKPKLEGENmXy/6/sFCNiHXoLN2EakXzcbH7Wl/NEcm9dzvhbP4GO+9w=="
             , key_type = "RSA"
-            }, "jml")
+            }, "git")
      ]
 
 -- | Implementation

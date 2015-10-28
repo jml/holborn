@@ -1,4 +1,5 @@
 let
+    normalSSHPort = 3334;
     region = "eu-west-1";
     common-config = {
         nix.gc.automatic = true;
@@ -15,7 +16,6 @@ let
             ./secrets/id_rsa_tom.pub
             ./secrets/id_rsa_jml.pub
         ];
-
     };
 in
 rec {
@@ -28,14 +28,22 @@ rec {
         inherit region;
         rules = [
             { fromPort = 22; toPort = 22; sourceIp = "0.0.0.0/0"; }
+            { fromPort = normalSSHPort; toPort = normalSSHPort; sourceIp = "0.0.0.0/0"; }
             { fromPort = 80; toPort = 80; sourceIp = "0.0.0.0/0"; }
             { fromPort = 443; toPort = 443; sourceIp = "0.0.0.0/0"; }
         ];
     };
 
-    web = { resources, pkgs, lib, ... }:
+    web = { resources, pkgs, lib, config, ... }:
     let
-        holborn-web = pkgs.haskellPackages.callPackage ../holborn-web {};
+        holborn-openssh-source = pkgs.fetchgitPrivate {
+          url = "git@bitbucket.org:tehunger/holborn-ssh.git";
+          sha256 = "91e998af03249db570d00262aa5b7b39720b2899b1aa3e86e76bfd10d0299a37";
+          rev = "HEAD";
+        };
+        holborn-openssh = pkgs.callPackage "${holborn-openssh-source}/nix" {};
+        holborn-api = pkgs.haskellPackages.callPackage ../holborn-api {};
+        holborn-repo = pkgs.haskellPackages.callPackage ../holborn-repo {};
     in
         (common-config // {
         deployment.targetEnv = "ec2";
@@ -46,13 +54,28 @@ rec {
         deployment.ec2.keyPair = resources.ec2KeyPairs.pair;
         deployment.ec2.securityGroups = [ resources.ec2SecurityGroups.http-ssh ];
 
+
+        # The following is slightly messy: The AMI ships with SSH
+        # running on port 22 but we're moving it to another port so
+        # after server creation and deployment we need to comment out
+        # the following line because SSH will have moved to port
+        # `normalSSHPort`:
+        #deployment.targetPort = 22;
+
+        nixpkgs.config.allowUnfree = true;
+
+        services.openssh.ports = [normalSSHPort];
+
         environment.systemPackages = [ pkgs.git pkgs.vim ];
         require = [
-          ./nix/holborn-web-module.nix
+          ./nix/holborn-openssh-module.nix
+          ./nix/holborn-api-module.nix
+          ./nix/holborn-repo-module.nix
         ];
+        services.holborn-openssh.package = holborn-openssh;
+        services.holborn-api.package = holborn-api;
+        services.holborn-repo.package = holborn-repo;
 
-        services.holborn-web.enable = true;
-        services.holborn-web.package = holborn-web;
 
         services.postgresql.enable = true;
         services.postgresql.package = pkgs.postgresql94;
