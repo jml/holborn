@@ -26,12 +26,12 @@ import qualified Pipes.Parse as PP
 import           Pipes.Safe (runSafeT)
 
 import           Holborn.Repo.Config (Config, buildRepoPath)
-import           Holborn.Repo.Process (streamio, proc)
+import           Holborn.Repo.Process (streamIO, proc)
 
 
 gitPack :: String -> Config -> Text -> Text -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
 gitPack packCommand config org repo from to = do
-    r <- streamio (proc packCommand [buildRepoPath config org repo]) from to
+    _ <- streamIO (proc packCommand [buildRepoPath config org repo]) from to
     return ()
 
 gitUploadPack :: Config -> Text -> Text -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
@@ -64,9 +64,9 @@ accept :: Config -> (Socket, SockAddr) -> IO ()
 accept config (sock, _) = do
     let from = fromSocket sock 4096
     let to = toSocket sock
-    (r, fromRest) <- runStateT getRepoParser from
-    liftIO $ print r
-    _ <- case r of
+    (header, fromRest) <- runStateT getRepoParser from
+    liftIO $ print header
+    _ <- case header of
         Just (RepoCall "git-upload-pack" org repo) ->
             gitUploadPack config org repo fromRest to
         Just (RepoCall "git-receive-pack" org repo) ->

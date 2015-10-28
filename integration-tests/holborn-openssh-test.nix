@@ -35,9 +35,9 @@ stdenv.mkDerivation {
 
       # Run ssh + repo server
       ${holborn-ssh}/bin/sshd -D -e -f ${holborn-ssh-testconfig} &
-      ${holborn-api}/bin/holborn-api-server &
+      PORT=8082 ${holborn-api}/bin/holborn-api-server &
       echo "REPOROOT ${test-repos}"
-      REPOROOT=${test-repos} ${holborn-repo}/bin/holborn &
+      REPO_ROOT=${test-repos} ${holborn-repo}/bin/holborn &
 
       # Kill server when test is done
       trap 'kill $(jobs -p)' EXIT

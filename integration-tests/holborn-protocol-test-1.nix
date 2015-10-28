@@ -15,7 +15,7 @@ stdenv.mkDerivation {
       export PATH=$PATH:${git}/bin
 
       # 2) Run server
-      REPOROOT=${test-repos} ${holborn-repo}/bin/holborn &
+      REPO_ROOT=${test-repos} ${holborn-repo}/bin/holborn &
 
       # Kill server when test is done
       trap 'kill $(jobs -p)' EXIT

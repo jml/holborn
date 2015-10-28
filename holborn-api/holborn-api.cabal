@@ -44,5 +44,6 @@ executable holborn-api-server
                      , wai >= 3.0 && <3.1
                      , warp >= 3.1 && <3.2
                      , holborn-api
+                     , envparse >=0.2
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings

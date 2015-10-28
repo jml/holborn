@@ -8,6 +8,7 @@ import BasicPrelude
 
 import Network.Wai (Application)
 import Network.Wai.Handler.Warp (run)
+import qualified Env
 import Servant
   ( serve
   , Get
@@ -22,5 +23,9 @@ rootAPI = Proxy
 app :: Application
 app = serve rootAPI server
 
+
 main :: IO ()
-main = run 8082 app
+main = do
+    port <- Env.parse (Env.header "Run holborn API server") $
+            Env.var (Env.auto Env.<=< Env.nonempty) "PORT" (Env.help "port to listen on")
+    run port app

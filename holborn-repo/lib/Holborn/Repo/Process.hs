@@ -1,5 +1,5 @@
 module Holborn.Repo.Process
-       ( streamio
+       ( streamIO
        , Process.proc
        ) where
 
@@ -19,8 +19,8 @@ import           System.Exit (ExitCode(..))
 -- TODO:
 -- * ship stderr to the "correct" log
 -- * test this a bit harder
-streamio :: Process.CreateProcess -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ExitCode
-streamio p stdin stdout = do
+streamIO :: Process.CreateProcess -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ExitCode
+streamIO p stdin stdout = do
     -- Prevent double close (borrowed from Gabriel's Turtle code)
     mvar <- newMVar False
     bracket

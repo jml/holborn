@@ -40,8 +40,8 @@ type AuthAPI =
         :> Post '[JSON] CheckRepoAccessResponse
 
 -- | Fake database
-db :: Map CheckKeyRequest Text
-db = DMS.fromList
+fakeDB :: Map CheckKeyRequest Text
+fakeDB = DMS.fromList
      [ (CheckKeyRequest
             { key = "AAAAB3NzaC1yc2EAAAABIwAAAQEAtq8LpgrnFQWpIcK5YdrQNzu22sPrbkHKD83g8v/s7Nu3Omb7h5TLBOZ6DYPSorGMKGjDFqo0witXRagWq95HaA9epFXmhJlO3NTxyTAzIZSzql+oJkqszNpmYY09L00EIplE/YKXPlY2a+sGx3CdJxbglGfTcqf0J2DW4wO2ikZSOXRiLEbztyDwc+TNwYJ3WtzTFWhG/9hbbHGZtpwQl6X5l5d2Mhl2tlKJ/zQYWV1CVXLSyKhkb4cQPkL05enguCQgijuI/WsUE6pqdl4ypziXGjlHAfH+zO06s6EDMQYr50xgYRuCBicF86GF8/fOuDJS5CJ8/FWr16fiWLa2Aw=="
             , key_type = "RSA"
@@ -57,7 +57,7 @@ checkKey :: CheckKeyRequest -> EitherT ServantErr IO CheckKeyResponse
 checkKey r = do
     liftIO $ print ("checkKey", r)
     liftIO $ hFlush stdout
-    return $ case DMS.lookup r db of
+    return $ case DMS.lookup r fakeDB of
        Just username -> CheckKeyResponse True username
        _ -> terror "TODO return error for checkKey"
 
