@@ -1,4 +1,3 @@
-{-# LANGUAGE RecursiveDo #-}
 module Main where
 
 import BasicPrelude
@@ -13,17 +12,17 @@ parser = (,) <$> argInt "port" "port to check"
 
 main :: IO ()
 main = do
-    (port, timeOut) <- options "Wait for a port to become active for --timeout seconds, then fail if it didn't" parser
-    (check port timeOut) >>= exitWith
+    (port, timeout) <- options "Wait for a port to become active for --timeout seconds, then fail if it didn't. Retries once a second." parser
+    (check port timeout) >>= exitWith
 
   where
     check :: Int -> Int -> IO ExitCode
-    check _ 0 =
-        return (ExitFailure 1)
-    check port timeOut = do
+    check port timeout
+      | timeout <= 0 = return (ExitFailure 1)
+      | otherwise = do
         exitCode <- proc "nc" ["-z", "127.0.0.1", show port] Turtle.empty
         case exitCode of
             ExitSuccess -> return ExitSuccess
             ExitFailure _ -> do
                 threadDelay (1000 * 1000)
-                check port (timeOut - 1)
+                check port (timeout - 1)
