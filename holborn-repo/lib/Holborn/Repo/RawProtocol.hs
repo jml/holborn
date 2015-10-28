@@ -31,7 +31,7 @@ import           Holborn.Repo.Process (streamIO, proc)
 
 gitPack :: String -> Config -> Text -> Text -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
 gitPack packCommand config org repo from to = do
-    _ <- streamIO (proc packCommand [buildRepoPath config org repo]) from to
+    void $ streamIO (proc packCommand [buildRepoPath config org repo]) from to
     return ()
 
 gitUploadPack :: Config -> Text -> Text -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
@@ -66,7 +66,7 @@ accept config (sock, _) = do
     let to = toSocket sock
     (header, fromRest) <- runStateT getRepoParser from
     liftIO $ print header
-    _ <- case header of
+    void $ case header of
         Just (RepoCall "git-upload-pack" org repo) ->
             gitUploadPack config org repo fromRest to
         Just (RepoCall "git-receive-pack" org repo) ->

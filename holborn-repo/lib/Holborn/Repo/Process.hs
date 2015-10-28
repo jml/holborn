@@ -47,6 +47,6 @@ streamIO p stdin stdout = do
     -- think the async library does this better than forkIO but I'm
     -- out of energy on process communication.
     run (hIn, hOut, ph) = do
-        _ <- forkIO (runEffect (stdin >-> toHandle hIn))
-        _ <- runEffect (fromHandle hOut >-> stdout)
+        void $ forkIO (runEffect (stdin >-> toHandle hIn))
+        void $ runEffect (fromHandle hOut >-> stdout)
         Process.waitForProcess ph

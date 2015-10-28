@@ -81,19 +81,19 @@ parseSSHCommand =
     upload <|> receive <|> (fmap Invalid AT.takeText)
   where
     upload = do
-        _ <- AT.string "git-upload-pack '"
+        void $ AT.string "git-upload-pack '"
         (org, user) <- repoPath
         return (GitUploadPack org user)
     receive = do
-        _ <- AT.string "git-receive-pack '"
+        void $ AT.string "git-receive-pack '"
         (org, user) <- repoPath
         return (GitReceivePack org user)
     repoPath = do
         AT.skipWhile (== '/') -- skip optional leading /
         org <- AT.takeWhile1 (/= '/')
-        _ <- AT.char '/'
+        void $ AT.char '/'
         user <- AT.takeWhile1 (/= '\'')
-        _ <- AT.char '\''
+        void $ AT.char '\''
         AT.endOfInput
         return (org, user)
 
