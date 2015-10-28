@@ -1,3 +1,5 @@
+# Install & run the holborn-openssh server via systemd. Also makes
+# sure we have the correct git user as required by openssh.
 { config, pkgs, lib, ... }:
 with lib;
 let

@@ -1,3 +1,4 @@
+# Install & run the holborn-repo server via systemd.
 { config, pkgs, lib, ... }:
 with lib;
 let

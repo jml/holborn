@@ -1,3 +1,4 @@
+# Install & run the holborn-api server via systemd.
 { config, pkgs, lib, ... }:
 with lib;
 let
