@@ -1,4 +1,4 @@
-{ haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText }:
+{ haskell, haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText }:
 
 let
   holborn-repo = haskellPackages.callPackage ../holborn-repo {};
@@ -10,6 +10,7 @@ let
     rev = "HEAD";
   };
   holborn-ssh = callPackage "${holborn-openssh-source}/nix" {};
+  hcl = haskell.lib.dontHaddock (haskellPackages.callPackage ../hcl {});
 
   holborn-ssh-testconfig = writeText "testconfig" ''
     UsePrivilegeSeparation=no
@@ -36,14 +37,17 @@ stdenv.mkDerivation {
       # Run ssh + repo server
       ${holborn-ssh}/bin/sshd -D -e -f ${holborn-ssh-testconfig} &
       PORT=8082 ${holborn-api}/bin/holborn-api-server &
-      echo "REPOROOT ${test-repos}"
+      echo "REPO_ROOT ${test-repos}"
       REPO_ROOT=${test-repos} ${holborn-repo}/bin/holborn-repo &
 
       # Kill server when test is done
       trap 'kill $(jobs -p)' EXIT
 
-      # TODO wait for servers to respond instead of sleep 1
-      sleep 2s
+      # Wait for server to become ready
+      ${hcl}/bin/hcl-wait-for-port 3333 --timeout 5
+      ${hcl}/bin/hcl-wait-for-port 8080 --timeout 5
+      ${hcl}/bin/hcl-wait-for-port 8081 --timeout 5
+      ${hcl}/bin/hcl-wait-for-port 8082 --timeout 5
 
       # Clone the test repository
       mkdir $out

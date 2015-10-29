@@ -1,6 +1,7 @@
-{ haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText }:
+{ haskell, haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText }:
 let
   holborn-repo = haskellPackages.callPackage ../holborn-repo {};
+  hcl = haskell.lib.dontHaddock (haskellPackages.callPackage ../hcl {});
 
   test-repos = callPackage ./test-repo.nix {};
 
@@ -14,14 +15,14 @@ stdenv.mkDerivation {
       # Make this script more readable by placing git into PATH
       export PATH=$PATH:${git}/bin
 
-      # 2) Run server
+      # Run server
       REPO_ROOT=${test-repos} ${holborn-repo}/bin/holborn-repo &
 
       # Kill server when test is done
       trap 'kill $(jobs -p)' EXIT
 
-      # TODO wait for server to respond instead of sleep 1
-      sleep 1s
+      # Wait for HTTP server to become ready
+      ${hcl}/bin/hcl-wait-for-port 8080 --timeout 5
 
       # Clone the test repository
       mkdir $out

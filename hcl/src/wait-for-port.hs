@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
 import BasicPrelude
@@ -5,6 +6,7 @@ import BasicPrelude
 import Turtle
 import Control.Concurrent (threadDelay)
 import System.Exit (exitWith)
+import Network.Simple.TCP (connectSock)
 
 parser :: Parser (Int, Int)
 parser = (,) <$> argInt "port" "port to check"
@@ -18,11 +20,13 @@ main = do
   where
     check :: Int -> Int -> IO ExitCode
     check port timeout
-      | timeout <= 0 = return (ExitFailure 1)
+      | timeout <= 0 = do
+            print ("Could not connect to " :: String, port)
+            return (ExitFailure 1)
       | otherwise = do
-        exitCode <- proc "nc" ["-z", "127.0.0.1", show port] Turtle.empty
-        case exitCode of
-            ExitSuccess -> return ExitSuccess
-            ExitFailure _ -> do
-                threadDelay (1000 * 1000)
-                check port (timeout - 1)
+            result <- try (connectSock "127.0.0.1" ((textToString . show) port))
+            case result of
+             Left (_ :: IOException) -> do
+                 threadDelay (1000 * 1000)
+                 check port (timeout - 1)
+             Right _ -> return ExitSuccess
