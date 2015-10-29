@@ -27,6 +27,10 @@ in
       requires = [ "postgresql.service" ];
       after = [ "postgresql.service" ];
 
+      environment = {
+          PORT = "8082";
+      };
+
       serviceConfig.ExecStart = "${cfg.package}/bin/holborn-api-server";
       serviceConfig.User = "holborn-api";
     };

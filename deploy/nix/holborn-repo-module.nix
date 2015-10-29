@@ -29,7 +29,7 @@ in
       path = [ pkgs.git ];
 
       environment = {
-          REPOROOT = "/tmp";
+          REPO_ROOT = "/tmp";
       };
 
       serviceConfig.DevicePolicy = "closed";
