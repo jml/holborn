@@ -39,20 +39,12 @@ import Holborn.Repo.Config (Config, buildRepoPath)
 type RepoAPI =
     Capture "userOrOrg" Text
         :> Capture "repo" Text
-        :> Get '[] ()
-    :<|> Capture "userOrOrg" Text
-        :> Capture "repo" Text
-        :> "info" :> "refs"
-        :> QueryParam "service" Text -- `git-upload-pack` or `git-receive-pack`
-        :> Raw
-    :<|> Capture "userOrOrg" Text
-        :> Capture "repo" Text
-        :> "git-upload-pack"
-        :> Raw
-    :<|> Capture "userOrOrg" Text
-        :> Capture "repo" Text
-        :> "git-receive-pack"
-        :> Raw
+        :> ( Get '[] ()
+             :<|> "info" :> "refs"
+                 :> QueryParam "service" Text -- `git-upload-pack` or `git-receive-pack`
+                 :> Raw
+             :<|> "git-upload-pack" :> Raw
+             :<|> "git-receive-pack" :> Raw )
 
 
 repoAPI :: Proxy RepoAPI
@@ -60,17 +52,19 @@ repoAPI = Proxy
 
 
 repoServer :: Config -> Server RepoAPI
-repoServer config =
+repoServer config userOrOrg repo =
     showNormal
-    :<|> (smartHandshake config)
-    :<|> (gitUploadPack config)
-    :<|> (gitReceivePack config)
+    :<|> (smartHandshake repoPath)
+    :<|> (gitUploadPack repoPath)
+    :<|> (gitReceivePack repoPath)
+    where
+      repoPath = buildRepoPath config userOrOrg repo
 
 
 -- | Placeholder for "normal" HTTP traffic - without a service. This
 -- is where we plug in holborn-web output.
-showNormal :: Text -> Text -> EitherT ServantErr IO ()
-showNormal _userOrOrg _repo = return ()
+showNormal :: EitherT ServantErr IO ()
+showNormal = return ()
 
 
 backupResponse :: Response
@@ -88,8 +82,8 @@ acceptGzip :: RequestHeaders -> Bool
 acceptGzip = any ( == (hContentEncoding, "gzip"))
 
 
-smartHandshake :: Config -> Text -> Text -> Maybe Text -> Application
-smartHandshake config userOrOrg repo service =
+smartHandshake :: FilePath -> Maybe Text -> Application
+smartHandshake repoPath service =
     handshakeApp
   where
     handshakeApp :: Application
@@ -129,8 +123,6 @@ smartHandshake config userOrOrg repo service =
         yield (pktString ("# service=" ++ serviceName ++ "\n"))
         yield "0000"
 
-    repoPath = buildRepoPath config userOrOrg repo
-
     -- Yield an empty footer to be explicit about what we are not
     -- sending.
     footer = do
@@ -164,15 +156,12 @@ producerRequestBody req =
             loop
 
 
-gitReceivePack :: Config -> Text -> Text -> Application
-gitReceivePack config userOrOrg repo =
+gitReceivePack :: FilePath -> Application
+gitReceivePack repoPath =
     localrespond
   where
-    repoPath = buildRepoPath config userOrOrg repo
     localrespond :: Application
     localrespond req respond = do
-        liftIO $ print userOrOrg
-        liftIO $ print repo
         respond $ responseStream ok200 headers (gitPack "git-receive-pack" (producerRequestBody req))
 
     headers =
@@ -195,15 +184,12 @@ gitReceivePack config userOrOrg repo =
             sendChunks
 
 
-gitUploadPack :: Config -> Text -> Text -> Application
-gitUploadPack config userOrOrg repo =
+gitUploadPack :: FilePath -> Application
+gitUploadPack repoPath =
     localrespond
   where
-    repoPath = buildRepoPath config userOrOrg repo
     localrespond :: Application
     localrespond req respond = do
-        liftIO $ print userOrOrg
-        liftIO $ print repo
         respond $ responseStream ok200 headers (gitPack "git-upload-pack" (producerRequestBody req))
         -- todo header checking
 
