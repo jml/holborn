@@ -90,8 +90,8 @@ data GitResponse = Service | Advertisement
 gitProtocolAPI :: FilePath -> Server GitProtocolAPI
 gitProtocolAPI repoPath =
   (smartHandshake repoPath)
-  :<|> (gitUploadPack repoPath)
-  :<|> (gitReceivePack repoPath)
+  :<|> (gitServe GitUploadPack repoPath)
+  :<|> (gitServe GitReceivePack repoPath)
 
 
 smartHandshake :: FilePath -> Maybe GitService -> Application
@@ -146,27 +146,15 @@ smartHandshake repoPath service =
         yield ""
 
 
-gitReceivePack :: FilePath -> Application
-gitReceivePack repoPath =
-    localrespond
+gitServe :: GitService -> FilePath -> Application
+gitServe serviceType repoPath = localrespond
   where
     localrespond :: Application
     localrespond req respond = do
-        respond $ responseStream ok200 headers (gitPack repoPath GitReceivePack (producerRequestBody req))
-
-    headers = gitHeaders GitReceivePack Service
-
-
-gitUploadPack :: FilePath -> Application
-gitUploadPack repoPath =
-    localrespond
-  where
-    localrespond :: Application
-    localrespond req respond = do
-        respond $ responseStream ok200 headers (gitPack repoPath GitUploadPack (producerRequestBody req))
-        -- todo header checking
-
-    headers = gitHeaders GitUploadPack Service
+        respond $ responseStream
+          ok200
+          (gitHeaders serviceType Service)
+          (gitPack repoPath serviceType (producerRequestBody req))
 
 
 gitHeaders :: GitService -> GitResponse -> RequestHeaders
