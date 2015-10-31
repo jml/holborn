@@ -110,7 +110,7 @@ smartHandshake repoPath service =
             (gitPack' serviceType)
 
     backupResponse :: Response
-    backupResponse = terror "I have no idea whether we can reach this state."
+    backupResponse = terror "no git service specified: I have no idea whether we can reach this state."
 
     gitPack' :: GitService -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack' serviceType moreData _flush =
