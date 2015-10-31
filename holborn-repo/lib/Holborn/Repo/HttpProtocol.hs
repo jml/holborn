@@ -30,6 +30,7 @@ import           Pipes.GZip (decompress)
 import           Pipes.Safe (SafeT)
 import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import           Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..), ServantErr, Server, Raw)
+import           Servant.Common.Text (FromText(..), ToText(..))
 import           Text.Printf (printf)
 
 import Holborn.Repo.Config (Config, buildRepoPath)
@@ -37,9 +38,20 @@ import Holborn.Repo.Config (Config, buildRepoPath)
 -- | The git pull & push repository API. The URL schema is borrowed
 -- from github, i.e. `/user/repo` or `/org/repo`.
 
+data GitService = GitUploadPack | GitReceivePack
+
+instance ToText GitService where
+    toText GitUploadPack = "git-upload-pack"
+    toText GitReceivePack = "git-receive-pack"
+
+instance FromText GitService where
+    fromText "git-upload-pack" = Just GitUploadPack
+    fromText "git-receive-pack" = Just GitReceivePack
+    fromText _ = Nothing
+
+
 type GitProtocolAPI =
-  -- "service" is either `git-upload-pack` or `git-receive-pack`
-       "info" :> "refs" :> QueryParam "service" Text :> Raw
+       "info" :> "refs" :> QueryParam "service" GitService :> Raw
   :<|> "git-upload-pack" :> Raw
   :<|> "git-receive-pack" :> Raw
 
@@ -89,15 +101,15 @@ acceptGzip :: RequestHeaders -> Bool
 acceptGzip = any ( == (hContentEncoding, "gzip"))
 
 
-smartHandshake :: FilePath -> Maybe Text -> Application
+smartHandshake :: FilePath -> Maybe GitService -> Application
 smartHandshake repoPath service =
     handshakeApp
   where
     handshakeApp :: Application
     handshakeApp _req respond =
         respond $ case service of
-            Just "git-upload-pack" -> gitResponse "git-upload-pack"
-            Just "git-receive-pack" -> gitResponse "git-receive-pack"
+            Just GitUploadPack -> gitResponse "git-upload-pack"
+            Just GitReceivePack -> gitResponse "git-receive-pack"
             _ -> backupResponse
 
     gitResponse :: Text -> Response
