@@ -70,9 +70,13 @@ type GitProtocolAPI =
 -- | Git offers two kinds of service.
 data GitService = GitUploadPack | GitReceivePack
 
+stringyService :: IsString a => GitService -> a
+stringyService serviceType = case serviceType of
+  GitUploadPack -> "git-upload-pack"
+  GitReceivePack -> "git-receive-pack"
+
 instance ToText GitService where
-    toText GitUploadPack = "git-upload-pack"
-    toText GitReceivePack = "git-receive-pack"
+    toText = stringyService
 
 instance FromText GitService where
     fromText "git-upload-pack" = Just GitUploadPack
@@ -103,18 +107,21 @@ smartHandshake repoPath service =
         responseStream
             ok200
             (gitHeaders serviceType Advertisement)
-            (gitPack' (textToString (toText serviceType)))
+            (gitPack' serviceType)
 
     backupResponse :: Response
     backupResponse = terror "I have no idea whether we can reach this state."
 
-    gitPack' :: String -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack' serviceName moreData _flush =
+    gitPack' :: GitService -> (Builder -> IO ()) -> IO () -> IO ()
+    gitPack' serviceType moreData _flush =
         runShell $ (
             (banner serviceName)
             >> (producerCmd (serviceName ++ " --stateless-rpc --advertise-refs " ++ repoPath) >-> filterStdErr)
             >> footer) >-> sendChunks
       where
+
+        serviceName = stringyService serviceType
+
         sendChunks :: Consumer ByteString (SafeT IO) ()
         sendChunks = do
             chunk <- await
@@ -145,7 +152,7 @@ gitReceivePack repoPath =
   where
     localrespond :: Application
     localrespond req respond = do
-        respond $ responseStream ok200 headers (gitPack repoPath "git-receive-pack" (producerRequestBody req))
+        respond $ responseStream ok200 headers (gitPack repoPath GitReceivePack (producerRequestBody req))
 
     headers = gitHeaders GitReceivePack Service
 
@@ -156,7 +163,7 @@ gitUploadPack repoPath =
   where
     localrespond :: Application
     localrespond req respond = do
-        respond $ responseStream ok200 headers (gitPack repoPath "git-upload-pack" (producerRequestBody req))
+        respond $ responseStream ok200 headers (gitPack repoPath GitUploadPack (producerRequestBody req))
         -- todo header checking
 
     headers = gitHeaders GitUploadPack Service
@@ -164,23 +171,25 @@ gitUploadPack repoPath =
 
 gitHeaders :: GitService -> GitResponse -> RequestHeaders
 gitHeaders serviceType gitResponse =
-    [ ("Content-Type", "application/x-" ++ encodeUtf8 (toText serviceType) ++ "-" ++ suffix)
+    [ ("Content-Type", "application/x-" ++ service ++ "-" ++ suffix)
     , ("Pragma", "no-cache")
     , ("Server", "holborn")
     , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
     ]
   where
+    service = stringyService serviceType
     suffix = case gitResponse of
       Service -> "service"
       Advertisement -> "advertisement"
 
 
-gitPack :: FilePath -> String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
-gitPack repoPath service postDataProducer moreData _flush =
+gitPack :: FilePath -> GitService -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
+gitPack repoPath serviceType postDataProducer moreData _flush =
     runShell $
     postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
         >-> sendChunks
   where
+    service = stringyService serviceType
     sendChunks :: Consumer ByteString (SafeT IO) ()
     sendChunks = do
         chunk <- await
