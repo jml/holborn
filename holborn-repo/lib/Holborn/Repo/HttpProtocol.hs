@@ -107,10 +107,7 @@ smartHandshake repoPath service =
   where
     handshakeApp :: Application
     handshakeApp _req respond =
-        respond $ case service of
-            Just GitUploadPack -> gitResponse "git-upload-pack"
-            Just GitReceivePack -> gitResponse "git-receive-pack"
-            _ -> backupResponse
+        respond $ maybe backupResponse (gitResponse . toText) service
 
     gitResponse :: Text -> Response
     gitResponse serviceName =
