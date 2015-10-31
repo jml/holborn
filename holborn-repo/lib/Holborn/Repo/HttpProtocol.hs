@@ -97,10 +97,6 @@ pktString s =
     fromString (printf "%04x" ((length s) + 4) ++ s)
 
 
-acceptGzip :: RequestHeaders -> Bool
-acceptGzip = any ( == (hContentEncoding, "gzip"))
-
-
 smartHandshake :: FilePath -> Maybe GitService -> Application
 smartHandshake repoPath service =
     handshakeApp
@@ -111,7 +107,7 @@ smartHandshake repoPath service =
 
     gitResponse :: Text -> Response
     gitResponse serviceName =
-        responseStream ok200 (gitHeaders (encodeUtf8 serviceName)) (gitPack (textToString serviceName))
+        responseStream ok200 (gitHeaders (encodeUtf8 serviceName)) (gitPack' (textToString serviceName))
 
     gitHeaders serviceName =
         [ ("Content-Type", "application/x-" ++ serviceName ++ "-advertisement")
@@ -120,8 +116,8 @@ smartHandshake repoPath service =
         , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
         ]
 
-    gitPack :: String -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack serviceName moreData _flush =
+    gitPack' :: String -> (Builder -> IO ()) -> IO () -> IO ()
+    gitPack' serviceName moreData _flush =
         runShell $ (
             (banner serviceName)
             >> (producerCmd (serviceName ++ " --stateless-rpc --advertise-refs " ++ repoPath) >-> filterStdErr)
@@ -145,18 +141,50 @@ smartHandshake repoPath service =
         yield ""
 
 
--- | The shell library we are using to invoke git returns a Left for
--- stderr output and a Right for stdout output. We don't expect stderr
--- (Left) output in normal operation so we error out (for now).
-filterStdErr :: Pipe (Either ByteString ByteString) ByteString (SafeT IO) ()
-filterStdErr = do
-    x <- await
-    case x of
-         -- TODO send errors to journald && maybe measure
-         Left err -> terror (decodeUtf8 err)
-         Right data' -> do
-             yield data'
-             filterStdErr
+gitReceivePack :: FilePath -> Application
+gitReceivePack repoPath =
+    localrespond
+  where
+    localrespond :: Application
+    localrespond req respond = do
+        respond $ responseStream ok200 headers (gitPack repoPath "git-receive-pack" (producerRequestBody req))
+
+    headers =
+        [ ("Content-Type", "application/x-git-receive-pack-result")
+        , ("Pragma", "no-cache")
+        , ("Server", "holborn")
+        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
+        ]
+
+
+gitUploadPack :: FilePath -> Application
+gitUploadPack repoPath =
+    localrespond
+  where
+    localrespond :: Application
+    localrespond req respond = do
+        respond $ responseStream ok200 headers (gitPack repoPath "git-upload-pack" (producerRequestBody req))
+        -- todo header checking
+
+    headers =
+        [ ("Content-Type", "application/x-git-upload-pack-result")
+        , ("Pragma", "no-cache")
+        , ("Server", "holborn")
+        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
+        ]
+
+
+gitPack :: FilePath -> String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
+gitPack repoPath service postDataProducer moreData _flush =
+    runShell $
+    postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
+        >-> sendChunks
+  where
+    sendChunks :: Consumer ByteString (SafeT IO) ()
+    sendChunks = do
+        chunk <- await
+        liftIO $ moreData (fromByteString chunk)
+        sendChunks
 
 
 producerRequestBody :: Request -> Producer ByteString (SafeT IO) ()
@@ -172,58 +200,19 @@ producerRequestBody req =
             loop
 
 
-gitReceivePack :: FilePath -> Application
-gitReceivePack repoPath =
-    localrespond
-  where
-    localrespond :: Application
-    localrespond req respond = do
-        respond $ responseStream ok200 headers (gitPack "git-receive-pack" (producerRequestBody req))
-
-    headers =
-        [ ("Content-Type", "application/x-git-receive-pack-result")
-        , ("Pragma", "no-cache")
-        , ("Server", "holborn")
-        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
-        ]
-
-    gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack service postDataProducer moreData _flush =
-        runShell $
-        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
-            >-> sendChunks
-      where
-        sendChunks :: Consumer ByteString (SafeT IO) ()
-        sendChunks = do
-            chunk <- await
-            liftIO $ moreData (fromByteString chunk)
-            sendChunks
+acceptGzip :: RequestHeaders -> Bool
+acceptGzip = any ( == (hContentEncoding, "gzip"))
 
 
-gitUploadPack :: FilePath -> Application
-gitUploadPack repoPath =
-    localrespond
-  where
-    localrespond :: Application
-    localrespond req respond = do
-        respond $ responseStream ok200 headers (gitPack "git-upload-pack" (producerRequestBody req))
-        -- todo header checking
-
-    headers =
-        [ ("Content-Type", "application/x-git-upload-pack-result")
-        , ("Pragma", "no-cache")
-        , ("Server", "holborn")
-        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
-        ]
-
-    gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack service postDataProducer moreData _flush =
-        runShell $
-        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
-            >-> sendChunks
-      where
-        sendChunks :: Consumer ByteString (SafeT IO) ()
-        sendChunks = do
-            chunk <- await
-            liftIO $ moreData (fromByteString chunk)
-            sendChunks
+-- | The shell library we are using to invoke git returns a Left for
+-- stderr output and a Right for stdout output. We don't expect stderr
+-- (Left) output in normal operation so we error out (for now).
+filterStdErr :: Pipe (Either ByteString ByteString) ByteString (SafeT IO) ()
+filterStdErr = do
+    x <- await
+    case x of
+         -- TODO send errors to journald && maybe measure
+         Left err -> terror (decodeUtf8 err)
+         Right data' -> do
+             yield data'
+             filterStdErr
