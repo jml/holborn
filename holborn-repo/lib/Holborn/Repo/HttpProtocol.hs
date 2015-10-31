@@ -80,6 +80,9 @@ instance FromText GitService where
     fromText _ = Nothing
 
 
+data GitResponse = Service | Advertisement
+
+
 gitProtocolAPI :: FilePath -> Server GitProtocolAPI
 gitProtocolAPI repoPath =
   (smartHandshake repoPath)
@@ -93,21 +96,17 @@ smartHandshake repoPath service =
   where
     handshakeApp :: Application
     handshakeApp _req respond =
-        respond $ maybe backupResponse (gitResponse . toText) service
+        respond $ maybe backupResponse gitResponse service
 
-    gitResponse :: Text -> Response
-    gitResponse serviceName =
-        responseStream ok200 (gitHeaders' (encodeUtf8 serviceName)) (gitPack' (textToString serviceName))
+    gitResponse :: GitService -> Response
+    gitResponse serviceType =
+        responseStream
+            ok200
+            (gitHeaders serviceType Advertisement)
+            (gitPack' (textToString (toText serviceType)))
 
     backupResponse :: Response
     backupResponse = terror "I have no idea whether we can reach this state."
-
-    gitHeaders' serviceName =
-        [ ("Content-Type", "application/x-" ++ serviceName ++ "-advertisement")
-        , ("Pragma", "no-cache")
-        , ("Server", "holborn")
-        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
-        ]
 
     gitPack' :: String -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack' serviceName moreData _flush =
@@ -148,7 +147,7 @@ gitReceivePack repoPath =
     localrespond req respond = do
         respond $ responseStream ok200 headers (gitPack repoPath "git-receive-pack" (producerRequestBody req))
 
-    headers = gitHeaders GitReceivePack
+    headers = gitHeaders GitReceivePack Service
 
 
 gitUploadPack :: FilePath -> Application
@@ -160,16 +159,20 @@ gitUploadPack repoPath =
         respond $ responseStream ok200 headers (gitPack repoPath "git-upload-pack" (producerRequestBody req))
         -- todo header checking
 
-    headers = gitHeaders GitUploadPack
+    headers = gitHeaders GitUploadPack Service
 
 
-gitHeaders :: GitService -> RequestHeaders
-gitHeaders serviceType =
-    [ ("Content-Type", "application/x-" ++ encodeUtf8 (toText serviceType) ++ "-result")
+gitHeaders :: GitService -> GitResponse -> RequestHeaders
+gitHeaders serviceType gitResponse =
+    [ ("Content-Type", "application/x-" ++ encodeUtf8 (toText serviceType) ++ "-" ++ suffix)
     , ("Pragma", "no-cache")
     , ("Server", "holborn")
     , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
     ]
+  where
+    suffix = case gitResponse of
+      Service -> "service"
+      Advertisement -> "advertisement"
 
 
 gitPack :: FilePath -> String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
