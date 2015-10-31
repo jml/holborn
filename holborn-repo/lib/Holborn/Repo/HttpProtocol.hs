@@ -37,25 +37,6 @@ import Holborn.Repo.Config (Config, buildRepoPath)
 
 -- | The git pull & push repository API. The URL schema is borrowed
 -- from github, i.e. `/user/repo` or `/org/repo`.
-
-data GitService = GitUploadPack | GitReceivePack
-
-instance ToText GitService where
-    toText GitUploadPack = "git-upload-pack"
-    toText GitReceivePack = "git-receive-pack"
-
-instance FromText GitService where
-    fromText "git-upload-pack" = Just GitUploadPack
-    fromText "git-receive-pack" = Just GitReceivePack
-    fromText _ = Nothing
-
-
-type GitProtocolAPI =
-       "info" :> "refs" :> QueryParam "service" GitService :> Raw
-  :<|> "git-upload-pack" :> Raw
-  :<|> "git-receive-pack" :> Raw
-
-
 type RepoAPI =
     Capture "userOrOrg" Text
         :> Capture "repo" Text
@@ -73,28 +54,37 @@ repoServer config userOrOrg repo =
       repoPath = buildRepoPath config userOrOrg repo
 
 
-gitProtocolAPI :: FilePath -> Server GitProtocolAPI
-gitProtocolAPI repoPath =
-  (smartHandshake repoPath)
-  :<|> (gitUploadPack repoPath)
-  :<|> (gitReceivePack repoPath)
-
-
 -- | Placeholder for "normal" HTTP traffic - without a service. This
 -- is where we plug in holborn-web output.
 showNormal :: EitherT ServantErr IO ()
 showNormal = return ()
 
 
-backupResponse :: Response
-backupResponse = terror "I have no idea whether we can reach this state."
+-- | The core git protocol for a single repository.
+type GitProtocolAPI =
+       "info" :> "refs" :> QueryParam "service" GitService :> Raw
+  :<|> "git-upload-pack" :> Raw
+  :<|> "git-receive-pack" :> Raw
 
 
--- | Render in pkg format (4 byte hex prefix for total line length
--- including header)
-pktString :: (IsString s) => String -> s
-pktString s =
-    fromString (printf "%04x" ((length s) + 4) ++ s)
+-- | Git offers two kinds of service.
+data GitService = GitUploadPack | GitReceivePack
+
+instance ToText GitService where
+    toText GitUploadPack = "git-upload-pack"
+    toText GitReceivePack = "git-receive-pack"
+
+instance FromText GitService where
+    fromText "git-upload-pack" = Just GitUploadPack
+    fromText "git-receive-pack" = Just GitReceivePack
+    fromText _ = Nothing
+
+
+gitProtocolAPI :: FilePath -> Server GitProtocolAPI
+gitProtocolAPI repoPath =
+  (smartHandshake repoPath)
+  :<|> (gitUploadPack repoPath)
+  :<|> (gitReceivePack repoPath)
 
 
 smartHandshake :: FilePath -> Maybe GitService -> Application
@@ -108,6 +98,9 @@ smartHandshake repoPath service =
     gitResponse :: Text -> Response
     gitResponse serviceName =
         responseStream ok200 (gitHeaders' (encodeUtf8 serviceName)) (gitPack' (textToString serviceName))
+
+    backupResponse :: Response
+    backupResponse = terror "I have no idea whether we can reach this state."
 
     gitHeaders' serviceName =
         [ ("Content-Type", "application/x-" ++ serviceName ++ "-advertisement")
@@ -134,6 +127,12 @@ smartHandshake repoPath service =
     banner serviceName = do
         yield (pktString ("# service=" ++ serviceName ++ "\n"))
         yield "0000"
+
+    -- | Render in pkg format (4 byte hex prefix for total line length
+    -- including header)
+    pktString :: (IsString s) => String -> s
+    pktString s =
+        fromString (printf "%04x" ((length s) + 4) ++ s)
 
     -- Yield an empty footer to be explicit about what we are not
     -- sending.
