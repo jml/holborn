@@ -36,15 +36,18 @@ import Holborn.Repo.Config (Config, buildRepoPath)
 
 -- | The git pull & push repository API. The URL schema is borrowed
 -- from github, i.e. `/user/repo` or `/org/repo`.
+
+type GitProtocolAPI =
+  -- "service" is either `git-upload-pack` or `git-receive-pack`
+       "info" :> "refs" :> QueryParam "service" Text :> Raw
+  :<|> "git-upload-pack" :> Raw
+  :<|> "git-receive-pack" :> Raw
+
+
 type RepoAPI =
     Capture "userOrOrg" Text
         :> Capture "repo" Text
-        :> ( Get '[] ()
-             :<|> "info" :> "refs"
-                 :> QueryParam "service" Text -- `git-upload-pack` or `git-receive-pack`
-                 :> Raw
-             :<|> "git-upload-pack" :> Raw
-             :<|> "git-receive-pack" :> Raw )
+        :> ( Get '[] () :<|> GitProtocolAPI)
 
 
 repoAPI :: Proxy RepoAPI
@@ -53,12 +56,16 @@ repoAPI = Proxy
 
 repoServer :: Config -> Server RepoAPI
 repoServer config userOrOrg repo =
-    showNormal
-    :<|> (smartHandshake repoPath)
-    :<|> (gitUploadPack repoPath)
-    :<|> (gitReceivePack repoPath)
+    showNormal :<|> gitProtocolAPI repoPath
     where
       repoPath = buildRepoPath config userOrOrg repo
+
+
+gitProtocolAPI :: FilePath -> Server GitProtocolAPI
+gitProtocolAPI repoPath =
+  (smartHandshake repoPath)
+  :<|> (gitUploadPack repoPath)
+  :<|> (gitReceivePack repoPath)
 
 
 -- | Placeholder for "normal" HTTP traffic - without a service. This
