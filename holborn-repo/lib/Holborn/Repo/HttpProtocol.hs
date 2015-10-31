@@ -23,7 +23,7 @@ import           Control.Monad.Trans.Either (EitherT)
 import qualified Data.ByteString as BS
 import           Network.HTTP.Types.Header (hContentEncoding, RequestHeaders)
 import           Network.HTTP.Types.Status (ok200)
-import           Network.Wai (responseLBS, Application, responseStream, requestBody, requestHeaders, Request, Response)
+import           Network.Wai (Application, responseStream, requestBody, requestHeaders, Request, Response)
 import           Pipes ((>->), await, yield)
 import           Pipes.Core (Consumer, Producer, Pipe)
 import           Pipes.GZip (decompress)
@@ -31,7 +31,6 @@ import           Pipes.Safe (SafeT)
 import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import           Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..), ServantErr, Server, Raw)
 import           Text.Printf (printf)
-import System.IO (stdout, hFlush)
 
 import Holborn.Repo.Config (Config, buildRepoPath)
 
@@ -68,7 +67,7 @@ repoServer config =
 -- | Placeholder for "normal" HTTP traffic - without a service. This
 -- is where we plug in holborn-web output.
 showNormal :: Text -> Text -> EitherT ServantErr IO ()
-showNormal userOrOrg repo = return ()
+showNormal _userOrOrg _repo = return ()
 
 backupResponse :: Response
 backupResponse = terror "I have no idea whether we can reach this state."
@@ -87,8 +86,9 @@ smartHandshake config userOrOrg repo service =
     localrespond
   where
     repoPath = buildRepoPath config userOrOrg repo
+
     localrespond :: Application
-    localrespond req respond = do
+    localrespond _req respond = do
         liftIO $ print service
         liftIO $ print repoPath
 
@@ -100,7 +100,7 @@ smartHandshake config userOrOrg repo service =
             _ -> backupResponse
 
     gitPack :: String -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack service moreData flush =
+    gitPack service moreData _flush =
         runShell $ (
             (banner service)
             >> (producerCmd (service ++ " --stateless-rpc --advertise-refs " ++ repoPath) >-> filterStdErr)
@@ -155,6 +155,7 @@ producerRequestBody req =
             yield data'
             loop
 
+
 gitReceivePack :: Config -> Text -> Text -> Application
 gitReceivePack config userOrOrg repo =
     localrespond
@@ -174,7 +175,7 @@ gitReceivePack config userOrOrg repo =
         ]
 
     gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack service postDataProducer moreData flush =
+    gitPack service postDataProducer moreData _flush =
         runShell $
         postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
             >-> sendChunks
@@ -184,6 +185,7 @@ gitReceivePack config userOrOrg repo =
             chunk <- await
             liftIO $ moreData (fromByteString chunk)
             sendChunks
+
 
 gitUploadPack :: Config -> Text -> Text -> Application
 gitUploadPack config userOrOrg repo =
@@ -205,7 +207,7 @@ gitUploadPack config userOrOrg repo =
         ]
 
     gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack service postDataProducer moreData flush =
+    gitPack service postDataProducer moreData _flush =
         runShell $
         postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
             >-> sendChunks
