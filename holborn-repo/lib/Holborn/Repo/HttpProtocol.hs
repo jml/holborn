@@ -107,9 +107,9 @@ smartHandshake repoPath service =
 
     gitResponse :: Text -> Response
     gitResponse serviceName =
-        responseStream ok200 (gitHeaders (encodeUtf8 serviceName)) (gitPack' (textToString serviceName))
+        responseStream ok200 (gitHeaders' (encodeUtf8 serviceName)) (gitPack' (textToString serviceName))
 
-    gitHeaders serviceName =
+    gitHeaders' serviceName =
         [ ("Content-Type", "application/x-" ++ serviceName ++ "-advertisement")
         , ("Pragma", "no-cache")
         , ("Server", "holborn")
@@ -149,12 +149,7 @@ gitReceivePack repoPath =
     localrespond req respond = do
         respond $ responseStream ok200 headers (gitPack repoPath "git-receive-pack" (producerRequestBody req))
 
-    headers =
-        [ ("Content-Type", "application/x-git-receive-pack-result")
-        , ("Pragma", "no-cache")
-        , ("Server", "holborn")
-        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
-        ]
+    headers = gitHeaders GitReceivePack
 
 
 gitUploadPack :: FilePath -> Application
@@ -166,12 +161,16 @@ gitUploadPack repoPath =
         respond $ responseStream ok200 headers (gitPack repoPath "git-upload-pack" (producerRequestBody req))
         -- todo header checking
 
-    headers =
-        [ ("Content-Type", "application/x-git-upload-pack-result")
-        , ("Pragma", "no-cache")
-        , ("Server", "holborn")
-        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
-        ]
+    headers = gitHeaders GitUploadPack
+
+
+gitHeaders :: GitService -> RequestHeaders
+gitHeaders serviceType =
+    [ ("Content-Type", "application/x-" ++ encodeUtf8 (toText serviceType) ++ "-result")
+    , ("Pragma", "no-cache")
+    , ("Server", "holborn")
+    , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
+    ]
 
 
 gitPack :: FilePath -> String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
