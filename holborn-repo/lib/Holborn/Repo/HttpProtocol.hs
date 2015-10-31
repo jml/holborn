@@ -93,11 +93,12 @@ smartHandshake config userOrOrg repo service =
         liftIO $ print repoPath
 
         respond $ case service of
-            Just "git-upload-pack" ->
-                responseStream ok200 (gitHeaders "git-upload-pack") (gitPack "git-upload-pack")
-            Just "git-receive-pack" ->
-                responseStream ok200 (gitHeaders "git-receive-pack") (gitPack "git-receive-pack")
+            Just "git-upload-pack" -> gitResponse "git-upload-pack"
+            Just "git-receive-pack" -> gitResponse "git-receive-pack"
             _ -> backupResponse
+
+    gitResponse :: String -> Response
+    gitResponse serviceName = responseStream ok200 (gitHeaders (fromString serviceName)) (gitPack serviceName)
 
     gitPack :: String -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack service moreData _flush =
