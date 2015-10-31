@@ -54,8 +54,10 @@ type RepoAPI =
         :> "git-receive-pack"
         :> Raw
 
+
 repoAPI :: Proxy RepoAPI
 repoAPI = Proxy
+
 
 repoServer :: Config -> Server RepoAPI
 repoServer config =
@@ -64,13 +66,16 @@ repoServer config =
     :<|> (gitUploadPack config)
     :<|> (gitReceivePack config)
 
+
 -- | Placeholder for "normal" HTTP traffic - without a service. This
 -- is where we plug in holborn-web output.
 showNormal :: Text -> Text -> EitherT ServantErr IO ()
 showNormal _userOrOrg _repo = return ()
 
+
 backupResponse :: Response
 backupResponse = terror "I have no idea whether we can reach this state."
+
 
 -- | Render in pkg format (4 byte hex prefix for total line length
 -- including header)
@@ -78,33 +83,38 @@ pktString :: (IsString s) => String -> s
 pktString s =
     fromString (printf "%04x" ((length s) + 4) ++ s)
 
+
 acceptGzip :: RequestHeaders -> Bool
 acceptGzip = any ( == (hContentEncoding, "gzip"))
 
+
 smartHandshake :: Config -> Text -> Text -> Maybe Text -> Application
 smartHandshake config userOrOrg repo service =
-    localrespond
+    handshakeApp
   where
-    repoPath = buildRepoPath config userOrOrg repo
-
-    localrespond :: Application
-    localrespond _req respond = do
-        liftIO $ print service
-        liftIO $ print repoPath
-
+    handshakeApp :: Application
+    handshakeApp _req respond =
         respond $ case service of
             Just "git-upload-pack" -> gitResponse "git-upload-pack"
             Just "git-receive-pack" -> gitResponse "git-receive-pack"
             _ -> backupResponse
 
-    gitResponse :: String -> Response
-    gitResponse serviceName = responseStream ok200 (gitHeaders (fromString serviceName)) (gitPack serviceName)
+    gitResponse :: Text -> Response
+    gitResponse serviceName =
+        responseStream ok200 (gitHeaders (encodeUtf8 serviceName)) (gitPack (textToString serviceName))
+
+    gitHeaders serviceName =
+        [ ("Content-Type", "application/x-" ++ serviceName ++ "-advertisement")
+        , ("Pragma", "no-cache")
+        , ("Server", "holborn")
+        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
+        ]
 
     gitPack :: String -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack service moreData _flush =
+    gitPack serviceName moreData _flush =
         runShell $ (
-            (banner service)
-            >> (producerCmd (service ++ " --stateless-rpc --advertise-refs " ++ repoPath) >-> filterStdErr)
+            (banner serviceName)
+            >> (producerCmd (serviceName ++ " --stateless-rpc --advertise-refs " ++ repoPath) >-> filterStdErr)
             >> footer) >-> sendChunks
       where
         sendChunks :: Consumer ByteString (SafeT IO) ()
@@ -113,22 +123,19 @@ smartHandshake config userOrOrg repo service =
             liftIO $ moreData (fromByteString chunk)
             sendChunks
 
-    gitHeaders service =
-        [ ("Content-Type", "application/x-" ++ service ++ "-advertisement")
-        , ("Pragma", "no-cache")
-        , ("Server", "holborn")
-        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
-        ]
-
     -- git requires a service header that just repeats the service it
     -- asked for. It also requires `0000` to indicate a boundary.
-    banner service = do
-        yield (pktString ("# service=" ++ service ++ "\n"))
+    banner serviceName = do
+        yield (pktString ("# service=" ++ serviceName ++ "\n"))
         yield "0000"
+
+    repoPath = buildRepoPath config userOrOrg repo
+
     -- Yield an empty footer to be explicit about what we are not
     -- sending.
     footer = do
         yield ""
+
 
 -- | The shell library we are using to invoke git returns a Left for
 -- stderr output and a Right for stdout output. We don't expect stderr
