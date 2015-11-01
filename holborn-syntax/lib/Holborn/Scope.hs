@@ -231,6 +231,10 @@ exitScope :: Scoped a (Environment a)
 exitScope = Scoped $ state popEnvironment'
 
 
+modifyScope :: (Environment a -> Environment a) -> Scoped a ()
+modifyScope = Scoped . modify . modifyEnvironment
+
+
 incrementID :: Scoped a ID
 incrementID = Scoped $ state incrementID'
 
@@ -239,13 +243,13 @@ incrementID = Scoped $ state incrementID'
 bind :: Symbol -> location -> Scoped location ID
 bind symbol srcSpan = do
   nextID <- incrementID
-  Scoped $ modify (modifyEnvironment (insertBinding symbol nextID srcSpan))
+  modifyScope $ insertBinding symbol nextID srcSpan
   return nextID
 
 
 -- | Declare that a symbol is no longer bound in the current scope.
 unbind :: Symbol -> Scoped location ()
-unbind symbol = Scoped $ modify (modifyEnvironment (insertUnbinding symbol))
+unbind symbol = modifyScope $ insertUnbinding symbol
 
 
 -- | Declare that symbol is a reference to a previously bound variable, using
@@ -253,4 +257,4 @@ unbind symbol = Scoped $ modify (modifyEnvironment (insertUnbinding symbol))
 addReference :: Symbol -> a -> Scoped a ()
 addReference symbol srcSpan = do
   definition <- findDefinition symbol <$> Scoped get
-  Scoped $ modify (modifyEnvironment (insertReference symbol definition srcSpan))
+  modifyScope $ insertReference symbol definition srcSpan
