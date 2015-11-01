@@ -23,15 +23,15 @@ import           Control.Monad.Trans.Either (EitherT)
 import qualified Data.ByteString as BS
 import           Network.HTTP.Types.Header (hContentEncoding, RequestHeaders)
 import           Network.HTTP.Types.Status (ok200)
-import           Network.Wai (responseLBS, Application, responseStream, requestBody, requestHeaders, Request, Response)
+import           Network.Wai (Application, responseStream, requestBody, requestHeaders, Request, Response)
 import           Pipes ((>->), await, yield)
 import           Pipes.Core (Consumer, Producer, Pipe)
 import           Pipes.GZip (decompress)
 import           Pipes.Safe (SafeT)
 import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import           Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..), ServantErr, Server, Raw)
+import           Servant.Common.Text (FromText(..), ToText(..))
 import           Text.Printf (printf)
-import System.IO (stdout, hFlush)
 
 import Holborn.Repo.Config (Config, buildRepoPath)
 
@@ -40,107 +40,149 @@ import Holborn.Repo.Config (Config, buildRepoPath)
 type RepoAPI =
     Capture "userOrOrg" Text
         :> Capture "repo" Text
-        :> Get '[] ()
-    :<|> Capture "userOrOrg" Text
-        :> Capture "repo" Text
-        :> "info" :> "refs"
-        :> QueryParam "service" Text -- `git-upload-pack` or `git-receive-pack`
-        :> Raw
-    :<|> Capture "userOrOrg" Text
-        :> Capture "repo" Text
-        :> "git-upload-pack"
-        :> Raw
-    :<|> Capture "userOrOrg" Text
-        :> Capture "repo" Text
-        :> "git-receive-pack"
-        :> Raw
+        :> ( Get '[] () :<|> GitProtocolAPI)
+
 
 repoAPI :: Proxy RepoAPI
 repoAPI = Proxy
 
+
 repoServer :: Config -> Server RepoAPI
-repoServer config =
-    showNormal
-    :<|> (smartHandshake config)
-    :<|> (gitUploadPack config)
-    :<|> (gitReceivePack config)
+repoServer config userOrOrg repo =
+    showNormal :<|> gitProtocolAPI repoPath
+    where
+      repoPath = buildRepoPath config userOrOrg repo
+
 
 -- | Placeholder for "normal" HTTP traffic - without a service. This
 -- is where we plug in holborn-web output.
-showNormal :: Text -> Text -> EitherT ServantErr IO ()
-showNormal userOrOrg repo = return ()
+showNormal :: EitherT ServantErr IO ()
+showNormal = return ()
 
-backupResponse :: Response
-backupResponse = terror "I have no idea whether we can reach this state."
 
--- | Render in pkg format (4 byte hex prefix for total line length
--- including header)
-pktString :: (IsString s) => String -> s
-pktString s =
-    fromString (printf "%04x" ((length s) + 4) ++ s)
+-- | The core git protocol for a single repository.
+type GitProtocolAPI =
+       "info" :> "refs" :> QueryParam "service" GitService :> Raw
+  :<|> "git-upload-pack" :> Raw
+  :<|> "git-receive-pack" :> Raw
 
-acceptGzip :: RequestHeaders -> Bool
-acceptGzip = any ( == (hContentEncoding, "gzip"))
 
-smartHandshake :: Config -> Text -> Text -> Maybe Text -> Application
-smartHandshake config userOrOrg repo service =
-    localrespond
+-- | Git offers two kinds of service.
+data GitService = GitUploadPack | GitReceivePack
+
+stringyService :: IsString a => GitService -> a
+stringyService serviceType = case serviceType of
+  GitUploadPack -> "git-upload-pack"
+  GitReceivePack -> "git-receive-pack"
+
+instance ToText GitService where
+    toText = stringyService
+
+instance FromText GitService where
+    fromText "git-upload-pack" = Just GitUploadPack
+    fromText "git-receive-pack" = Just GitReceivePack
+    fromText _ = Nothing
+
+
+data GitResponse = Service | Advertisement
+
+
+gitProtocolAPI :: FilePath -> Server GitProtocolAPI
+gitProtocolAPI repoPath =
+  (smartHandshake repoPath)
+  :<|> (gitServe GitUploadPack repoPath)
+  :<|> (gitServe GitReceivePack repoPath)
+
+
+smartHandshake :: FilePath -> Maybe GitService -> Application
+smartHandshake repoPath service =
+    handshakeApp
   where
-    repoPath = buildRepoPath config userOrOrg repo
-    localrespond :: Application
-    localrespond req respond = do
-        liftIO $ print service
-        liftIO $ print repoPath
+    handshakeApp :: Application
+    handshakeApp _req respond =
+        respond $ maybe backupResponse gitResponse service
 
-        respond $ case service of
-            Just "git-upload-pack" ->
-                responseStream ok200 (gitHeaders "git-upload-pack") (gitPack "git-upload-pack")
-            Just "git-receive-pack" ->
-                responseStream ok200 (gitHeaders "git-receive-pack") (gitPack "git-receive-pack")
-            _ -> backupResponse
+    gitResponse :: GitService -> Response
+    gitResponse serviceType =
+        responseStream
+            ok200
+            (gitHeaders serviceType Advertisement)
+            (gitPack' serviceType)
 
-    gitPack :: String -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack service moreData flush =
+    backupResponse :: Response
+    backupResponse = terror "no git service specified: I have no idea whether we can reach this state."
+
+    gitPack' :: GitService -> (Builder -> IO ()) -> IO () -> IO ()
+    gitPack' serviceType moreData _flush =
         runShell $ (
-            (banner service)
-            >> (producerCmd (service ++ " --stateless-rpc --advertise-refs " ++ repoPath) >-> filterStdErr)
+            (banner serviceName)
+            >> (producerCmd (serviceName ++ " --stateless-rpc --advertise-refs " ++ repoPath) >-> filterStdErr)
             >> footer) >-> sendChunks
       where
+
+        serviceName = stringyService serviceType
+
         sendChunks :: Consumer ByteString (SafeT IO) ()
         sendChunks = do
             chunk <- await
             liftIO $ moreData (fromByteString chunk)
             sendChunks
 
-    gitHeaders service =
-        [ ("Content-Type", "application/x-" ++ service ++ "-advertisement")
-        , ("Pragma", "no-cache")
-        , ("Server", "holborn")
-        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
-        ]
-
     -- git requires a service header that just repeats the service it
     -- asked for. It also requires `0000` to indicate a boundary.
-    banner service = do
-        yield (pktString ("# service=" ++ service ++ "\n"))
+    banner serviceName = do
+        yield (pktString ("# service=" ++ serviceName ++ "\n"))
         yield "0000"
+
+    -- | Render in pkg format (4 byte hex prefix for total line length
+    -- including header)
+    pktString :: (IsString s) => String -> s
+    pktString s =
+        fromString (printf "%04x" ((length s) + 4) ++ s)
+
     -- Yield an empty footer to be explicit about what we are not
     -- sending.
     footer = do
         yield ""
 
--- | The shell library we are using to invoke git returns a Left for
--- stderr output and a Right for stdout output. We don't expect stderr
--- (Left) output in normal operation so we error out (for now).
-filterStdErr :: Pipe (Either ByteString ByteString) ByteString (SafeT IO) ()
-filterStdErr = do
-    x <- await
-    case x of
-         -- TODO send errors to journald && maybe measure
-         Left err -> terror (decodeUtf8 err)
-         Right data' -> do
-             yield data'
-             filterStdErr
+
+gitServe :: GitService -> FilePath -> Application
+gitServe serviceType repoPath = localrespond
+  where
+    localrespond :: Application
+    localrespond req respond = do
+        respond $ responseStream
+          ok200
+          (gitHeaders serviceType Service)
+          (gitPack repoPath serviceType (producerRequestBody req))
+
+
+gitHeaders :: GitService -> GitResponse -> RequestHeaders
+gitHeaders serviceType gitResponse =
+    [ ("Content-Type", "application/x-" ++ service ++ "-" ++ suffix)
+    , ("Pragma", "no-cache")
+    , ("Server", "holborn")
+    , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
+    ]
+  where
+    service = stringyService serviceType
+    suffix = case gitResponse of
+      Service -> "service"
+      Advertisement -> "advertisement"
+
+
+gitPack :: FilePath -> GitService -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
+gitPack repoPath serviceType postDataProducer moreData _flush =
+    runShell $
+    postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
+        >-> sendChunks
+  where
+    service = stringyService serviceType
+    sendChunks :: Consumer ByteString (SafeT IO) ()
+    sendChunks = do
+        chunk <- await
+        liftIO $ moreData (fromByteString chunk)
+        sendChunks
 
 
 producerRequestBody :: Request -> Producer ByteString (SafeT IO) ()
@@ -155,63 +197,20 @@ producerRequestBody req =
             yield data'
             loop
 
-gitReceivePack :: Config -> Text -> Text -> Application
-gitReceivePack config userOrOrg repo =
-    localrespond
-  where
-    repoPath = buildRepoPath config userOrOrg repo
-    localrespond :: Application
-    localrespond req respond = do
-        liftIO $ print userOrOrg
-        liftIO $ print repo
-        respond $ responseStream ok200 headers (gitPack "git-receive-pack" (producerRequestBody req))
 
-    headers =
-        [ ("Content-Type", "application/x-git-receive-pack-result")
-        , ("Pragma", "no-cache")
-        , ("Server", "holborn")
-        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
-        ]
+acceptGzip :: RequestHeaders -> Bool
+acceptGzip = any ( == (hContentEncoding, "gzip"))
 
-    gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack service postDataProducer moreData flush =
-        runShell $
-        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
-            >-> sendChunks
-      where
-        sendChunks :: Consumer ByteString (SafeT IO) ()
-        sendChunks = do
-            chunk <- await
-            liftIO $ moreData (fromByteString chunk)
-            sendChunks
 
-gitUploadPack :: Config -> Text -> Text -> Application
-gitUploadPack config userOrOrg repo =
-    localrespond
-  where
-    repoPath = buildRepoPath config userOrOrg repo
-    localrespond :: Application
-    localrespond req respond = do
-        liftIO $ print userOrOrg
-        liftIO $ print repo
-        respond $ responseStream ok200 headers (gitPack "git-upload-pack" (producerRequestBody req))
-        -- todo header checking
-
-    headers =
-        [ ("Content-Type", "application/x-git-upload-pack-result")
-        , ("Pragma", "no-cache")
-        , ("Server", "holborn")
-        , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
-        ]
-
-    gitPack :: String -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
-    gitPack service postDataProducer moreData flush =
-        runShell $
-        postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
-            >-> sendChunks
-      where
-        sendChunks :: Consumer ByteString (SafeT IO) ()
-        sendChunks = do
-            chunk <- await
-            liftIO $ moreData (fromByteString chunk)
-            sendChunks
+-- | The shell library we are using to invoke git returns a Left for
+-- stderr output and a Right for stdout output. We don't expect stderr
+-- (Left) output in normal operation so we error out (for now).
+filterStdErr :: Pipe (Either ByteString ByteString) ByteString (SafeT IO) ()
+filterStdErr = do
+    x <- await
+    case x of
+         -- TODO send errors to journald && maybe measure
+         Left err -> terror (decodeUtf8 err)
+         Right data' -> do
+             yield data'
+             filterStdErr
