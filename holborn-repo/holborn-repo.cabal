@@ -37,6 +37,7 @@ library
                      , pipes-safe
                      , pipes-zlib
                      , wai
+                     , warp
                      , pipes
                      , http-types
                      , blaze-builder
