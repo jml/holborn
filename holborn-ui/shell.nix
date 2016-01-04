@@ -4,8 +4,8 @@ let
 
   inherit (nixpkgs) pkgs;
 
-  f = { mkDerivation, base, basic-prelude, bcrypt, bytestring
-      , errors, postgresql-simple, stdenv, tasty, tasty-hunit
+  f = { mkDerivation, aeson, base, basic-prelude, bcrypt
+      , bytestring, errors, postgresql-simple, stdenv, tasty, tasty-hunit
       , tasty-quickcheck, text
       }:
       mkDerivation {
@@ -13,7 +13,8 @@ let
         version = "0.1.0.0";
         src = ./.;
         libraryHaskellDepends = [
-          base basic-prelude bcrypt bytestring errors postgresql-simple text
+          aeson base basic-prelude bcrypt bytestring errors postgresql-simple
+          text
         ];
         testHaskellDepends = [
           base basic-prelude tasty tasty-hunit tasty-quickcheck

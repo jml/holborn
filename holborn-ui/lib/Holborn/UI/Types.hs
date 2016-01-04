@@ -6,6 +6,7 @@ module Holborn.UI.Types
        , Username
        , Email
        , Password
+       , ApiError(..)
        ) where
 
 import BasicPrelude
@@ -34,3 +35,10 @@ newPassword p = do
 
 instance Prelude.Show Password where
     show _ = "*hidden-password*" :: String
+
+-- | Sum type of all API errors that we want to handle nicely (where
+-- nicely means something other than throwing a 500 with "something
+-- broke").
+data ApiError =
+    UserAlreadyExists Username
+    deriving Show

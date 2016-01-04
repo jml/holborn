@@ -17,6 +17,8 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Holborn.UI.Types
+                     , Holborn.UI.User
+                     , Holborn.Models.Users
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.8 && <5
@@ -26,6 +28,7 @@ library
                      , errors
                      , basic-prelude
                      , bcrypt
+                     , aeson
 
   hs-source-dirs:      lib
   default-language:    Haskell2010
