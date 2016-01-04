@@ -6,14 +6,15 @@ module Holborn.UI.User
        ) where
 
 import BasicPrelude
-import Database.PostgreSQL.Simple (execute, Connection, query, Only(..))
-import Database.PostgreSQL.Simple.Errors (constraintViolation)
-import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Holborn.UI.Types (Email, Password, Username, ApiError(..))
 import Control.Error (ExceptT, throwE)
 import Data.Aeson (ToJSON)
+import Database.PostgreSQL.Simple (Connection, Only (..), execute, query)
+import Database.PostgreSQL.Simple.Errors (ConstraintViolation (..), constraintViolation)
+import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Holborn.UI.Types (ApiError (..), Email, Password, Username)
 
 import qualified Holborn.Models.Users as U
+
 
 signup :: Connection -> Username -> Email -> Password -> ExceptT ApiError IO ()
 signup conn u e p = do
@@ -22,17 +23,22 @@ signup conn u e p = do
             insert into "user" (id, username, signup_email, password, created)
             values (default, ?, ?, ?, default)
             |] (u, e, p)))
-        (\_ -> (throwE (UserAlreadyExists u)))
+        handle
     return ()
+  where
+    handle (UniqueViolation "username") = throwE (UserAlreadyExists u)
 
 
-listUsers :: Connection -> Int -> ExceptT ApiError IO [U.ListUsersRow]
+listUsers :: Connection -> Int -> ExceptT ApiError IO (U.PaginatedResponse [U.ListUsersRow])
 listUsers conn startId = do
     r <- liftIO $ (query conn [sql|
         select id, username
-        from "user" where id > ? limit 50
+        from "user" where id > ? order by id limit 50
         |] (Only startId) :: IO [U.ListUsersRow])
-    return r
+    let next = case r of
+                   [] -> ""
+                   l -> show (maximum (map U._listUserRowId r))
+    return (U.PaginatedResponse r next)
 
 
 --example = do
