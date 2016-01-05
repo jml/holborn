@@ -5,7 +5,6 @@ module Holborn.UI.Api
        ( UserAPI
        , userAPI
        , server
-       , signupForm
        ) where
 
 import BasicPrelude
@@ -16,7 +15,6 @@ import Servant
 import Servant.HTML.Blaze (HTML)
 import Text.Blaze.Html (Html, toHtml)
 import Text.Hamlet (shamletFile)
-import Text.Digestive (Form, (.:), text)
 import Data.Text (unpack)
 
 
@@ -25,13 +23,6 @@ data SignupData = SignupData { username :: Text, email ::Text, password :: Text 
 type UserAPI =
     "users" :> "signup" :> Get '[HTML] Html
     :<|> "users" :> "signup" :> ReqBody '[FormUrlEncoded] SignupData :> Post '[HTML] Html
-
-
-signupForm :: MonadIO m => Form Text m SignupData
-signupForm = SignupData
-     <$> "username" .: text Nothing
-     <*> "email" .: text Nothing
-     <*> "password" .: text Nothing
 
 
 instance FromFormUrlEncoded SignupData where
