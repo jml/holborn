@@ -18,6 +18,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Holborn.UI.Types
                      , Holborn.UI.User
+                     , Holborn.UI.Api
                      , Holborn.Models.Users
   -- other-modules:
   -- other-extensions:
@@ -28,7 +29,16 @@ library
                      , errors
                      , basic-prelude
                      , bcrypt
-                     , aeson
+                     , aeson >= 0.10
+                     , digestive-functors >=0.8
+                     , digestive-functors-blaze
+                     , servant >=0.4 && <0.5
+                     , servant-blaze >=0.4 && <0.5
+                     , servant-server >=0.4 && <0.5
+                     , blaze-html
+                     , shakespeare
+                     , either
+
 
   hs-source-dirs:      lib
   default-language:    Haskell2010
@@ -47,5 +57,22 @@ Test-Suite holborn-ui-tests
                      , holborn-ui
   hs-source-dirs:      tests
   default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+
+
+executable holborn-ui-server
+  main-is:             Main.hs
+  hs-source-dirs:      holborn-ui-server
+  default-language:    Haskell2010
+  build-depends:       base >=4.8 && <5
+                     , basic-prelude >= 0.3.13 && <0.6
+                     , blaze-html >= 0.8 && <0.9
+                     , bytestring >= 0.10.0
+                     , servant-server >= 0.4 && <0.5
+                     , wai >= 3.0 && <3.1
+                     , warp >= 3.1 && <3.2
+                     , envparse >= 0.2
+                     , holborn-ui
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings

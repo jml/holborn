@@ -6,7 +6,10 @@ mkDerivation {
   src = ./.;
   isLibrary = true;
   isExecutable = true;
-  buildDepends = [ base basic-prelude network-simple turtle ];
+  libraryHaskellDepends = [ base ];
+  executableHaskellDepends = [
+    base basic-prelude network-simple turtle
+  ];
   description = "Command line tool for holborn";
   license = stdenv.lib.licenses.unfree;
 }
