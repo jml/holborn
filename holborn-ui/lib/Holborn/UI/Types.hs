@@ -7,16 +7,25 @@ module Holborn.UI.Types
        , Email
        , Password
        , ApiError(..)
+       , AppConf(..)
        ) where
 
 import BasicPrelude
 import qualified Crypto.BCrypt as BCrypt
 import Database.PostgreSQL.Simple.ToField (ToField)
+import Database.PostgreSQL.Simple (Connection)
 import qualified Prelude
+
 
 newtype Username = Username Text deriving (Eq, Ord, Show, ToField)
 newtype Email = Email Text deriving (Eq, Ord, Show, ToField)
 newtype Password = Password Text deriving (ToField)
+
+
+data AppConf = AppConf
+  { conn :: Connection
+  , jwtSecret :: Text
+  }
 
 
 newUsername :: Text -> Username
@@ -41,4 +50,6 @@ instance Prelude.Show Password where
 -- broke").
 data ApiError =
     UserAlreadyExists Username
+    | UnexpectedConstraintViolation Text
+    | UserNotFound Username
     deriving Show
