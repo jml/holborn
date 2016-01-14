@@ -1,0 +1,28 @@
+# For more information, see: https://github.com/commercialhaskell/stack/blob/release/doc/yaml_configuration.md
+
+# NB: This requires `pcre` to be installed on the system.
+
+# Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
+resolver: lts-4.1
+
+# Local packages, usually specified by relative directory name
+packages:
+- hcl/
+- holborn-api/
+- holborn-repo/
+- holborn-syntax/
+
+# Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
+extra-deps:
+- language-python-0.5.2
+- envparse-0.2.2
+- highlighter2-0.2.5
+- pipes-shell-0.1.4
+- pipes-zlib-0.4.3
+- pretty-error-0.1.0.0
+
+# Override default flag values for local packages and extra-deps
+flags: {}
+
+# Extra package databases containing global packages
+extra-package-dbs: []
