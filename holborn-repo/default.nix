@@ -1,5 +1,5 @@
 { mkDerivation, aeson, async, base, basic-prelude, blaze-builder
-, bytestring, either, envparse, http-types, mtl, network
+, bytestring, either, envparse, gitlib, http-types, mtl, network
 , network-simple, pipes, pipes-aeson, pipes-bytestring
 , pipes-network, pipes-parse, pipes-safe, pipes-shell, pipes-zlib
 , process, servant, servant-server, stdenv, text, time, wai, warp
@@ -12,9 +12,10 @@ mkDerivation {
   isExecutable = true;
   buildDepends = [
     aeson async base basic-prelude blaze-builder bytestring either
-    envparse http-types mtl network network-simple pipes pipes-aeson
-    pipes-bytestring pipes-network pipes-parse pipes-safe pipes-shell
-    pipes-zlib process servant servant-server text time wai warp
+    envparse gitlib http-types mtl network network-simple pipes
+    pipes-aeson pipes-bytestring pipes-network pipes-parse pipes-safe
+    pipes-shell pipes-zlib process servant servant-server text time wai
+    warp
   ];
   license = stdenv.lib.licenses.unfree;
 }

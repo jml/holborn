@@ -6,7 +6,7 @@ version:             0.1.0.0
 -- synopsis:
 -- description:
 -- license:
-author:              Tom Hunger
+author:              Tom Hunger and Jonathan M. Lange
 maintainer:          tehunger@gmail.com
 -- copyright:
 -- category:
@@ -55,6 +55,7 @@ library
                      , process
                      , async
                      , pipes-bytestring
+                     , gitlib
 
 executable holborn-repo
   main-is:             Main.hs

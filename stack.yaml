@@ -1,6 +1,6 @@
 # For more information, see: https://github.com/commercialhaskell/stack/blob/release/doc/yaml_configuration.md
 
-# NB: This requires `pcre` to be installed on the system.
+# NB: This requires dev versions of `pcre` and `icu` to be installed on the system.
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
 resolver: lts-4.1
@@ -26,3 +26,7 @@ flags: {}
 
 # Extra package databases containing global packages
 extra-package-dbs: []
+
+# XXX: brew installs icu in a weird place
+extra-include-dirs: [/usr/local/opt/icu4c/include]
+extra-lib-dirs: [/usr/local/opt/icu4c/lib]
