@@ -18,7 +18,6 @@ module Holborn.Repo.HttpProtocol
 import           BasicPrelude
 
 import           Blaze.ByteString.Builder (Builder, fromByteString)
-import           Control.Monad.Trans.Either (EitherT)
 import qualified Data.ByteString as BS
 import           Network.HTTP.Types.Header (hContentEncoding, RequestHeaders)
 import           Network.HTTP.Types.Status (ok200)
@@ -32,14 +31,16 @@ import           Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..),
 import           Servant.Common.Text (FromText(..), ToText(..))
 import           Text.Printf (printf)
 
+import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
 import Holborn.Repo.Config (Config, buildRepoPath)
+import Holborn.Repo.GitLayer (makeRepository)
 
 -- | The git pull & push repository API. The URL schema is borrowed
 -- from github, i.e. `/user/repo` or `/org/repo`.
 type RepoAPI =
     Capture "userOrOrg" Text
         :> Capture "repo" Text
-        :> ( Get '[] () :<|> GitProtocolAPI)
+        :> (BrowseAPI :<|> GitProtocolAPI)
 
 
 repoAPI :: Proxy RepoAPI
@@ -47,16 +48,11 @@ repoAPI = Proxy
 
 
 repoServer :: Config -> Server RepoAPI
-repoServer config userOrOrg repo =
-    showNormal :<|> gitProtocolAPI repoPath
+repoServer config userOrOrg repoName =
+    codeBrowser repo :<|> gitProtocolAPI repoPath
     where
-      repoPath = buildRepoPath config userOrOrg repo
-
-
--- | Placeholder for "normal" HTTP traffic - without a service. This
--- is where we plug in holborn-web output.
-showNormal :: EitherT ServantErr IO ()
-showNormal = return ()
+      repo = makeRepository userOrOrg repoName repoPath
+      repoPath = buildRepoPath config userOrOrg repoName
 
 
 -- | The core git protocol for a single repository.
