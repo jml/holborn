@@ -21,10 +21,13 @@ import Data.Nullable (toMaybe)
 import Control.Monad.Eff
 
 import Components.Validated
+import Holborn.Routing as HR
 
 import qualified Thermite as T
 
 import qualified React as R
+import Control.Monad.Eff.Console (log, CONSOLE())
+import Data.Maybe (Maybe())
 
 import qualified DOM as DOM
 import qualified DOM.HTML as DOM
@@ -32,19 +35,7 @@ import qualified DOM.HTML.Types as DOM
 import qualified DOM.HTML.Window as DOM
 import qualified DOM.Node.ParentNode as DOM
 
-
-import Data.Functor ((<$))
-import Control.Alt ((<|>))
-import Routing
-import Routing.Match
-import Routing.Match.Class
-import Control.Monad.Eff.Console (log, CONSOLE())
-import Data.Maybe (Maybe())
-
-data Routes = RouteA | RouteB
-
-routing :: Match Routes
-routing = RouteA <$ lit "a" <|> RouteB <$ lit "b"
+import Routing (matches)
 
 
 -- The following is a hack to listen on route changes for the "root"
@@ -53,12 +44,12 @@ routing = RouteA <$ lit "a" <|> RouteB <$ lit "b"
 -- valid once we mounted a component.
 componentDidMount :: forall props state eff. (React.ReactThis props state -> InputAction -> T.EventHandler) -> R.ComponentDidMount props state (console :: CONSOLE | eff)
 componentDidMount dispatch this = do
-    matches routing callback
+    matches HR.rootRoutes callback
   where
-    callback :: Maybe Routes -> Routes -> T.EventHandler
-    callback _ RouteA = do
+    callback :: Maybe HR.RootRoutes -> HR.RootRoutes -> T.EventHandler
+    callback _ (HR.RouteA _) = do
       dispatch this Submit
-    callback _ RouteB = do
+    callback _ HR.RouteB = do
       dispatch this Submit
 
 
