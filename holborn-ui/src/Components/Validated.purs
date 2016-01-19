@@ -3,6 +3,7 @@ module Components.Validated where
 import Prelude
 import qualified Thermite as T
 import qualified React.DOM as R
+import qualified React as R
 import qualified React.DOM.Props as RP
 import qualified Thermite.Aff as TA
 import qualified Network.HTTP.Affjax as AJ
@@ -82,6 +83,13 @@ initialState :: InputState
 initialState = { usernameValid: false, passwordValid: false, emailValid: false, signupData: { username: "", email: "", password: "" } }
 
 
+simpleButtonSpec :: forall eff props. T.Spec eff Unit props Unit
+simpleButtonSpec = T.simpleSpec T.defaultPerformAction render
+  where
+    render _ _ _ _ = [ R.button [] [ R.text "simpleButton"] ]
+simpleButton props = R.createElement (T.createClass simpleButtonSpec unit) props []
+
+
 validatedInput :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) InputState props InputAction
 validatedInput = T.simpleSpec performAction render
   where
@@ -98,6 +106,7 @@ validatedInput = T.simpleSpec performAction render
                             , RP.onBlur \e -> dispatch (ValidateUsername (unsafeCoerce e).target.value)
                             ] []
                   ]
+        , simpleButton [RP._type "text"]
         , R.div [ RP.className (if s.emailValid then "form-group has-success" else "form-group has-error")
                 ] [ R.input [ RP._type "text"
                             , RP.placeholder "email"

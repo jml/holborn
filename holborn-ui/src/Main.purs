@@ -33,10 +33,44 @@ import qualified DOM.HTML.Window as DOM
 import qualified DOM.Node.ParentNode as DOM
 
 
+import Data.Functor ((<$))
+import Control.Alt ((<|>))
+import Routing
+import Routing.Match
+import Routing.Match.Class
+import Control.Monad.Eff.Console (log, CONSOLE())
+import Data.Maybe (Maybe())
+
+data Routes = RouteA | RouteB
+
+routing :: Match Routes
+routing = RouteA <$ lit "a" <|> RouteB <$ lit "b"
+
+
+-- The following is a hack to listen on route changes for the "root"
+-- component that controls everything else. `dispatch` can be
+-- extracted from the spec but takes a `this` pointer which is only
+-- valid once we mounted a component.
+componentDidMount :: forall props state eff. (React.ReactThis props state -> InputAction -> T.EventHandler) -> R.ComponentDidMount props state (console :: CONSOLE | eff)
+componentDidMount dispatch this = do
+    matches routing callback
+  where
+    callback :: Maybe Routes -> Routes -> T.EventHandler
+    callback _ RouteA = do
+      dispatch this Submit
+    callback _ RouteB = do
+      dispatch this Submit
+
+
 -- | The main method creates the task list component, and renders it to the document body.
-main :: forall eff. Eff (dom :: DOM.DOM | eff) Unit
+main :: forall eff. Eff (dom :: DOM.DOM, console :: CONSOLE | eff) Unit
 main = void do
-  let component = T.createClass validatedInput initialState
+
+  -- Demo for how to hook into life cycle.
+  let validatedInputSpec = T.createReactSpec validatedInput initialState
+  let component = R.createClass ((_.spec validatedInputSpec) { componentDidMount = (componentDidMount (_.dispatcher validatedInputSpec))})
+  let reactElement = (R.createFactory component {})
+
   document <- DOM.window >>= DOM.document
   container <- fromJust <<< toMaybe <$> DOM.querySelector "#container" (DOM.htmlDocumentToParentNode document)
-  R.render (R.createFactory component {}) container
+  R.render reactElement container
