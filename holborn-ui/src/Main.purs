@@ -47,10 +47,8 @@ componentDidMount dispatch this = do
     matches HR.rootRoutes callback
   where
     callback :: Maybe HR.RootRoutes -> HR.RootRoutes -> T.EventHandler
-    callback _ (HR.RouteA _) = do
-      dispatch this Submit
-    callback _ HR.RouteB = do
-      dispatch this Submit
+    callback _ rt = do
+      dispatch this (UpdateRoute rt)
 
 
 -- | The main method creates the task list component, and renders it to the document body.

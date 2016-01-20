@@ -29,6 +29,7 @@ import qualified Web.Cookies as C
 import Components.Response (Response(..))
 
 import Data.Foreign (Foreign())
+import Holborn.Routing (RootRoutes(..))
 
 type SignupData =
   { username :: String
@@ -68,6 +69,7 @@ type InputState =
   , usernameValid :: Boolean
   , passwordValid :: Boolean
   , signupData :: SignupData
+  , currentRoute :: RootRoutes
   }
 
 canSubmit :: InputState -> Boolean
@@ -78,9 +80,16 @@ data InputAction =
   | ValidateEmail String
   | ValidatePassword String
   | Submit
+  | UpdateRoute RootRoutes
 
 initialState :: InputState
-initialState = { usernameValid: false, passwordValid: false, emailValid: false, signupData: { username: "", email: "", password: "" } }
+initialState =
+  { usernameValid: false
+  , passwordValid: false
+  , emailValid: false
+  , signupData: { username: "", email: "", password: "" }
+  , currentRoute: RouteB
+  }
 
 
 simpleButtonSpec :: forall eff props. T.Spec eff Unit props Unit
@@ -106,7 +115,11 @@ validatedInput = T.simpleSpec performAction render
                             , RP.onBlur \e -> dispatch (ValidateUsername (unsafeCoerce e).target.value)
                             ] []
                   ]
-        , simpleButton [RP._type "text"]
+        , case s.currentRoute of
+             RouteB -> simpleButton [RP._type "text"]
+             RouteA _ -> R.text "routea"
+             _ -> R.text "404"
+
         , R.div [ RP.className (if s.emailValid then "form-group has-success" else "form-group has-error")
                 ] [ R.input [ RP._type "text"
                             , RP.placeholder "email"
@@ -157,6 +170,7 @@ validatedInput = T.simpleSpec performAction render
          pure $ state { passwordValid = true, signupData = state.signupData { password = password } }
 
     performAction :: forall eff. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) InputState props InputAction
+    performAction action@(UpdateRoute r) props state k = k $ state { currentRoute = r }
     performAction action@(ValidateUsername u) props state k = do
         k $ state { usernameValid = false } -- Set UI validity to false immediately.
         TA.asyncOne' doGet action props state k
