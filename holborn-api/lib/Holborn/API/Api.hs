@@ -48,8 +48,12 @@ instance FromText Username where
 
 type UserAPI =
     Get '[HTML] Html
+    -- normal user api
     :<|> "v1" :> "users" :> Capture "username" Username :> Get '[JSON] (U.Result U.ListUsersRow Text)
+    -- Special POST for signing up:
     :<|> "users" :> "signup" :> ReqBody '[JSON] SignupData :> Post '[JSON] (U.Result SignupOk SignupError)
+
+--    :<|> "v1" :> "users" :> Capture "username" Username :> "repos" :> Get '[JSON] (U.Result U.ListUserRepoRow Text)
 
 
 landing :: EitherT ServantErr IO Html

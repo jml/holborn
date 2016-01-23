@@ -11,11 +11,18 @@ import qualified Network.Wai.Handler.Warp as Warp
 import Servant (serve)
 import Database.PostgreSQL.Simple (connect, ConnectInfo(..), defaultConnectInfo)
 
-import Holborn.API.Api (userAPI, server)
+import qualified Holborn.API.Api as AA
+import qualified Holborn.API.Internal as AI
 import Holborn.API.Types (AppConf(..))
+import Servant ((:<|>)(..))
+import Data.Proxy (Proxy(..))
+
+api :: Proxy (AA.UserAPI :<|> AI.AuthAPI)
+api = Proxy
 
 app :: AppConf -> Application
-app conf = serve userAPI (server conf)
+app conf = serve api
+  ((AA.server conf) :<|> AI.server)
 
 
 main = do

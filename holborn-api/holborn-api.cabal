@@ -19,6 +19,7 @@ library
   exposed-modules:     Holborn.API.Types
                      , Holborn.API.User
                      , Holborn.API.Api
+                     , Holborn.API.Internal
                      , Holborn.JSON.User
                      , Holborn.JSON.Response
   -- other-modules:
@@ -38,6 +39,8 @@ library
                      , shakespeare
                      , either
                      , jwt
+                     , containers
+                     , attoparsec
 
 
   hs-source-dirs:      lib
