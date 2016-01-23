@@ -26,7 +26,4 @@ tests =
 db = do
     c <- connect (defaultConnectInfo  { connectDatabase = "holborn-test", connectUser = "tom"})
     pwd <- newPassword "password" -- password is in IO so can't generate in an arbitray
-    let fns = [ ((listUsers c) <$> arbitrary)
---             , ((signup c) <$> arbitrary <*> arbitrary <*> (pure pwd)) >> return ()
-              ] :: (forall a. Gen (ExceptT ApiError )
-    return $ fmap runExceptT (oneof fns)
+    return ()
