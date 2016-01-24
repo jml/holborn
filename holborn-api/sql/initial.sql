@@ -18,6 +18,7 @@ create table "user"
     , password varchar(256) not null
     , created timestamp without time zone default (now() at time zone 'utc') not null
     );
+insert into "user" (username, signup_email, password) values ('alice', 'alice@exampe.com', 'password');
 
 
 create table "org"
@@ -83,5 +84,6 @@ create table "public_key"
     , pubkey text not null
     , owner_id int references "user" (id) not null
     , verified boolean not null
+    , readonly boolean not null
     , created timestamp without time zone default (now() at time zone 'utc') not null
     );
