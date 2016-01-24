@@ -18,6 +18,8 @@ library
                      , Holborn.API.Internal
                      , Holborn.JSON.User
                      , Holborn.JSON.Response
+                     , Holborn.JSON.Keys
+                     , Holborn.API.Keys
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.8 && <5

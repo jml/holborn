@@ -5,8 +5,7 @@
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeOperators      #-}
 module Holborn.API.Api
-       ( UserAPI
-       , userAPI
+       ( API
        , server
        ) where
 
@@ -46,26 +45,25 @@ instance FromText Username where
     fromText x = Just (newUsername x)
 
 
-type UserAPI =
+type API =
     Get '[HTML] Html
     -- normal user api
-    :<|> "v1" :> "users" :> Capture "username" Username :> Get '[JSON] (U.Result U.ListUsersRow Text)
+    :<|> "v1" :> "users" :> Capture "username" Username :> Get '[JSON] U.ListUsersRow
+
     -- Special POST for signing up:
     :<|> "users" :> "signup" :> ReqBody '[JSON] SignupData :> Post '[JSON] (U.Result SignupOk SignupError)
-
---    :<|> "v1" :> "users" :> Capture "username" Username :> "repos" :> Get '[JSON] (U.Result U.ListUserRepoRow Text)
 
 
 landing :: EitherT ServantErr IO Html
 landing = return $(shamletFile "./templates/landing.html")
 
 
-getUser :: AppConf -> Username -> EitherT ServantErr IO (U.Result U.ListUsersRow Text)
+getUser :: AppConf -> Username -> EitherT ServantErr IO U.ListUsersRow
 getUser (AppConf conn _) username = do
     r <- liftIO (runExceptT (U.getUser conn username))
     case r of
         Left (UserNotFound u) -> left err404
-        Right row -> return (U.OK row)
+        Right row -> return row
 
 
 signupPost :: AppConf -> SignupData -> EitherT ServantErr IO (U.Result SignupOk SignupError)
@@ -84,12 +82,8 @@ signupPost (AppConf conn jwtSecret) SignupData{..} = do
             return (U.OK (AuthJwt encodedJwt))
 
 
-server :: AppConf -> Server UserAPI
+server :: AppConf -> Server API
 server conf =
     landing
     :<|> (getUser conf)
     :<|> (signupPost conf)
-
-
-userAPI :: Proxy UserAPI
-userAPI = Proxy

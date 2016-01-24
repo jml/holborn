@@ -10,7 +10,7 @@
 -- and has absolutely no stability guarantees.
 
 module Holborn.API.Internal
-       ( AuthAPI
+       ( API
        , server
        ) where
 
@@ -27,7 +27,7 @@ import qualified Data.Attoparsec.Combinator as AT
 import System.IO (stdout, hFlush)
 
 -- | Main internal API (only used by our openssh version ATM).
-type AuthAPI =
+type API =
     "internal"
         :> "ssh"
         :> "check-key"
@@ -136,7 +136,7 @@ checkRepoAccess request = do
         , "echo 'Look at me. I\'m Dr. Zoidberg, homeowner'"
         ]
 
-server :: Server AuthAPI
+server :: Server API
 server = checkKey
     :<|> checkRepoAccess
 

@@ -8,39 +8,40 @@ drop table "pull_request" cascade;
 drop table "user_repo" cascade;
 drop table "org_repo" cascade;
 drop table "pull_request" cascade;
+drop table "public_key" cascade;
 
 
 create table "user"
     ( id serial primary key
-    , username varchar(32) unique
-    , signup_email varchar(1024) unique
-    , password varchar(256)
-    , created timestamp without time zone default (now() at time zone 'utc')
+    , username varchar(32) unique not null
+    , signup_email varchar(1024) not null
+    , password varchar(256) not null
+    , created timestamp without time zone default (now() at time zone 'utc') not null
     );
 
 
 create table "org"
     ( id serial primary key
-    , orgname varchar(32) unique
-    , created_by_id int references "user" (id)
-    , created timestamp without time zone default (now() at time zone 'utc')
+    , orgname varchar(32) unique not null
+    , created_by_id int references "user" (id) not null
+    , created timestamp without time zone default (now() at time zone 'utc') not null
     );
 
 
 create table "team"
     ( id serial primary key
-    , org_id int references "org" (id)
-    , team_name varchar(128) unique
-    , created_by_id int references "user" (id)
-    , created timestamp without time zone default (now() at time zone 'utc')
+    , org_id int references "org" (id) not null
+    , team_name varchar(128) unique not null
+    , created_by_id int references "user" (id) not null
+    , created timestamp without time zone default (now() at time zone 'utc') not null
     );
 
 
 create table "team_member"
     ( id serial primary key
-    , org_id int references "org" (id)
-    , team_id int references "team" (id)
-    , created timestamp without time zone default (now() at time zone 'utc')
+    , org_id int references "org" (id) not null
+    , team_id int references "team" (id) not null
+    , created timestamp without time zone default (now() at time zone 'utc') not null
     );
 
 
@@ -48,17 +49,17 @@ create table "team_member"
 -- different permissions etc attached to them.
 create table "user_repo"
     ( id serial primary key
-    , name varchar(128)
-    , user_id int references "user" (id)
-    , created timestamp without time zone default (now() at time zone 'utc')
+    , name varchar(128) not null
+    , user_id int references "user" (id) not null
+    , created timestamp without time zone default (now() at time zone 'utc') not null
     );
 
 
 create table "org_repo"
     ( id serial primary key
-    , name varchar(128)
-    , org_id int references "org" (id)
-    , created timestamp without time zone default (now() at time zone 'utc')
+    , name varchar(128) not null
+    , org_id int references "org" (id) not null
+    , created timestamp without time zone default (now() at time zone 'utc') not null
     );
 
 
@@ -67,10 +68,20 @@ create table "org_repo"
 -- make this fast with function indexes.
 create table "pull_request"
     ( id serial primary key
+    , name varchar(128) not null
+    , comment text not null
+    , initated_by_id int references "user" (id) not null
+    , from_ref varchar(256) not null -- e.g. teh/holborn to jml/holborn
+    , to_ref varchar(256) not null
+    , created timestamp without time zone default (now() at time zone 'utc') not null
+    );
+
+
+create table "public_key"
+    ( id serial primary key
     , name varchar(128)
-    , comment text
-    , initated_by_id int references "user" (id)
-    , from_ref varchar(256) -- e.g. teh/holborn to jml/holborn
-    , to_ref varchar(256)
-    , created timestamp without time zone default (now() at time zone 'utc')
+    , pubkey text not null
+    , owner_id int references "user" (id) not null
+    , verified boolean not null
+    , created timestamp without time zone default (now() at time zone 'utc') not null
     );
