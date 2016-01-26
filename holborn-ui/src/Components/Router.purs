@@ -12,6 +12,7 @@ import qualified Control.Monad.Eff.Exception as E
 import Network.HTTP.StatusCode (StatusCode(..))
 import Control.Monad.Eff.Console (CONSOLE())
 
+import qualified Holborn.KeySettings as KeySettings
 
 import Data.Foreign (Foreign())
 import Holborn.Routing (RootRoutes(..), rootRoutes)
@@ -41,7 +42,7 @@ spec = T.simpleSpec performAction render
     render dispatch _ s _ = pickRoute s.currentRoute
 
     pickRoute EmptyRoute = [ R.text "loading..." ]
-    pickRoute KeySettings = [ R.text "KeySettings..." ]
+    pickRoute KeySettings = [ KeySettings.component {} ]
 
     performAction action@(UpdateRoute r) props state k = k $ state { currentRoute = r }
 
