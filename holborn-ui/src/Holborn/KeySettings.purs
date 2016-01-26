@@ -9,7 +9,7 @@ import qualified Thermite.Aff as TA
 import Control.Monad.Aff
 import qualified Control.Monad.Eff.Exception as E
 import Network.HTTP.StatusCode (StatusCode(..))
-import Control.Monad.Eff.Console (CONSOLE())
+import Control.Monad.Eff.Console (log, CONSOLE())
 
 import Components.Validated as V
 
@@ -21,13 +21,14 @@ import Routing (matches)
 import qualified Network.HTTP.Affjax as AJ
 
 
+
 type State =
   { valid :: Boolean
   , keys :: Array String
   }
 
 
-data Action = AddKey
+data Action = AddKey | LoadData
 
 initialState :: State
 initialState =
@@ -40,10 +41,25 @@ spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie ::
 spec = T.simpleSpec performAction render
   where
     render :: T.Render State props Action
-    render dispatch _ s _ = [ R.text "keysettings" ]
+    render dispatch _ s _ =
+      [ R.h1 [] [R.text "Key settings"]
+      , R.form []
+        [ R.textarea [RP.value ("hello " ++ (show s.valid))] []
+        , R.button [] [R.text "add new key" ]
+        ]
+      ]
 
     performAction AddKey props state k = k $ state { valid = true }
+    performAction LoadData props state k = k $ state { valid = true }
+
+
+componentDidMount :: forall props state eff. (React.ReactThis props state -> Action -> T.EventHandler) -> R.ComponentDidMount props state (console :: CONSOLE | eff)
+componentDidMount dispatch this = do
+  dispatch this LoadData
 
 
 component :: forall eff props. props -> R.ReactElement
-component props = R.createElement (T.createClass spec initialState) props []
+component props =
+  let rspec = T.createReactSpec spec initialState
+      cls = R.createClass ((_.spec rspec) { componentDidMount = (componentDidMount (_.dispatcher rspec))})
+  in R.createElement cls props []
