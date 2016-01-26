@@ -69,7 +69,6 @@ type InputState =
   , usernameValid :: Boolean
   , passwordValid :: Boolean
   , signupData :: SignupData
-  , currentRoute :: RootRoutes
   }
 
 canSubmit :: InputState -> Boolean
@@ -88,7 +87,6 @@ initialState =
   , passwordValid: false
   , emailValid: false
   , signupData: { username: "", email: "", password: "" }
-  , currentRoute: RouteB
   }
 
 
@@ -115,11 +113,6 @@ validatedInput = T.simpleSpec performAction render
                             , RP.onBlur \e -> dispatch (ValidateUsername (unsafeCoerce e).target.value)
                             ] []
                   ]
-        , case s.currentRoute of
-             RouteB -> simpleButton [RP._type "text"]
-             RouteA _ -> R.text "routea"
-             _ -> R.text "404"
-
         , R.div [ RP.className (if s.emailValid then "form-group has-success" else "form-group has-error")
                 ] [ R.input [ RP._type "text"
                             , RP.placeholder "email"
@@ -170,7 +163,6 @@ validatedInput = T.simpleSpec performAction render
          pure $ state { passwordValid = true, signupData = state.signupData { password = password } }
 
     performAction :: forall eff. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) InputState props InputAction
-    performAction action@(UpdateRoute r) props state k = k $ state { currentRoute = r }
     performAction action@(ValidateUsername u) props state k = do
         k $ state { usernameValid = false } -- Set UI validity to false immediately.
         TA.asyncOne' doGet action props state k

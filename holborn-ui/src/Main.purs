@@ -20,7 +20,7 @@ import Data.Nullable (toMaybe)
 
 import Control.Monad.Eff
 
-import Components.Validated
+import qualified Components.Router as Router
 import Holborn.Routing as HR
 
 import qualified Thermite as T
@@ -42,13 +42,13 @@ import Routing (matches)
 -- component that controls everything else. `dispatch` can be
 -- extracted from the spec but takes a `this` pointer which is only
 -- valid once we mounted a component.
-componentDidMount :: forall props state eff. (React.ReactThis props state -> InputAction -> T.EventHandler) -> R.ComponentDidMount props state (console :: CONSOLE | eff)
+componentDidMount :: forall props state eff. (React.ReactThis props state -> Router.Action -> T.EventHandler) -> R.ComponentDidMount props state (console :: CONSOLE | eff)
 componentDidMount dispatch this = do
     matches HR.rootRoutes callback
   where
     callback :: Maybe HR.RootRoutes -> HR.RootRoutes -> T.EventHandler
     callback _ rt = do
-      dispatch this (UpdateRoute rt)
+      dispatch this (Router.UpdateRoute rt)
 
 
 -- | The main method creates the task list component, and renders it to the document body.
@@ -56,8 +56,8 @@ main :: forall eff. Eff (dom :: DOM.DOM, console :: CONSOLE | eff) Unit
 main = void do
 
   -- Demo for how to hook into life cycle.
-  let validatedInputSpec = T.createReactSpec validatedInput initialState
-  let component = R.createClass ((_.spec validatedInputSpec) { componentDidMount = (componentDidMount (_.dispatcher validatedInputSpec))})
+  let rspec = T.createReactSpec Router.spec Router.initialState
+  let component = R.createClass ((_.spec rspec) { componentDidMount = (componentDidMount (_.dispatcher rspec))})
   let reactElement = (R.createFactory component {})
 
   document <- DOM.window >>= DOM.document
