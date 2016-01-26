@@ -40,7 +40,7 @@ listUsers conn startId = do
         |] (Only startId) :: IO [U.ListUsersRow])
     let next = case r of
                    [] -> ""
-                   l -> show (maximum (map U._listUsersRowId r))
+                   l -> show (maximum (map U._ListUsersRow_id r))
     return (U.PaginatedResponse r next)
 
 
