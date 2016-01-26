@@ -36,6 +36,10 @@ import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
+-- XXX: Get the instances. Actually, we'll want to move them here and make
+-- holborn-syntax purely a syntax library.
+import Holborn.HtmlFormat ()
+import Holborn.Syntax (annotateCode)
 
 -- | A git repository
 data Repository =
@@ -129,7 +133,12 @@ data Blob = Blob { _gitBlobOid :: Git.BlobOid GitRepo
 
 instance ToMarkup Blob where
   toMarkup blob =
-    H.pre $ toMarkup (decodeUtf8 (blobContents blob))
+    case annotateCode filename contents of
+      Left _ -> H.pre $ toMarkup (decodeUtf8 contents)
+      Right annotated -> toMarkup annotated
+    where
+      filename = intercalate "/" (blobPath blob)
+      contents = blobContents blob
 
 
 -- XXX: Copy/paste of getTree, which is also terrible and staircasey.

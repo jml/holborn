@@ -19,7 +19,7 @@ Currently missing support for:
  * Backticks
  * Wildcard imports, e.g. @from foo import *@
 -}
-module Holborn.Python (annotateSourceCode, getAST, Token) where
+module Holborn.Python (annotateSourceCode, getAST, ParseError, Token) where
 
 import BasicPrelude hiding (lex)
 
