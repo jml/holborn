@@ -2,7 +2,7 @@
 
 {- | Adapted version of highlighter2 syntax highlighter.  -}
 
-module Holborn.HtmlFormat (format) where
+module Holborn.HtmlFormat () where
 
 import BasicPrelude hiding (div, span)
 

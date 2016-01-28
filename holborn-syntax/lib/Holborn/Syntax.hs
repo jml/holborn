@@ -6,19 +6,16 @@ This module is the main entry point to the rest of the library.
 module Holborn.Syntax
        ( HolbornSource
        , annotateCode
-       , annotatePythonCode
        ) where
 
 import BasicPrelude
 
 import Control.Error (fmapL, note)
 import Data.ByteString.Char8 (unpack)
-import qualified Data.List as List
 import Text.Highlighter (lexerFromFilename)
 import Text.Highlighter.Lexer (runLexer)
-import Text.Highlighter.Lexers (lexers)
 import Text.Highlighter.Types (Token(tText), Lexer(lName))
-import PrettyError (assertRight, fromRight)
+import PrettyError (assertRight)
 
 import Holborn.Internal (leftMergeBy)
 import qualified Holborn.Python as P
@@ -50,15 +47,6 @@ annotateCode filename contents = do
       case lName lexer of
         "Python" -> fmapL ParseError $ P.annotateSourceCode (decodeUtf8 contents)
         _ -> Left (NoParser filename)
-
-
--- XXX: Deprecate this.
-annotatePythonCode :: Text -> HolbornSource
-annotatePythonCode code = fromRight $ do
-  pythonLexer <- note "Could not load Python lexer" $ List.lookup ".py" lexers
-  highlighterTokens <- fmapL show $ runLexer pythonLexer (encodeUtf8 code)
-  annotations <- fmapL show $ P.annotateSourceCode code
-  return $ annotateTokens highlighterTokens annotations
 
 
 annotateTokens :: Show a => [Token] -> [(String, Maybe (Annotation a))] -> AnnotatedSource a
