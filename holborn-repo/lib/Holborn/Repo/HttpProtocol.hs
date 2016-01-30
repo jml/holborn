@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
 
 -- | Implement the git http protocol (smart only):
@@ -19,7 +18,6 @@ module Holborn.Repo.HttpProtocol
 import           BasicPrelude
 
 import           Blaze.ByteString.Builder (Builder, fromByteString)
-import           Control.Monad.Trans.Either (EitherT)
 import qualified Data.ByteString as BS
 import           Network.HTTP.Types.Header (hContentEncoding, RequestHeaders)
 import           Network.HTTP.Types.Status (ok200)
@@ -33,14 +31,16 @@ import           Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..),
 import           Servant.Common.Text (FromText(..), ToText(..))
 import           Text.Printf (printf)
 
+import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
 import Holborn.Repo.Config (Config, buildRepoPath)
+import Holborn.Repo.GitLayer (makeRepository)
 
 -- | The git pull & push repository API. The URL schema is borrowed
 -- from github, i.e. `/user/repo` or `/org/repo`.
 type RepoAPI =
     Capture "userOrOrg" Text
         :> Capture "repo" Text
-        :> ( Get '[] () :<|> GitProtocolAPI)
+        :> (BrowseAPI :<|> GitProtocolAPI)
 
 
 repoAPI :: Proxy RepoAPI
@@ -48,16 +48,11 @@ repoAPI = Proxy
 
 
 repoServer :: Config -> Server RepoAPI
-repoServer config userOrOrg repo =
-    showNormal :<|> gitProtocolAPI repoPath
+repoServer config userOrOrg repoName =
+    codeBrowser repo :<|> gitProtocolAPI repoPath
     where
-      repoPath = buildRepoPath config userOrOrg repo
-
-
--- | Placeholder for "normal" HTTP traffic - without a service. This
--- is where we plug in holborn-web output.
-showNormal :: EitherT ServantErr IO ()
-showNormal = return ()
+      repo = makeRepository userOrOrg repoName repoPath
+      repoPath = buildRepoPath config userOrOrg repoName
 
 
 -- | The core git protocol for a single repository.
@@ -89,9 +84,9 @@ data GitResponse = Service | Advertisement
 
 gitProtocolAPI :: FilePath -> Server GitProtocolAPI
 gitProtocolAPI repoPath =
-  (smartHandshake repoPath)
-  :<|> (gitServe GitUploadPack repoPath)
-  :<|> (gitServe GitReceivePack repoPath)
+  smartHandshake repoPath
+  :<|> gitServe GitUploadPack repoPath
+  :<|> gitServe GitReceivePack repoPath
 
 
 smartHandshake :: FilePath -> Maybe GitService -> Application
@@ -115,18 +110,12 @@ smartHandshake repoPath service =
     gitPack' :: GitService -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack' serviceType moreData _flush =
         runShell $ (
-            (banner serviceName)
+            banner serviceName
             >> (producerCmd (serviceName ++ " --stateless-rpc --advertise-refs " ++ repoPath) >-> filterStdErr)
-            >> footer) >-> sendChunks
+            >> footer) >-> sendChunks moreData
       where
 
         serviceName = stringyService serviceType
-
-        sendChunks :: Consumer ByteString (SafeT IO) ()
-        sendChunks = do
-            chunk <- await
-            liftIO $ moreData (fromByteString chunk)
-            sendChunks
 
     -- git requires a service header that just repeats the service it
     -- asked for. It also requires `0000` to indicate a boundary.
@@ -138,19 +127,18 @@ smartHandshake repoPath service =
     -- including header)
     pktString :: (IsString s) => String -> s
     pktString s =
-        fromString (printf "%04x" ((length s) + 4) ++ s)
+        fromString (printf "%04x" (length s + 4) ++ s)
 
     -- Yield an empty footer to be explicit about what we are not
     -- sending.
-    footer = do
-        yield ""
+    footer = yield ""
 
 
 gitServe :: GitService -> FilePath -> Application
 gitServe serviceType repoPath = localrespond
   where
     localrespond :: Application
-    localrespond req respond = do
+    localrespond req respond =
         respond $ responseStream
           ok200
           (gitHeaders serviceType Service)
@@ -175,21 +163,23 @@ gitPack :: FilePath -> GitService -> Producer ByteString (SafeT IO) () -> (Build
 gitPack repoPath serviceType postDataProducer moreData _flush =
     runShell $
     postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
-        >-> sendChunks
+        >-> sendChunks moreData
   where
     service = stringyService serviceType
-    sendChunks :: Consumer ByteString (SafeT IO) ()
-    sendChunks = do
-        chunk <- await
-        liftIO $ moreData (fromByteString chunk)
-        sendChunks
+
+
+sendChunks :: (Builder -> IO ()) -> Consumer ByteString (SafeT IO) ()
+sendChunks moreData = do
+    chunk <- await
+    liftIO $ moreData (fromByteString chunk)
+    sendChunks moreData
 
 
 producerRequestBody :: Request -> Producer ByteString (SafeT IO) ()
 producerRequestBody req =
-    case acceptGzip (requestHeaders req) of
-        True -> decompress loop
-        False -> loop
+    case getContentEncoding req of
+        Just "gzip" -> decompress loop
+        _ -> loop
   where
     loop = do
         data' <- liftIO (requestBody req)
@@ -198,8 +188,8 @@ producerRequestBody req =
             loop
 
 
-acceptGzip :: RequestHeaders -> Bool
-acceptGzip = any ( == (hContentEncoding, "gzip"))
+getContentEncoding :: Request -> Maybe ByteString
+getContentEncoding = lookup hContentEncoding . requestHeaders
 
 
 -- | The shell library we are using to invoke git returns a Left for

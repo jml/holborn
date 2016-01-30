@@ -6,7 +6,7 @@ version:             0.1.0.0
 -- synopsis:
 -- description:
 -- license:
-author:              Tom Hunger
+author:              Tom Hunger and Jonathan M. Lange
 maintainer:          tehunger@gmail.com
 -- copyright:
 -- category:
@@ -19,6 +19,8 @@ library
                      , Holborn.Repo.RawProtocol
                      , Holborn.Repo.Config
                      , Holborn.Repo.Process
+                     , Holborn.Repo.GitLayer
+                     , Holborn.Repo.Browse
   hs-source-dirs:      lib
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
@@ -55,6 +57,20 @@ library
                      , process
                      , async
                      , pipes-bytestring
+                       -- Git support
+                     , gitlib
+                     , gitlib-libgit2
+                     , tagged
+                     , bytestring
+                     , errors
+                     , transformers
+                       -- XXX: For servant extensions. Should put them in
+                       -- separate library.
+                     , holborn-syntax
+                       -- Web UI for browsing git
+                     , servant-blaze
+                     , blaze-markup
+                     , blaze-html
 
 executable holborn-repo
   main-is:             Main.hs
