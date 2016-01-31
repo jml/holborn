@@ -14,7 +14,7 @@ import Text.Highlighter.Types (Token(..), TokenType, shortName)
 
 
 -- | A file that has been tokenized and annotated.
-data AnnotatedSource a = AnnotatedSource [HolbornToken a]
+data AnnotatedSource a = AnnotatedSource { getTokens :: [HolbornToken a] }
 
 -- | A token with extra semantic information. More data to be added later.
 data HolbornToken a = HolbornToken { _lexerToken :: Token

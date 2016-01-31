@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 {- | Adapted version of highlighter2 syntax highlighter.  -}
@@ -12,10 +14,11 @@ import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 import qualified Data.ByteString as BS
 
-import Holborn.Syntax.Types (
+import Holborn.Syntax (
   Annotation(..),
-  AnnotatedSource(..),
+  HolbornSource,
   HolbornToken,
+  getTokens,
   tokenAnnotation,
   tokenName,
   tokenShortName,
@@ -51,15 +54,15 @@ instance (H.ToValue a, Show a) => ToMarkup (HolbornToken a) where
      -- XXX: What do we actually want to do for unresolved references? Some sort of styling?
      Just UnresolvedReference -> H.span ! A.class_ (H.toValue ("unresolved" :: Text)) $ baseToken
    where
-     baseToken = H.span ! A.class_ (tokenShortName $ token) $ H.toHtml contents
+     baseToken = H.span ! A.class_ (tokenShortName token) $ H.toHtml contents
      contents = decodeUtf8 (tokenName token)
      findReferencesUrl = "https://google.com/?q=" ++ decodeUtf8 (tokenName token)
      bindingUrl i = "#" ++ show i
 
 
-instance (H.ToValue a, Show a) => ToMarkup (AnnotatedSource a) where
+instance ToMarkup HolbornSource where
 
-  toMarkup (AnnotatedSource tokens) = format HideLineNumbers tokens
+  toMarkup source = format HideLineNumbers (getTokens source)
 
 
 countLines :: [HolbornToken a] -> Int
