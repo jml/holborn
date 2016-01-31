@@ -12,7 +12,7 @@ import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 import qualified Data.ByteString as BS
 
-import Holborn.Types (
+import Holborn.Syntax.Types (
   Annotation(..),
   AnnotatedSource(..),
   HolbornToken,

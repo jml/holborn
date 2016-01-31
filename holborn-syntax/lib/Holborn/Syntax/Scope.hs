@@ -30,23 +30,23 @@ Currently missing support for a few necessary features
 
 -}
 
-module Holborn.Scope ( Scoped
-                     , calculateAnnotations
-                     , enterScope
-                     , exitScope
-                     , ID
-                     , addReference
-                     , bind
-                     , unbind
-                     , Interpreter(..)
-                     ) where
+module Holborn.Syntax.Scope ( Scoped
+                            , calculateAnnotations
+                            , enterScope
+                            , exitScope
+                            , ID
+                            , addReference
+                            , bind
+                            , unbind
+                            , Interpreter(..)
+                            ) where
 
 import BasicPrelude
 
 import Control.Monad.State (State, get, modify, state, runState)
 import qualified Data.Map as M
 
-import Holborn.Types (Annotation(..))
+import Holborn.Syntax.Types (Annotation(..))
 
 
 -- | @m@ is the kind of thing, @location@ is the location type

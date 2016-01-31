@@ -17,10 +17,10 @@ import Text.Highlighter.Lexer (runLexer)
 import Text.Highlighter.Types (Token(tText), Lexer(lName))
 import PrettyError (assertRight)
 
-import Holborn.Internal (leftMergeBy)
-import qualified Holborn.Python as P
-import Holborn.Scope (ID)
-import Holborn.Types (Annotation, AnnotatedSource(..), HolbornToken(..))
+import Holborn.Syntax.Internal (leftMergeBy)
+import qualified Holborn.Syntax.Python as P
+import Holborn.Syntax.Scope (ID)
+import Holborn.Syntax.Types (Annotation, AnnotatedSource(..), HolbornToken(..))
 
 
 -- | Source code that we've annotated with our intelligent parser.

@@ -1,4 +1,4 @@
-module Holborn.Types
+module Holborn.Syntax.Types
        ( Annotation(..)
        , AnnotatedSource(..)
        , Identifier(..)
