@@ -10,7 +10,7 @@ import Data.Foldable (asum)
 import Test.Tasty (TestTree, TestName, testGroup)
 import Test.Tasty.HUnit
 
-import Holborn.Syntax.Python (annotateSourceCode)
+import Holborn.Syntax.Languages.Python (annotateSourceCode)
 import Holborn.Syntax.Scope (ID)
 import Holborn.Syntax.Types (Annotation(..))
 

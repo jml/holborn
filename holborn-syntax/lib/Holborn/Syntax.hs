@@ -18,10 +18,10 @@ import Text.Highlighter.Types (Token(tText), Lexer(lName))
 import PrettyError (assertRight)
 
 import Holborn.Syntax.Internal (leftMergeBy)
-import qualified Holborn.Syntax.Python as P
 import Holborn.Syntax.Scope (ID)
 import Holborn.Syntax.Types (Annotation, AnnotatedSource(..), HolbornToken(..))
 
+import qualified Holborn.Syntax.Languages.Python as P
 
 -- | Source code that we've annotated with our intelligent parser.
 type HolbornSource = AnnotatedSource ID
