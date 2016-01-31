@@ -36,9 +36,9 @@ import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
--- XXX: Get the instances. Actually, we'll want to move them here and make
--- holborn-syntax purely a syntax library.
-import Holborn.HtmlFormat ()
+-- XXX: Get the instances. Need to move all HTML formatting stuff to a
+-- separate module, and leave this just about using Git.
+import Holborn.Repo.HtmlFormatTokens ()
 import Holborn.Syntax (annotateCode)
 
 -- | A git repository

@@ -1,16 +1,14 @@
-{ mkDerivation, base, basic-prelude, blaze-html, blaze-markup
-, bytestring, containers, errors, highlighter2, language-python
-, mtl, pretty-error, servant-server, stdenv, tasty, tasty-hunit
-, tasty-quickcheck, text, wai
+{ mkDerivation, base, basic-prelude, bytestring, containers, errors
+, highlighter2, language-python, mtl, pretty-error, stdenv, tasty
+, tasty-hunit, tasty-quickcheck, text
 }:
 mkDerivation {
   pname = "holborn-syntax";
-  version = "0.2.0.0";
+  version = "0.3.0.0";
   src = ./.;
   buildDepends = [
-    base basic-prelude blaze-html blaze-markup bytestring containers
-    errors highlighter2 language-python mtl pretty-error servant-server
-    text wai
+    base basic-prelude bytestring containers errors highlighter2
+    language-python mtl pretty-error text
   ];
   testDepends = [
     base basic-prelude tasty tasty-hunit tasty-quickcheck
