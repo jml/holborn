@@ -6,6 +6,14 @@ This module is the main entry point to the rest of the library.
 module Holborn.Syntax
        ( HolbornSource
        , annotateCode
+       , getTokens
+         -- Annotations
+       , Annotation(..)
+         -- Tokens
+       , HolbornToken
+       , tokenAnnotation
+       , tokenName
+       , tokenShortName
        ) where
 
 import BasicPrelude
@@ -17,11 +25,18 @@ import Text.Highlighter.Lexer (runLexer)
 import Text.Highlighter.Types (Token(tText), Lexer(lName))
 import PrettyError (assertRight)
 
-import Holborn.Internal (leftMergeBy)
-import qualified Holborn.Python as P
-import Holborn.Scope (ID)
-import Holborn.Types (Annotation, AnnotatedSource(..), HolbornToken(..))
+import Holborn.Syntax.Internal (leftMergeBy)
+import Holborn.Syntax.Scope (ID)
+import Holborn.Syntax.Types (
+  Annotation(..),
+  AnnotatedSource(..),
+  HolbornToken(..),
+  tokenAnnotation,
+  tokenName,
+  tokenShortName,
+  )
 
+import qualified Holborn.Syntax.Languages.Python as P
 
 -- | Source code that we've annotated with our intelligent parser.
 type HolbornSource = AnnotatedSource ID

@@ -6,7 +6,7 @@
 Python language analysis.
 
 Logic for building a model of bindings and references from Python source code,
-using "Holborn.Scope".
+using "Holborn.Syntax.Scope".
 
 Currently missing support for:
 
@@ -19,7 +19,7 @@ Currently missing support for:
  * Backticks
  * Wildcard imports, e.g. @from foo import *@
 -}
-module Holborn.Python (annotateSourceCode, getAST, ParseError, Token) where
+module Holborn.Syntax.Languages.Python (annotateSourceCode, getAST, ParseError, Token) where
 
 import BasicPrelude hiding (lex)
 
@@ -59,17 +59,17 @@ import Language.Python.Common.Token (tokenString)
 import Language.Python.Version2.Lexer (lex)
 import Language.Python.Version2.Parser (parseModule)
 
-import Holborn.Scope ( Scoped
-                     , ID
-                     , addReference
-                     , bind
-                     , calculateAnnotations
-                     , enterScope
-                     , exitScope
-                     , unbind
-                     , Interpreter(..)
-                     )
-import Holborn.Types (Annotation)
+import Holborn.Syntax.Scope ( Scoped
+                            , ID
+                            , addReference
+                            , bind
+                            , calculateAnnotations
+                            , enterScope
+                            , exitScope
+                            , unbind
+                            , Interpreter(..)
+                            )
+import Holborn.Syntax.Types (Annotation)
 
 
 getAST :: Text -> FilePath -> Either ParseError (Module SrcSpan, [Token])

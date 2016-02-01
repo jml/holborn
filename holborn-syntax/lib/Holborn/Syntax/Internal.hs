@@ -1,4 +1,4 @@
-module Holborn.Internal
+module Holborn.Syntax.Internal
        ( leftMergeBy
        ) where
 

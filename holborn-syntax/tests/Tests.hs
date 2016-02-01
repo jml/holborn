@@ -4,7 +4,7 @@ import Test.Tasty (defaultMain, TestTree, testGroup)
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-import Holborn.Internal (leftMergeBy)
+import Holborn.Syntax.Internal (leftMergeBy)
 
 import qualified PythonBindings
 
