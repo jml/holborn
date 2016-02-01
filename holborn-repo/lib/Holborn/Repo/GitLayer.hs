@@ -134,7 +134,13 @@ data Blob = Blob { _gitBlobOid :: Git.BlobOid GitRepo
 instance ToMarkup Blob where
   toMarkup blob =
     case annotateCode filename contents of
-      Left _ -> H.pre $ toMarkup (decodeUtf8 contents)
+      Left e -> do
+        -- TODO: Handle unparseable files better. In the meantime, show our
+        -- parse error so we can debug better.
+        H.div $ do
+          "Could not parse"
+          H.pre $ toMarkup (show e)
+        H.pre $ toMarkup (decodeUtf8 contents)
       Right annotated -> toMarkup annotated
     where
       filename = intercalate "/" (blobPath blob)

@@ -4,7 +4,7 @@ mkDerivation {
   pname = "hcl";
   version = "0.1.0.0";
   src = ./.;
-  isLibrary = true;
+  isLibrary = false;
   isExecutable = true;
   buildDepends = [ base basic-prelude network-simple turtle ];
   description = "Command line tool for holborn";

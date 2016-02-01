@@ -64,9 +64,8 @@ library
                      , bytestring
                      , errors
                      , transformers
-                       -- XXX: For servant extensions. Should put them in
-                       -- separate library.
-                     , holborn-syntax
+                       -- XXX: Need to bump version to get new 'annotateCode' function?
+                     , holborn-syntax >= 0.2
                        -- Web UI for browsing git
                      , servant-blaze
                      , blaze-markup
