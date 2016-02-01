@@ -5,11 +5,12 @@ module Holborn.Types
        , HolbornToken(..)
        , tokenAnnotation
        , tokenName
+       , tokenShortName
        , tokenType
        ) where
 
 import BasicPrelude
-import Text.Highlighter.Types (Token(..), TokenType)
+import Text.Highlighter.Types (Token(..), TokenType, shortName)
 
 
 -- | A file that has been tokenized and annotated.
@@ -44,6 +45,10 @@ tokenType (HolbornToken (Token t _) _) = t
 
 tokenName :: HolbornToken a -> ByteString
 tokenName (HolbornToken (Token _ s) _) = s
+
+
+tokenShortName :: IsString b => HolbornToken a -> b
+tokenShortName = fromString . shortName . tokenType
 
 
 tokenAnnotation :: HolbornToken a -> Maybe (Annotation a)

@@ -21,6 +21,8 @@ library
                      , Holborn.Repo.Process
                      , Holborn.Repo.GitLayer
                      , Holborn.Repo.Browse
+                     , Holborn.Repo.HtmlFormatTokens
+                     , Holborn.ServantExtensions
   hs-source-dirs:      lib
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
@@ -44,7 +46,6 @@ library
                      , http-types
                      , blaze-builder
                      , bytestring
-                     , time
                      , network >= 2.5
                      , pipes-network
                      , pipes-aeson
@@ -52,10 +53,8 @@ library
                      , aeson >=0.9
                      , pipes-parse
                      , mtl
-                     , network-simple >=0.4
                      , pipes-bytestring
                      , process
-                     , async
                      , pipes-bytestring
                        -- Git support
                      , gitlib
@@ -64,8 +63,7 @@ library
                      , bytestring
                      , errors
                      , transformers
-                       -- XXX: Need to bump version to get new 'annotateCode' function?
-                     , holborn-syntax >= 0.2
+                     , holborn-syntax >= 0.3
                        -- Web UI for browsing git
                      , servant-blaze
                      , blaze-markup
@@ -81,9 +79,7 @@ executable holborn-repo
   build-depends:       base >=4.8 && <4.9
                      , basic-prelude >= 0.3.13 && <0.6
                      , holborn-repo
-                     , servant >= 0.4 && <0.5
                      , servant-server >= 0.4 && <0.5
                      , wai
                      , warp
                      , envparse >=0.2
-                     , pipes-safe
