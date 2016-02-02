@@ -22,7 +22,6 @@ import Servant.HTML.Blaze (HTML)
 import Text.Blaze.Html (Html, toHtml)
 import Text.Hamlet (shamletFile)
 import qualified Holborn.JSON.User as U
-import qualified Holborn.JSON.Response as U
 import qualified Web.JWT as JWT
 
 import Holborn.API.Types (ApiError(..), newEmail, newPassword, newUsername, Username, AppConf(..))
@@ -51,7 +50,7 @@ type API =
     :<|> "v1" :> "users" :> Capture "username" Username :> Get '[JSON] U.ListUsersRow
 
     -- Special POST for signing up:
-    :<|> "users" :> "signup" :> ReqBody '[JSON] SignupData :> Post '[JSON] (U.Result SignupOk SignupError)
+    :<|> "users" :> "signup" :> ReqBody '[JSON] SignupData :> Post '[JSON] (Either SignupError SignupOk)
 
 
 landing :: EitherT ServantErr IO Html
@@ -66,12 +65,12 @@ getUser (AppConf conn _) username = do
         Right row -> return row
 
 
-signupPost :: AppConf -> SignupData -> EitherT ServantErr IO (U.Result SignupOk SignupError)
+signupPost :: AppConf -> SignupData -> EitherT ServantErr IO (Either SignupError SignupOk)
 signupPost (AppConf conn jwtSecret) SignupData{..} = do
     pwd <- liftIO (newPassword password)
     result <- liftIO (runExceptT (U.signup conn (newUsername username) (newEmail email) pwd))
     case result of
-        Left (UserAlreadyExists u) -> return $ U.Error (EUserExists "user already exists")
+        Left (UserAlreadyExists u) -> return $ Left (EUserExists "user already exists")
         Left err@(UnexpectedConstraintViolation x) -> do
             liftIO $ print ("ERROR", err)
             left err400
@@ -79,7 +78,7 @@ signupPost (AppConf conn jwtSecret) SignupData{..} = do
         Right _ -> do
             let jwt = JWT.def { JWT.sub = (JWT.stringOrURI username) }
             let encodedJwt = JWT.encodeSigned JWT.HS256 (JWT.secret jwtSecret) jwt
-            return (U.OK (AuthJwt encodedJwt))
+            return (Right (AuthJwt encodedJwt))
 
 
 server :: AppConf -> Server API

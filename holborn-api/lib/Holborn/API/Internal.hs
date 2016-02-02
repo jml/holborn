@@ -58,7 +58,7 @@ checkKey r = do
     liftIO $ print ("checkKey", r)
     liftIO $ hFlush stdout
     return $ case DMS.lookup r fakeDB of
-       Just username -> CheckKeyResponse True username
+       Just username -> CheckKeyResponse (Just username)
        _ -> terror "TODO return error for checkKey"
 
 
@@ -82,12 +82,10 @@ parseSSHCommand =
   where
     upload = do
         void $ AT.string "git-upload-pack '"
-        (org, user) <- repoPath
-        return (GitUploadPack org user)
+        uncurry GitUploadPack <$> repoPath
     receive = do
         void $ AT.string "git-receive-pack '"
-        (org, user) <- repoPath
-        return (GitReceivePack org user)
+        uncurry GitReceivePack <$> repoPath
     repoPath = do
         AT.skipWhile (== '/') -- skip optional leading /
         org <- AT.takeWhile1 (/= '/')
@@ -100,9 +98,6 @@ parseSSHCommand =
 checkRepoAccess :: CheckRepoAccessRequest -> EitherT ServantErr IO CheckRepoAccessResponse
 checkRepoAccess request = do
     let Right cmd = AT.parseOnly parseSSHCommand (command request)
-    liftIO $ print ("checkRepoAccess", request)
-    liftIO $ print cmd
-    liftIO $ hFlush stdout
     -- TODO - this is where we'd stick actual access controls, rate
     -- limiting etc.
 
@@ -111,23 +106,23 @@ checkRepoAccess request = do
     -- bidirectional pipe.
     return $ case cmd of
         GitReceivePack org repo ->
-            CheckRepoAccessResponse True (
+            CheckRepoAccessResponse (Just (
                 concat ["(echo -n '{\"command\": \"git-receive-pack\", \"org\": \""
                        , org
                        , "\", \"repo\": \""
                        , repo
                        ,"\"}' && cat) | nc 127.0.0.1 8081"
-                       ])
+                       ]))
         GitUploadPack org repo ->
-            CheckRepoAccessResponse True (
+            CheckRepoAccessResponse (Just (
                 concat ["(echo -n '{\"command\": \"git-upload-pack\", \"org\": \""
                        , org
                        , "\", \"repo\": \""
                        , repo
                        ,"\"}' && cat) | nc 127.0.0.1 8081"
-                       ])
+                       ]))
         Invalid _ ->
-            CheckRepoAccessResponse True (quotes !! 0)
+            CheckRepoAccessResponse (Just (quotes !! 0))
   where
     quotes :: [Text]
     quotes =
@@ -147,30 +142,36 @@ data CheckKeyRequest = CheckKeyRequest
     } deriving (Show, Generic, Eq, Ord)
 instance FromJSON CheckKeyRequest
 
+type Username = Text
+
 data CheckKeyResponse = CheckKeyResponse
-    { allowed :: Bool
-    , username_ :: Text
+    { username_ :: Maybe Username -- TODO might be more useful to return Either with error message?
     } deriving (Show, Generic)
 
 instance ToJSON CheckKeyResponse where
-    toJSON (CheckKeyResponse allowed username_) =
-        object [ "allowed"  .= allowed
+    toJSON (CheckKeyResponse (Just username_)) =
+        object [ "allowed"  .= True
                , "username" .= username_
+               ]
+    toJSON (CheckKeyResponse Nothing) =
+        object [ "allowed"  .= False
                ]
 
 data CheckRepoAccessRequest = CheckRepoAccessRequest
-    { username :: Text
+    { username :: Username
     , command :: Text
     } deriving (Show, Generic)
 instance FromJSON CheckRepoAccessRequest
 
 data CheckRepoAccessResponse = CheckRepoAccessResponse
-    { allowed_ :: Bool
-    , target :: Text -- E.g. "nc 127.0.0.1:8080"
+    { target :: Maybe Text -- E.g. "nc 127.0.0.1:8080"
     } deriving (Show)
 
 instance ToJSON CheckRepoAccessResponse where
-    toJSON (CheckRepoAccessResponse allowed_ target) =
-        object [ "allowed" .= allowed_
+    toJSON (CheckRepoAccessResponse (Just target)) =
+        object [ "allowed" .= True
                , "target"  .= target
+               ]
+    toJSON (CheckRepoAccessResponse Nothing) =
+        object [ "allowed" .= False
                ]

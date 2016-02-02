@@ -1,14 +1,8 @@
 name:                holborn-api
 version:             0.1.0.0
--- synopsis:
--- description:
--- license:
 author:              Tom Hunger
 maintainer:          tehunger@gmail.com
--- copyright:
--- category:
 build-type:          Simple
--- extra-source-files:
 cabal-version:       >=1.10
 
 library
@@ -20,8 +14,6 @@ library
                      , Holborn.JSON.Response
                      , Holborn.JSON.Keys
                      , Holborn.API.Keys
-  -- other-modules:
-  -- other-extensions:
   build-depends:       base >=4.8 && <5
                      , postgresql-simple
                      , text

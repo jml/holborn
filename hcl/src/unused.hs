@@ -1,4 +1,8 @@
-module Main where
+-- | This module runs the correct cabal invocation for figuring out
+-- modules that are specified in cabal but not actually imported
+-- anywhere. Useful for the occasional cleanup.
+
+module Main (main) where
 
 import Turtle
 
