@@ -23,10 +23,23 @@ import Data.Proxy (Proxy(..))
 data Config = Config { _port :: Warp.Port
                      }
 
+
 loadConfig :: IO Config
 loadConfig =
   Env.parse (Env.header "server") $
   Config <$> Env.var Env.auto "PORT"       (Env.def 8002 <> Env.help "Port to listen on")
+
+
+-- XXX: Duplicated & modified from Holborn.Repo.Config
+-- | Generate warp settings from config
+--
+-- Serve from a port and print out where we're serving from.
+warpSettings :: Config -> Warp.Settings
+warpSettings config =
+  Warp.setBeforeMainLoop printPort (Warp.setPort port' Warp.defaultSettings)
+  where
+    printPort = putStrLn $ "holborn-api running at http://localhost:" ++ show port' ++ "/"
+    port' = _port config
 
 
 api :: Proxy (AApi.API :<|> AInternal.API :<|> AKeys.API)
@@ -42,4 +55,4 @@ main = do
     config <- loadConfig
     conn <- connect (defaultConnectInfo  { connectDatabase = "holborn", connectUser = "tom"})
     let conf = AppConf conn "test-secret-todo-read-from-env"
-    Warp.run (_port config) (app conf)
+    Warp.runSettings (warpSettings config) (app conf)

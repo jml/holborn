@@ -7,6 +7,6 @@ NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/nixos-unstabl
 ```
 $ npm install pulp bower
 $ bower install
-$ pulp server
+$ pulp server  # --host 0.0.0.0 if running from inside Vagrant
 * Server listening on http://localhost:1337/
 ```

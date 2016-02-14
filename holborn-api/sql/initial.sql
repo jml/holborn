@@ -1,14 +1,13 @@
 -- psql holborn -f sql/initial.sql
 
-drop table "user" cascade;
-drop table "org" cascade;
-drop table "team" cascade;
-drop table "team_member" cascade;
-drop table "pull_request" cascade;
-drop table "user_repo" cascade;
-drop table "org_repo" cascade;
-drop table "pull_request" cascade;
-drop table "public_key" cascade;
+drop table if exists "user" cascade;
+drop table if exists "org" cascade;
+drop table if exists "team" cascade;
+drop table if exists "team_member" cascade;
+drop table if exists "pull_request" cascade;
+drop table if exists "user_repo" cascade;
+drop table if exists "org_repo" cascade;
+drop table if exists "public_key" cascade;
 
 
 create table "user"
