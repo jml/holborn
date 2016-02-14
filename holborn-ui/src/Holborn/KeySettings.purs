@@ -43,7 +43,7 @@ spec = T.simpleSpec performAction render
     render :: T.Render State props Action
     render dispatch _ s _ =
       [ R.h1 [] [R.text "Key settings"]
-      , R.form []
+      , R.form [ RP.key "form" ]
         [ R.textarea [RP.value ("hello " ++ (show s.valid))] []
         , R.button [] [R.text "add new key" ]
         ]
