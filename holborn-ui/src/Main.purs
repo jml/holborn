@@ -26,6 +26,7 @@ import Holborn.Routing as HR
 import qualified Thermite as T
 
 import qualified React as R
+import qualified ReactDOM as RD
 import Control.Monad.Eff.Console (log, CONSOLE())
 
 import Data.Maybe (Maybe())
@@ -49,4 +50,4 @@ main = void do
 
   document <- DOM.window >>= DOM.document
   container <- fromJust <<< toMaybe <$> DOM.querySelector "#container" (DOM.htmlDocumentToParentNode document)
-  R.render reactElement container
+  RD.render reactElement container
