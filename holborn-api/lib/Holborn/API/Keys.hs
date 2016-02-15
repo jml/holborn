@@ -1,7 +1,13 @@
+-- | Add a key e.g.
+-- Post a new key (we don't do auth yet).
+-- $ curl 127.0.0.1:8002/v1/user/keys/ -H "content-type: application/json" -d '{"key": "key", "title": "tom"}'
+-- Fetch some keys:
+-- $ curl 127.0.0.1:8002/v1/users/tom/keys
+
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE TypeOperators      #-}
-{-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE QuasiQuotes        #-}
 
 module Holborn.API.Keys
        ( API
@@ -34,7 +40,12 @@ server conf =
 
 
 listKeys :: AppConf -> Username -> EitherT ServantErr IO [ListKeysRow]
-listKeys conf username = undefined
+listKeys AppConf{conn=conn} username = do
+    r <- liftIO $ query conn [sql|
+                   select id, pubkey, name, verified, readonly, created
+                   from "public_key"
+               |] ()
+    return r
 
 getKey :: AppConf -> Int -> EitherT ServantErr IO ListKeysRow
 getKey conf keyId = undefined

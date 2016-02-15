@@ -4,17 +4,12 @@ import Prelude
 import qualified Thermite as T
 import qualified React.DOM as R
 import qualified React as R
-import qualified React.DOM.Props as RP
-import qualified Thermite.Aff as TA
 import qualified Network.HTTP.Affjax as AJ
-import Control.Monad.Aff
 import qualified Control.Monad.Eff.Exception as E
-import Network.HTTP.StatusCode (StatusCode(..))
 import Control.Monad.Eff.Console (CONSOLE())
 
 import qualified Holborn.KeySettings as KeySettings
 
-import Data.Foreign (Foreign())
 import Holborn.Routing (RootRoutes(..), rootRoutes)
 import qualified Web.Cookies as C
 import Data.Maybe
@@ -42,6 +37,7 @@ spec = T.simpleSpec performAction render
     render dispatch _ s _ = pickRoute s.currentRoute
 
     pickRoute EmptyRoute = [ R.text "loading..." ]
+    pickRoute Route404 = [ R.text "404 not found" ]
     pickRoute KeySettings = [ KeySettings.component {} ]
 
     performAction action@(UpdateRoute r) props state k = k $ state { currentRoute = r }
@@ -60,6 +56,7 @@ componentDidMount dispatch this = do
       dispatch this (UpdateRoute rt)
 
 
+component :: forall props. R.ReactClass props
 component =
   -- Demo for how to hook into life cycle.
   let rspec = T.createReactSpec spec initialState

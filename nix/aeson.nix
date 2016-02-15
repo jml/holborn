@@ -1,22 +1,24 @@
-{ mkDerivation, attoparsec, base, blaze-builder, bytestring
-, containers, deepseq, dlist, ghc-prim, hashable, HUnit, mtl
-, QuickCheck, scientific, stdenv, syb, template-haskell
-, test-framework, test-framework-hunit, test-framework-quickcheck2
-, text, time, transformers, unordered-containers, vector
+{ mkDerivation, attoparsec, base, bytestring, containers, deepseq
+, dlist, fail, ghc-prim, hashable, HUnit, mtl, QuickCheck
+, quickcheck-instances, scientific, semigroups, stdenv, syb
+, template-haskell, test-framework, test-framework-hunit
+, test-framework-quickcheck2, text, time, transformers
+, unordered-containers, vector
 }:
 mkDerivation {
   pname = "aeson";
-  version = "0.10.0.0";
-  sha256 = "19kp33rfivr4d3myyr8xn803wd7p8x5nc4wb3qvlgjwgyqjaxvrz";
-  buildDepends = [
-    attoparsec base blaze-builder bytestring containers deepseq dlist
-    ghc-prim hashable mtl scientific syb template-haskell text time
+  version = "0.11.0.0";
+  sha256 = "1mdd4klbad1dx5854agiiixfcc269hnmbam31zmfs91qszaljf5d";
+  libraryHaskellDepends = [
+    attoparsec base bytestring containers deepseq dlist fail ghc-prim
+    hashable mtl scientific semigroups syb template-haskell text time
     transformers unordered-containers vector
   ];
-  testDepends = [
+  testHaskellDepends = [
     attoparsec base bytestring containers ghc-prim HUnit QuickCheck
-    template-haskell test-framework test-framework-hunit
-    test-framework-quickcheck2 text time unordered-containers vector
+    quickcheck-instances template-haskell test-framework
+    test-framework-hunit test-framework-quickcheck2 text time
+    unordered-containers vector
   ];
   homepage = "https://github.com/bos/aeson";
   description = "Fast JSON parsing and encoding";

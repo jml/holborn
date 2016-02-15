@@ -6,6 +6,10 @@ haskellPackages.override {
       holborn-repo = self.callPackage ../holborn-repo {};
       holborn-syntax = self.callPackage ../holborn-syntax {};
 
+      # Temporary jailbreak until servant has been adjusted to include
+      # aeson 0.11:
+      servant-server =   haskell.lib.doJailbreak super.servant-server;
+
       aeson = haskell.lib.dontCheck (self.callPackage ./aeson.nix {});
       language-python = self.callPackage ./language-python.nix {};
       errors = self.callPackage ./errors.nix {};
