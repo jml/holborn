@@ -16,14 +16,15 @@ let t = writeText "local-nixconf.conf" ''
     cabal-install
     postgresql
     git
+    tmux
     # ghc?
     # open-haddock?
     # nox?
     # stuff for purescript
   ];
 
-  # Allow default pulp server.
-  networking.firewall.allowedTCPPorts = [ 1337 ];
+  # Allow default pulp server and default holborn-api.
+  networking.firewall.allowedTCPPorts = [ 1337 8002 ];
 
   # Assumes bash, which is slightly wrong, since this variable is used in all
   # shells.
