@@ -25,7 +25,7 @@ data Key =
       }
 
 
--- TODO. We're decoding JSON manully, we want to move to
+-- TODO. We're decoding JSON manually, we want to move to
 -- auto-generated decoders ASAP (probably with servant-foreign).
 instance objectIsForeign :: IsForeign Key where
   read value = do
