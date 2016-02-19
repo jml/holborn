@@ -12,12 +12,17 @@ import Network.HTTP.Affjax as AJ
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Aff (runAff, Aff)
 import Network.HTTP.Affjax (AJAX)
-import Data.Foreign.Class (readJSON)
 import Data.Either (Either(..))
+import Data.Argonaut.Decode (decodeJson)
+import Data.Argonaut.Encode (encodeJson)
+import Data.List (List(..), (:), toUnfoldable)
 
-import Holborn.Routing (Key(..))
+
+import Holborn.ManualEncoding.Keys (Key(..), AddKeyData(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Network.HTTP.StatusCode (StatusCode(..))
+
+import Debug.Trace
 
 -- The full internal state of this component. Components have state
 -- and props. State is internal (e.g. component was loaded) and props
@@ -25,7 +30,7 @@ import Network.HTTP.StatusCode (StatusCode(..))
 type State =
   { error :: String
   , loading :: Boolean
-  , keys :: Array Key
+  , keys :: List Key
   }
 
 -- All possible state-modifying actions for this component.
@@ -36,10 +41,10 @@ initialState :: State
 initialState =
   { error: ""
   , loading: false
-  , keys: []
+  , keys: Nil
   }
 
-type Props = {keys :: Array Key}
+type Props = {keys :: List Key}
 
 spec :: forall eff. T.Spec (ajax :: AJAX | eff) State Props Action
 spec = T.simpleSpec performAction render
@@ -58,8 +63,10 @@ spec = T.simpleSpec performAction render
                        dispatch AddKey
                    ] [R.text "add new key" ]
         ]
-      , R.div [] (map (\(Key key) -> (R.div [] [R.text key.title])) props.keys)
+      , R.div [] keyArray
       ]
+      where
+        keyArray = (toUnfoldable (map (\(Key key) -> (R.div [] [R.text key.title])) s.keys))
 
     -- performAction is a purescript-thermite callback. It takes an
     -- action and modifies the state by calling the callback k and
@@ -68,17 +75,19 @@ spec = T.simpleSpec performAction render
     performAction AddKey props state k = do
       k (state { loading = true })
       runAff (\err -> k state) k (addKey state)
-      k (state { loading = false })
 
+    -- Server fetching can go in many ways and we'll need to reflect
+    -- errors in the state and allow users to move on from there
+    -- (e.g. re-enable buttons for retry, display actual invalid input
+    -- errors etc).
     addKey :: forall eff. State -> Aff (ajax :: AJAX | eff) State
     addKey state = do
-      r <- AJ.post "http://127.0.0.1:8002/v1/user/keys" (toForeign {})
+      r <- AJ.post "http://127.0.0.1:8002/v1/user/keys" (encodeJson (AddKeyData{ key: "", title: "title" }))
       return case r.status of
-         StatusCode 200 -> case readJSON r.response of
-             Left _ -> state { loading = false, error = "invalid json" }
-             Right keys -> state { loading = false, keys = keys }
+         StatusCode 201 -> case decodeJson r.response of
+             Left err -> state { loading = false, error = "invalid json: " ++ err }
+             Right key -> state { loading = false, keys = key : state.keys, error = " OK" }
          _ -> state { loading = false, error = " [it broke]" }
-
 
 component :: Props -> React.ReactElement
 component props =
