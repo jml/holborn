@@ -8,6 +8,7 @@ import Data.Argonaut.Core (toObject, toString, fromObject, fromString, Json)
 import Data.Maybe (Maybe(..))
 import Data.StrMap (lookup, insert, singleton)
 import Data.Either (Either(..))
+import Data.Lens (Lens, lens, LensP)
 
 
 data Key =
@@ -16,6 +17,17 @@ data Key =
       }
 
 data AddKeyData = AddKeyData { key :: String, title :: String }
+
+title :: LensP AddKeyData String
+title = lens
+        (\(AddKeyData { title }) -> title)
+        (\(AddKeyData { key }) t -> AddKeyData { key, title: t})
+
+key :: LensP AddKeyData String
+key = lens
+        (\(AddKeyData { key }) -> key)
+        (\(AddKeyData { title }) k -> AddKeyData { key: k, title: title})
+
 
 instance decodeKey :: DecodeJson Key where
   decodeJson json =

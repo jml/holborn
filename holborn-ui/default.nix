@@ -5,6 +5,7 @@ stdenv.mkDerivation {
   propagatedBuildInputs = [
     nodejs
     haskellPackages.purescript
+    haskellPackages.psc-ide
   ];
   # npm install pulp bower
 }
