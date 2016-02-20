@@ -15,22 +15,22 @@ module Main (main) where
 
 import Prelude
 
-import Data.Maybe.Unsafe
+import Data.Maybe.Unsafe (fromJust)
 import Data.Nullable (toMaybe)
 
-import Control.Monad.Eff
+import Control.Monad.Eff (Eff)
 
-import qualified Components.Router as Router
+import Components.Router as Router
 
-import qualified React as R
-import qualified ReactDOM as RD
+import React as R
+import ReactDOM as RD
 import Control.Monad.Eff.Console (CONSOLE())
 
-import qualified DOM as DOM
-import qualified DOM.HTML as DOM
-import qualified DOM.HTML.Types as DOM
-import qualified DOM.HTML.Window as DOM
-import qualified DOM.Node.ParentNode as DOM
+import DOM (DOM) as DOM
+import DOM.HTML (window) as DOM
+import DOM.HTML.Types (htmlDocumentToParentNode) as DOM
+import DOM.HTML.Window (document) as DOM
+import DOM.Node.ParentNode (querySelector) as DOM
 
 
 -- | The main method creates the task list component, and renders it to the document body.
