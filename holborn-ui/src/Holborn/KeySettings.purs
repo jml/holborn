@@ -21,8 +21,10 @@ import Data.Lens (view, set)
 import Holborn.ManualEncoding.Keys (Key(..), AddKeyData(..), title, key)
 import Unsafe.Coerce (unsafeCoerce)
 import Network.HTTP.StatusCode (StatusCode(..))
+import Data.Lens (LensP)
 
 import Debug.Trace
+
 
 -- The full internal state of this component. Components have state
 -- and props. State is internal (e.g. component was loaded) and props
@@ -50,6 +52,20 @@ initialState =
 
 type Props = {keys :: List Key}
 
+
+-- We need to unsafeCoerce event because the purescript-react bindings
+-- aren't exposing preventDefault.
+preventDefault :: forall m. React.Event -> m
+preventDefault ev = (unsafeCoerce ev).preventDefault
+
+-- We need unsafeCoerce because purescript-react bindings arent
+-- exposing target.value yet.
+fieldUpdater :: forall a s x. LensP s x -> React.Event -> s -> s
+fieldUpdater setter ev state = set setter (unsafeCoerce ev).target.value state
+
+
+--(UpdateKeyData (set key (unsafeCoerce ev).target.value s.addKeyData))
+
 spec :: forall eff. T.Spec (ajax :: AJAX | eff) State Props Action
 spec = T.simpleSpec performAction render
   where
@@ -62,10 +78,10 @@ spec = T.simpleSpec performAction render
       , R.div [] [R.text if s.loading then "loading..." else ("loaded" ++ s.error)]
        , R.form [RP.onSubmit onSubmit]
         [ R.input [ RP.value (view title s.addKeyData)
-                  , RP.onChange \ev -> dispatch (UpdateKeyData (set title (unsafeCoerce ev).target.value s.addKeyData))
+                  , RP.onChange \ev -> dispatch (UpdateKeyData (fieldUpdater title ev s.addKeyData))
                   ] []
         , R.textarea [ RP.value (view key s.addKeyData)
-                     , RP.onChange \ev -> dispatch (UpdateKeyData (set key (unsafeCoerce ev).target.value s.addKeyData))
+                     , RP.onChange \ev -> dispatch (UpdateKeyData (fieldUpdater key ev s.addKeyData))
                      ] []
         , R.button [RP.disabled s.loading] [R.text "add new key"]
         ]
@@ -73,7 +89,7 @@ spec = T.simpleSpec performAction render
       ]
       where
         onSubmit ev = do
-          (unsafeCoerce ev).preventDefault
+          preventDefault ev
           dispatch AddKey
         keyArray = toUnfoldable (map (\(Key key) -> (R.div [] [R.text key.title])) s.keys)
 

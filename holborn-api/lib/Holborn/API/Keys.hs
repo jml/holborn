@@ -33,9 +33,9 @@ type API =
     :<|> "v1" :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> Post '[JSON] ListKeysRow
 
 
--- TODO I'd really rather have an applicative validator that can check
--- & mark several errors at the same time because that's a much better
--- user experience.
+-- TODO Tom would really rather have an applicative validator that can
+-- check & mark several errors at the same time because that's a much
+-- better user experience.
 data KeyError = EmptyTitle | InvalidSSHKey
 
 
@@ -71,14 +71,18 @@ getKey conf keyId = undefined
 deleteKey :: AppConf -> Int -> ExceptT KeyError IO ()
 deleteKey conf keyId = undefined
 
+-- TODO: Unclear what his type will be so using a type alias for now.
+type SSHKey = Text
 
-isValidSSHKey :: Text -> Bool
-isValidSSHKey _ = True
+toSSHKey :: Text -> Maybe SSHKey
+toSSHKey key = Just key
 
 
 addKey :: AppConf -> AddKeyData -> ExceptT KeyError IO ListKeysRow
 addKey AppConf{conn=conn} AddKeyData{..} = do
-    _ <- if isValidSSHKey _AddKeyData_key then return () else throwE InvalidSSHKey
+    _ <- case toSSHKey _AddKeyData_key of
+        Just _ -> return ()
+        _ -> throwE InvalidSSHKey
     _ <- if _AddKeyData_title /= "" then return () else throwE EmptyTitle
 
     [Only id_] <- liftIO $ query conn [sql|
@@ -87,7 +91,7 @@ addKey AppConf{conn=conn} AddKeyData{..} = do
             |] (_AddKeyData_title, _AddKeyData_key, 1::Integer)
 
     [r] <- liftIO $ query conn [sql|
-                   select id, pubkey, name, verified, readonly, created
+                   select id, pubkey, name, verified, readonly, createdxs
                    from "public_key" where id = ?
                |] (Only id_ :: Only Integer)
     return r
