@@ -83,12 +83,21 @@ instance eqA :: Eq A where
   eq (A a) (A b) = eq a.name b.name
 derive instance genericA :: Generic A
 
+-- Can't decode types with multiple data constructors:
 data B = B1 { name :: String } | B2
 instance eqB :: Eq B where
   eq _ _ = false
 derive instance genericB :: Generic B
 
+-- Handle maybe:
+data MA = MA { name :: Maybe String }
+instance eqMA :: Eq MA where
+  eq _ _ = false
+derive instance genericMA :: Generic MA
+
+
 testJson = fromRight (P.jsonParser "{\"name\": \"name\"}")
+emptyJson = fromRight (P.jsonParser "{}")
 
 
 main = runTest do
@@ -97,3 +106,8 @@ main = runTest do
       (gDecode testJson == Right (A {name: "name"}) :: Either String A)
     Assert.assert "expect broken data constructor" $
       (gDecode testJson == Left "When decoding a Test.Main.B: Must have exactly one data constructor."  :: Either String B)
+  test "gDecode maybe" do
+    Assert.assert "empty JSON should be Nothing" $
+      (gDecode emptyJson == Right (MA {name: Nothing})  :: Either String MA)
+    Assert.assert "valid JSON should be Just" $
+      (gDecode emptyJson == Right (MA {name: Just "name"})  :: Either String MA)
