@@ -9,6 +9,7 @@
   "dependencies": {
     "bower": "^1.7.7",
     "pulp": "^8.0.0",
+    "purescript-psa": "^0.3.4",
     "react": "^0.14.7",
     "react-dom": "^0.14.7"
   },

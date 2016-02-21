@@ -2,21 +2,20 @@ module Holborn.ManualEncoding.Keys where
 
 import Prelude
 
-import Data.Argonaut.Decode (class DecodeJson, decodeJson)
-import Data.Argonaut.Encode (class EncodeJson, encodeJson)
-import Data.Argonaut.Core (toObject, toString, fromObject, fromString, Json)
+import Data.Argonaut.Decode (class DecodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
+import Data.Argonaut.Core (fromString, fromObject, toString, toObject)
+
 import Data.Maybe (Maybe(..))
 import Data.StrMap (lookup, insert, singleton)
 import Data.Either (Either(..))
-import Data.Lens (Lens, lens, LensP)
+import Data.Lens (LensP, lens)
 
 
-data Key =
-  Key { key :: String
-      , title :: String
-      }
-
+-- The following three feel like they ought to be parametrized ...
+data Key = Key { key :: String , title :: String }
 data AddKeyData = AddKeyData { key :: String, title :: String }
+data AddKeyDataError = AddKeyDataError { key :: Maybe String, title :: Maybe String }
 
 title :: LensP AddKeyData String
 title = lens
