@@ -13,7 +13,7 @@
 
 module Main (main) where
 
-import Prelude
+import Prelude (Unit, (<$>), (<<<), bind, (>>=), void)
 
 import Data.Maybe.Unsafe (fromJust)
 import Data.Nullable (toMaybe)

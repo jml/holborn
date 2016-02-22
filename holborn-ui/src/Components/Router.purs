@@ -8,9 +8,10 @@ import Network.HTTP.Affjax as AJ
 import Control.Monad.Eff.Exception as E
 import Control.Monad.Eff.Console (CONSOLE())
 
-import Holborn.KeySettings as KeySettings
+import Holborn.Settings as Settings
 
-import Holborn.Routing (RootRoutes(..), rootRoutes, fetchData)
+
+import Holborn.Routing (RootRoutes(..), SettingsRoutes(..), rootRoutes, fetchData)
 import Web.Cookies as C
 import Data.Maybe (Maybe)
 import Routing (matches)
@@ -43,9 +44,10 @@ spec = T.simpleSpec performAction render
 
     pickRoute EmptyRoute = [ R.text "loading..." ]
     pickRoute Route404 = [ R.text "404 not found" ]
-    pickRoute (KeySettingsOK keys) = [ KeySettings.component {keys: keys} ]
+
+    -- Dispatch route settings to a subroute component.
+    pickRoute (Settings x) = [ Settings.component {route: x} ]
     pickRoute ErrorRoute = [ R.text "error" ]
-    pickRoute _ = [ R.text "404 not found" ]
 
     performAction action@(UpdateRoute r) props state k = k $ state { currentRoute = r }
 
