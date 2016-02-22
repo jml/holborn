@@ -89,7 +89,7 @@ spec = T.simpleSpec performAction render
       ]
       where
         onSubmit ev = do
-          preventDefault ev
+          (unsafeCoerce ev).preventDefault
           dispatch AddKey
         keyArray = toUnfoldable (map (\(Key key) -> (R.div [] [R.text key.title])) s.keys)
 

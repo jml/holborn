@@ -91,7 +91,7 @@ addKey AppConf{conn=conn} AddKeyData{..} = do
             |] (_AddKeyData_title, _AddKeyData_key, 1::Integer)
 
     [r] <- liftIO $ query conn [sql|
-                   select id, pubkey, name, verified, readonly, createdxs
+                   select id, pubkey, name, verified, readonly, created
                    from "public_key" where id = ?
                |] (Only id_ :: Only Integer)
     return r
