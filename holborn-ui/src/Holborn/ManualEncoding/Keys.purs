@@ -17,9 +17,10 @@ import Holborn.JSON.Generic (gDecode)
 -- The following three feel like they ought to be parametrized ...
 data Key = Key { key :: String , title :: String }
 data AddKeyData = AddKeyData { key :: String, title :: String }
-data AddKeyDataError = AddKeyDataError { key :: Maybe String, title :: Maybe String }
+data AddKeyDataError = AddKeyDataError { global :: Maybe String, key :: Maybe String, title :: Maybe String }
 
 derive instance genericKey :: Generic Key
+derive instance genericAddKeyDataError :: Generic AddKeyDataError
 
 title :: LensP AddKeyData String
 title = lens
@@ -35,6 +36,8 @@ key = lens
 instance decodeKey :: DecodeJson Key where
   decodeJson = gDecode
 
+instance decodeAddKeyDataError :: DecodeJson AddKeyDataError where
+  decodeJson = gDecode
 
 instance encodeAddKeyData :: EncodeJson AddKeyData where
   encodeJson (AddKeyData ak) = fromObject (insert "title" (fromString ak.title) (singleton "key" (fromString ak.key)))

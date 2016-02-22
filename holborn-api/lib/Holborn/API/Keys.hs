@@ -43,8 +43,8 @@ keyErrors :: ExceptT KeyError IO :~> EitherT ServantErr IO
 keyErrors = Nat (exceptTToEitherT . bimapExceptT handleError id)
   where
     exceptTToEitherT = EitherT . runExceptT
-    handleError EmptyTitle = err400 { errBody = "{\"errors\": {\"title\": \"Title can not be empty\"}}" }
-    handleError InvalidSSHKey = err400 { errBody = "{\"errors\": {\"key\": \"SSH key invalid\"}}" }
+    handleError EmptyTitle = err400 { errBody = "{\"title\": \"Title can not be empty\"}" }
+    handleError InvalidSSHKey = err400 { errBody = "{\"key\": \"SSH key invalid\"}" }
 
 
 server :: AppConf -> Server API

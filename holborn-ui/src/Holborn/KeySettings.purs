@@ -17,20 +17,21 @@ import Data.Argonaut.Decode (decodeJson)
 import Data.Argonaut.Encode (encodeJson)
 import Data.List (List(..), (:), toUnfoldable)
 import Data.Lens (view, set)
+import Data.Maybe (Maybe(..))
 
-import Holborn.ManualEncoding.Keys (Key(..), AddKeyData(..), title, key)
+import Holborn.ManualEncoding.Keys (Key(..), AddKeyData(..), AddKeyDataError(..), title, key)
 import Unsafe.Coerce (unsafeCoerce)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Data.Lens (LensP)
 
-import Debug.Trace
+import Debug.Trace (traceAnyM)
 
 
 -- The full internal state of this component. Components have state
 -- and props. State is internal (e.g. component was loaded) and props
 -- are external (e.g. colour of the button).
 type State =
-  { error :: String
+  { error :: AddKeyDataError
   , loading :: Boolean
   , keys :: List Key
   , addKeyData :: AddKeyData
@@ -41,10 +42,13 @@ data Action = AddKey | UpdateKeyData AddKeyData
 
 emptyAddKeyData = AddKeyData { key: "", title: "" }
 
+emptyAddKeyDataError = AddKeyDataError { global: Nothing, key: Nothing, title: Nothing }
+networkAddKeyDataError msg =  AddKeyDataError { global: Just msg, key: Nothing, title: Nothing }
+
 -- Initial State each time this component is inserted in the DOM.
 initialState :: State
 initialState =
-  { error: ""
+  { error: emptyAddKeyDataError
   , loading: false
   , keys: Nil
   , addKeyData: emptyAddKeyData
@@ -64,7 +68,17 @@ fieldUpdater :: forall a s x. LensP s x -> React.Event -> s -> s
 fieldUpdater setter ev state = set setter (unsafeCoerce ev).target.value state
 
 
---(UpdateKeyData (set key (unsafeCoerce ev).target.value s.addKeyData))
+-- TODO: Tom is a bit unsure about the best way to organise the render
+-- functions. I think that with more forms some common elements will
+-- emerge and we can consolidate then.
+labeled label err formEl = case err of
+  Nothing -> R.div [ RP.className "form-group" ] [ R.label [] [R.text label],  formEl ]
+  Just msg -> R.div [ RP.className "form-group has-error" ] [ R.label [] [R.text (label ++ " - " ++ msg)],  formEl ]
+
+renderGlobalError err = case err of
+  Nothing -> R.text ""
+  Just msg -> R.div [] [R.text msg]
+
 
 spec :: forall eff. T.Spec (ajax :: AJAX | eff) State Props Action
 spec = T.simpleSpec performAction render
@@ -73,17 +87,19 @@ spec = T.simpleSpec performAction render
     -- insert it efficiently by diffing the document-DOM with the
     -- fragment.
     render :: T.Render State Props Action
-    render dispatch props s _ =
-      [ R.h1 [] []
-      , R.div [] [R.text if s.loading then "loading..." else ("loaded" ++ s.error)]
+    render dispatch props ({ addKeyData, error: AddKeyDataError err, loading, keys }) _ =
+      [ R.h1 [] [R.text "Manage SSH keys"]
+      , renderGlobalError err.global
        , R.form [RP.onSubmit onSubmit]
-        [ R.input [ RP.value (view title s.addKeyData)
-                  , RP.onChange \ev -> dispatch (UpdateKeyData (fieldUpdater title ev s.addKeyData))
+        [ labeled "Key name" err.title $ R.input [ RP.value (view title addKeyData)
+                  , RP.className "form-control"
+                  , RP.onChange \ev -> dispatch (UpdateKeyData (fieldUpdater title ev addKeyData))
                   ] []
-        , R.textarea [ RP.value (view key s.addKeyData)
-                     , RP.onChange \ev -> dispatch (UpdateKeyData (fieldUpdater key ev s.addKeyData))
+        , labeled "Key" err.key $ R.textarea [ RP.value (view key addKeyData)
+                     , RP.onChange \ev -> dispatch (UpdateKeyData (fieldUpdater key ev addKeyData))
+                     , RP.className "form-control"
                      ] []
-        , R.button [RP.disabled s.loading] [R.text "add new key"]
+        , R.button [RP.disabled loading, RP.className "btn btn-default"] [R.text if loading then "Adding key ..." else "Add new key"]
         ]
       , R.div [] keyArray
       ]
@@ -91,7 +107,7 @@ spec = T.simpleSpec performAction render
         onSubmit ev = do
           (unsafeCoerce ev).preventDefault
           dispatch AddKey
-        keyArray = toUnfoldable (map (\(Key key) -> (R.div [] [R.text key.title])) s.keys)
+        keyArray = toUnfoldable (map (\(Key key) -> (R.div [] [R.text key.title])) keys)
 
     -- performAction is a purescript-thermite callback. It takes an
     -- action and modifies the state by calling the callback k and
@@ -100,7 +116,7 @@ spec = T.simpleSpec performAction render
     performAction (UpdateKeyData x) props state k = k $ state { addKeyData = x }
     performAction AddKey props state k = do
       k (state { loading = true })
-      runAff (\err -> k (state { error = show err})) k (addKey state)
+      runAff (\err -> traceAnyM err >>= \_ -> k $ state { error = networkAddKeyDataError "No network connection. Please try again later"}) k (addKey state)
 
     -- Server fetching can go in many ways and we'll need to reflect
     -- errors in the state and allow users to move on from there
@@ -111,15 +127,15 @@ spec = T.simpleSpec performAction render
       r <- AJ.post "http://127.0.0.1:8002/v1/user/keys" (encodeJson state.addKeyData)
       return case r.status of
          StatusCode 201 -> case decodeJson r.response of
-             Left err -> state { loading = false, error = "invalid json: " ++ err }
-             Right key -> state { loading = false, keys = key : state.keys, error = " OK", addKeyData = emptyAddKeyData}
+             Left err -> state { loading = false, error = networkAddKeyDataError "Something unexpeced broke." }
+             Right key -> state { loading = false, keys = key : state.keys, addKeyData = emptyAddKeyData}
 
          -- Note that by calling `decodeJson` in the 201 branch the
          -- type inference decided that the response must be JSON so
          -- we need to send back valid JSON in the 400 case as well.
-         StatusCode 400 -> state { loading = false, error = " - 400" }
-         _ -> state { loading = false, error = " [it broke]" }
-
+         StatusCode 400 -> case decodeJson r.response of
+             Left _ -> state { loading = false, error = networkAddKeyDataError "Something unexpeced broke." }
+             Right errors -> state { loading = false, error = errors }
 
 component :: Props -> React.ReactElement
 component props =
