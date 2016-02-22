@@ -24,7 +24,6 @@ import Type.Proxy (Proxy(..))
 import Control.Monad.Aff.AVar (AVAR)
 
 
-
 import Debug.Trace
 
 -- Adapted from
@@ -47,9 +46,28 @@ gDecode' sig json = case sig of
     SigRecord props -> do
       jObj <- mFail "Expected an object" $ toObject json
       SRecord <$> for props \({recLabel: lbl, recValue: val}) -> do
-        pf <- mFail ("'" <> lbl <> "' property missing") (M.lookup lbl jObj)
-        sp <- gDecode' (val unit) pf
-        pure { recLabel: lbl, recValue: const sp }
+        case val unit of
+          constr@(SigProd "Data.Maybe.Maybe" sigValues) -> case M.lookup lbl jObj of
+            Nothing -> pure { recLabel: lbl, recValue: \_ -> toSpine (Nothing :: Maybe Int) }
+            Just pf -> do
+              sp <- gDecode' constr pf
+              pure { recLabel: lbl, recValue: const sp }
+          _ -> do
+            pf <- mFail ("'" <> lbl <> "' property missing") (M.lookup lbl jObj)
+            sp <- gDecode' (val unit) pf
+            pure { recLabel: lbl, recValue: const sp }
+
+    SigProd "Data.Maybe.Maybe" alts -> do
+      justDC <- case head alts of
+        Nothing -> Left "uhh"
+        Just x -> Right x
+
+      sps  <- zipWithA (\k -> gDecode' (k unit)) justDC.sigValues [json]
+      sp <- case head sps of
+        Nothing -> Left "ahh"
+        Just x -> Right x
+
+      pure $ SProd justDC.sigConstructor [\_ -> sp]
 
     SigProd typeConstr alts -> do
       let decodingErr msg = "When decoding a " ++ typeConstr ++ ": " ++ msg
@@ -92,9 +110,10 @@ derive instance genericB :: Generic B
 -- Handle maybe:
 data MA = MA { name :: Maybe String }
 instance eqMA :: Eq MA where
-  eq _ _ = false
+  eq (MA a) (MA b) = eq a.name b.name
 derive instance genericMA :: Generic MA
-
+instance showMA :: Show MA where
+  show = gShow
 
 testJson = fromRight (P.jsonParser "{\"name\": \"name\"}")
 emptyJson = fromRight (P.jsonParser "{}")
@@ -106,8 +125,7 @@ main = runTest do
       (gDecode testJson == Right (A {name: "name"}) :: Either String A)
     Assert.assert "expect broken data constructor" $
       (gDecode testJson == Left "When decoding a Test.Main.B: Must have exactly one data constructor."  :: Either String B)
-  test "gDecode maybe" do
-    Assert.assert "empty JSON should be Nothing" $
-      (gDecode emptyJson == Right (MA {name: Nothing})  :: Either String MA)
-    Assert.assert "valid JSON should be Just" $
-      (gDecode emptyJson == Right (MA {name: Just "name"})  :: Either String MA)
+  test "gDecode maybe empty JSON should be Nothing" $
+    Assert.equal (Right (MA {name: Nothing})) (gDecode emptyJson)
+  test "gDecode maybe valid JSON should be Just" $
+    Assert.equal (Right (MA {name: Just "name"})) (gDecode testJson)
