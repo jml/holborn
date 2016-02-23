@@ -8,7 +8,7 @@ import Network.HTTP.Affjax as AJ
 import Control.Monad.Eff.Exception as E
 import Control.Monad.Eff.Console (CONSOLE())
 
-import Holborn.Settings as Settings
+import Holborn.SettingsRoute as SettingsRoute
 
 
 import Holborn.Routing (RootRoutes(..), SettingsRoutes(..), rootRoutes, fetchData)
@@ -46,7 +46,7 @@ spec = T.simpleSpec performAction render
     pickRoute Route404 = [ R.text "404 not found" ]
 
     -- Dispatch route settings to a subroute component.
-    pickRoute (Settings x) = [ Settings.component {route: x} ]
+    pickRoute (Settings x) = [ SettingsRoute.component {route: x} ]
     pickRoute ErrorRoute = [ R.text "error" ]
 
     performAction action@(UpdateRoute r) props state k = k $ state { currentRoute = r }
@@ -64,6 +64,7 @@ componentDidMount dispatch this = do
     callback :: forall eff refs. Maybe RootRoutes -> RootRoutes
                 -> Eff (props :: React.ReactProps, state :: React.ReactState React.ReadWrite, refs :: React.ReactRefs refs, ajax :: AJAX | eff) Unit
     callback _ rt = do
+      (dispatch this (UpdateRoute rt))
 
       -- Fetch route async or sync
       runAff

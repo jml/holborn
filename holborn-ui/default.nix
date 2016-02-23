@@ -1,4 +1,4 @@
-{ nodejs, stdenv, haskellPackages }:
+{ nodejs, stdenv, haskellPackages, purescript-derive-lenses }:
 stdenv.mkDerivation {
   name = "holborn-ui";
   src = ./.;
@@ -6,6 +6,6 @@ stdenv.mkDerivation {
     nodejs
     haskellPackages.purescript
     haskellPackages.psc-ide
+    # purescript-derive-lenses  # not working due to build failure.
   ];
-  # npm install pulp bower
 }

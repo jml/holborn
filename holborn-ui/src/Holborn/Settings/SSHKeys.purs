@@ -1,6 +1,6 @@
 -- | Example module for how to do an UI element in our UI.
 
-module Holborn.KeySettings where
+module Holborn.Settings.SSHKeys where
 
 
 import Prelude

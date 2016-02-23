@@ -1,2 +1,5 @@
 with (import <nixpkgs> {}).pkgs;
-(callPackage ./. {})
+let
+  hp = callPackage ../nix/all-packages.nix {};
+in
+(hp.callPackage ./. {})

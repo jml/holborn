@@ -1,6 +1,6 @@
 -- | Module that renders the settings menu on the left and the actual
 -- settings content on the right (cf Twitter settings)
-module Holborn.Settings where
+module Holborn.SettingsRoute where
 
 import Prelude
 import Thermite as T
@@ -11,7 +11,7 @@ import Network.HTTP.Affjax as AJ
 import Web.Cookies as C
 
 import Holborn.Routing (SettingsRoutes(..))
-import Holborn.KeySettings as KeySettings
+import Holborn.Settings.SSHKeys as SSHKeys
 
 type State = {}
 type Action = Unit
@@ -30,8 +30,10 @@ spec = T.simpleSpec T.defaultPerformAction render
         ]
       ]
 
-    settings (KeySettingsOK keys) = KeySettings.component {keys: keys}
-    settings (AccountSettingsOK) = R.div [] [R.text "AccountSettingsOK"]
+    settings (SSHKeySettingsOK keys) = SSHKeys.component {keys: keys}
+    settings AccountSettingsOK = R.div [] [R.text "AccountSettingsOK"]
+
+    settings _ = R.div [] [R.text "loading..."]
 
     lgi label link = R.a [RP.href link, RP.className "list-group-item"] [R.text label]
     lgia label link = R.a [RP.href link, RP.className "list-group-item active"] [R.text label]
@@ -39,15 +41,46 @@ spec = T.simpleSpec T.defaultPerformAction render
     menu :: SettingsRoutes -> React.ReactElement
     menu route =
       R.div [RP.className "list-group"]
-      [ let label = "AccountSettingsOK"
+      [ let label = "Profile"
+            link = "/#settings/profile"
+        in case route of
+           ProfileOK -> lgia label link
+           _ -> lgi label link
+
+      , let label = "SSH Keys"
+            link = "/#settings/ssh-keys"
+        in case route of
+           SSHKeySettingsOK _ -> lgia label link
+           _ -> lgi label link
+
+      , let label = "Account"
             link = "/#settings/account"
         in case route of
            AccountSettingsOK -> lgia label link
            _ -> lgi label link
-      , let label = "Manage keys"
-            link = "/#settings/keys"
+
+      , let label = "Emails"
+            link = "/#settings/emails"
         in case route of
-           KeySettingsOK _ -> lgia label link
+           EmailSettingsOK -> lgia label link
+           _ -> lgi label link
+
+      , let label = "Security"
+            link = "/#settings/security"
+        in case route of
+           SecuritySettingsOK -> lgia label link
+           _ -> lgi label link
+
+      , let label = "Repositories"
+            link = "/#settings/repositories"
+        in case route of
+           RepositorySettingsOK -> lgia label link
+           _ -> lgi label link
+
+      , let label = "Oranisations"
+            link = "/#settings/organisations"
+        in case route of
+           OrganisationSettingsOK -> lgia label link
            _ -> lgi label link
       ]
 
