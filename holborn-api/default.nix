@@ -1,8 +1,9 @@
 { mkDerivation, aeson, attoparsec, base, basic-prelude, bcrypt
 , blaze-html, bytestring, containers, either, envparse, errors, jwt
 , postgresql-simple, QuickCheck, servant, servant-blaze
-, servant-server, shakespeare, stdenv, tasty, tasty-hunit
-, tasty-quickcheck, text, time, wai, warp
+, servant-docs, servant-server, shakespeare, stdenv, tasty
+, tasty-hunit, tasty-quickcheck, text, time, transformers, wai
+, warp
 }:
 mkDerivation {
   pname = "holborn-api";
@@ -10,12 +11,17 @@ mkDerivation {
   src = ./.;
   isLibrary = true;
   isExecutable = true;
-  buildDepends = [
+  libraryHaskellDepends = [
     aeson attoparsec base basic-prelude bcrypt blaze-html bytestring
-    containers either envparse errors jwt postgresql-simple servant
-    servant-blaze servant-server shakespeare text time wai warp
+    containers either errors jwt postgresql-simple servant
+    servant-blaze servant-docs servant-server shakespeare text time
+    transformers
   ];
-  testDepends = [
+  executableHaskellDepends = [
+    base basic-prelude blaze-html bytestring envparse postgresql-simple
+    servant-server wai warp
+  ];
+  testHaskellDepends = [
     base basic-prelude errors postgresql-simple QuickCheck tasty
     tasty-hunit tasty-quickcheck
   ];

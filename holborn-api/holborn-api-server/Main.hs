@@ -15,6 +15,7 @@ import Database.PostgreSQL.Simple (connect, ConnectInfo(..), defaultConnectInfo)
 import qualified Holborn.API.Api as AApi
 import qualified Holborn.API.Internal as AInternal
 import qualified Holborn.API.Keys as AKeys
+import qualified Holborn.Docs as Docs
 import Holborn.API.Types (AppConf(..))
 import Servant ((:<|>)(..))
 import Data.Proxy (Proxy(..))
@@ -42,13 +43,14 @@ warpSettings config =
     port' = _port config
 
 
-api :: Proxy (AApi.API :<|> AInternal.API :<|> AKeys.API)
+api :: Proxy (AApi.API :<|> AInternal.API :<|> AKeys.API :<|> Docs.API)
 api = Proxy
 
 
 app :: AppConf -> Application
 app conf = serve api
-  ((AApi.server conf) :<|> AInternal.server :<|> (AKeys.server conf))
+  ((AApi.server conf) :<|> AInternal.server :<|> (AKeys.server conf) :<|> Docs.server)
+
 
 
 main = do
