@@ -25,7 +25,7 @@ import Servant
 
 import Holborn.API.Types (AppConf(..), Username)
 import Holborn.JSON.Keys (AddKeyData(..), ListKeysRow(..))
-import Holborn.Auth (AuthToken(..), userFromToken, Permission(..))
+import Holborn.Auth (AuthToken(..), userFromToken, Permission(..), hasPermission)
 
 
 instance FromText AuthToken where
@@ -47,7 +47,7 @@ data KeyError =
     | InvalidSSHKey
     | MissingAuthToken
     | InvalidAuthToken
-
+    | InsufficientPermissions
 
 keyErrors :: ExceptT KeyError IO :~> EitherT ServantErr IO
 keyErrors = Nat (exceptTToEitherT . bimapExceptT handleError id)
@@ -57,6 +57,7 @@ keyErrors = Nat (exceptTToEitherT . bimapExceptT handleError id)
     handleError InvalidSSHKey = err400 { errBody = "{\"key\": \"SSH key invalid\"}" }
     handleError MissingAuthToken = err400 { errBody = "{\"error\": \"Authorization token missing\"}" }
     handleError InvalidAuthToken = err400 { errBody = "{\"error\": \"Authorization token invalid\"}" }
+    handleError InsufficientPermissions = err400 { errBody = "{\"error\": \"Not permitted\"}" }
 
 
 server :: AppConf -> Server API
@@ -92,19 +93,11 @@ toSSHKey key = Just key
 
 addKey :: AppConf -> Maybe AuthToken -> AddKeyData -> ExceptT KeyError IO ListKeysRow
 addKey AppConf{conn=conn} token AddKeyData{..} = do
-    _ <- case toSSHKey _AddKeyData_key of
-        Just _ -> return ()
-        _ -> throwE InvalidSSHKey
-    _ <- if _AddKeyData_title /= "" then return () else throwE EmptyTitle
 
-    authToken <- case token of
-        Nothing -> throwE MissingAuthToken
-        Just x -> return x
-
-    x <- liftIO $ userFromToken conn authToken
-    (userId, permissions) <- case x of
-        Just (userId, permissions) -> return (userId, permissions)
-        Nothing -> throwE InvalidAuthToken
+    when (isNothing (toSSHKey _AddKeyData_key)) (throwE InvalidSSHKey)
+    when (_AddKeyData_title == "") (throwE EmptyTitle)
+    (userId, permissions) <- getAuth
+    unless (hasPermission permissions Web) (throwE InsufficientPermissions)
 
     [Only id_] <- liftIO $ query conn [sql|
             insert into "public_key" (id, name, pubkey, owner_id, verified, readonly, created)
@@ -116,3 +109,14 @@ addKey AppConf{conn=conn} token AddKeyData{..} = do
                    from "public_key" where id = ?
                |] (Only id_ :: Only Integer)
     return r
+
+  where
+    getAuth = do
+      authToken <- case token of
+          Nothing -> throwE MissingAuthToken
+          Just x -> return x
+
+      maybeUser <- liftIO $ userFromToken conn authToken
+      case maybeUser of
+          Just (userId, permissions) -> return (userId, permissions)
+          Nothing -> throwE InvalidAuthToken

@@ -13,6 +13,7 @@ module Holborn.Auth
        , Permissions(..)
        , AuthToken(..)
        , userFromToken
+       , hasPermission
        ) where
 
 import BasicPrelude
@@ -53,6 +54,9 @@ instance FromField Permissions where
 instance ToField AuthToken where
     toField (AuthToken a) = Escape a
 
+
+hasPermission :: Permissions -> Permission -> Bool
+hasPermission (Permissions x) p = Set.member p x
 
 userFromToken :: Connection -> AuthToken -> IO (Maybe (UserId, Permissions))
 userFromToken conn token = do
