@@ -12,3 +12,17 @@ $ pulp server  # --host 0.0.0.0 if running from inside Vagrant
 ```
 
 Check e.g. 127.0.0.1/#server/keys
+
+
+# Making the build smaller
+
+The debug build is 1.4M. For production we want a smaller build which
+we can do like so:
+
+```
+rm -rf output # Not sure why needed but pulp breaks without ("Prelude not found")
+pulp browserify -O -t app.js
+closure-compiler app.js -O SIMPLE > app.min.js
+```
+
+Eventually this will go into a nix build of course.

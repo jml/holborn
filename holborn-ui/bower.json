@@ -22,6 +22,7 @@
     "purescript-routing": "~0.3.0",
     "react": "~0.14.7",
     "purescript-react": "^0.6.0",
-    "purescript-react-dom": "~0.1.0"
+    "purescript-react-dom": "~0.1.0",
+    "purescript-test-unit": "~4.1.0"
   }
 }

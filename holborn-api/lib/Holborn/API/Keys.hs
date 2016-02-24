@@ -43,8 +43,8 @@ keyErrors :: ExceptT KeyError IO :~> EitherT ServantErr IO
 keyErrors = Nat (exceptTToEitherT . bimapExceptT handleError id)
   where
     exceptTToEitherT = EitherT . runExceptT
-    handleError EmptyTitle = err400 { errBody = "{\"errors\": {\"title\": \"Title can not be empty\"}}" }
-    handleError InvalidSSHKey = err400 { errBody = "{\"errors\": {\"key\": \"SSH key invalid\"}}" }
+    handleError EmptyTitle = err400 { errBody = "{\"title\": \"Title can not be empty\"}" }
+    handleError InvalidSSHKey = err400 { errBody = "{\"key\": \"SSH key invalid\"}" }
 
 
 server :: AppConf -> Server API
@@ -91,7 +91,7 @@ addKey AppConf{conn=conn} AddKeyData{..} = do
             |] (_AddKeyData_title, _AddKeyData_key, 1::Integer)
 
     [r] <- liftIO $ query conn [sql|
-                   select id, pubkey, name, verified, readonly, createdxs
+                   select id, pubkey, name, verified, readonly, created
                    from "public_key" where id = ?
                |] (Only id_ :: Only Integer)
     return r
