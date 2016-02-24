@@ -41,6 +41,7 @@ data RootRoutes =
   | Settings SettingsRoutes
   | Route404
   | ErrorRoute
+  | SigninRoute
 
 
 -- TODO tom: Routes should really be "invertible" so I can create a

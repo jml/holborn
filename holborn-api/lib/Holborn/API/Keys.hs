@@ -102,7 +102,7 @@ addKey AppConf{conn=conn} token AddKeyData{..} = do
     [Only id_] <- liftIO $ query conn [sql|
             insert into "public_key" (id, name, pubkey, owner_id, verified, readonly, created)
             values (default, ?, ?, ?, false, true, default) returning id
-            |] (_AddKeyData_title, _AddKeyData_key, 1::Integer)
+            |] (_AddKeyData_title, _AddKeyData_key, userId)
 
     [r] <- liftIO $ query conn [sql|
                    select id, pubkey, name, verified, readonly, created
