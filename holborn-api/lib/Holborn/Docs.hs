@@ -34,6 +34,7 @@ server = return (pack (markdown docsKeys))
 instance ToSample [Holborn.JSON.Keys.ListKeysRow] Text where
     toSample x = Just "many"
 
+
 instance ToSample Holborn.JSON.Keys.ListKeysRow Text where
     toSample _ = Just "Hello, haskeller!"
 
@@ -44,6 +45,7 @@ instance ToSample () Text where
 
 instance ToSample Holborn.JSON.Keys.AddKeyData Text where
     toSample _ = Just "unit!"
+
 
 instance ToCapture (Capture "id" Int) where
     toCapture _ = DocCapture "capture id" "capture id long"

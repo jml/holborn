@@ -8,6 +8,7 @@ drop table if exists "pull_request" cascade;
 drop table if exists "user_repo" cascade;
 drop table if exists "org_repo" cascade;
 drop table if exists "public_key" cascade;
+drop table if exists "oauth_token" cascade;
 
 
 create table "user"
@@ -86,3 +87,15 @@ create table "public_key"
     , readonly boolean not null
     , created timestamp without time zone default (now() at time zone 'utc') not null
     );
+
+
+create table "oauth_token"
+    ( id serial primary key
+    , description varchar(256) not null
+    , owner_id int references "user" (id) not null
+    , token varchar(256) not null
+    , created timestamp without time zone default (now() at time zone 'utc') not null
+    , permissions varchar(1024) not null -- set of haskell values serialized with read/show
+    );
+
+insert into "oauth_token" (description, owner_id, token, permissions) values ('desc', 1, 'test-token', 'Permissions (fromList [Web])');
