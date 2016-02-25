@@ -23,7 +23,7 @@ import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
 import Control.Error (bimapExceptT)
 import Servant
 
-import Holborn.API.Types (AppConf(..), Username)
+import Holborn.API.Types (AppConf(..), Username, parseSSHKey, SSHKey)
 import Holborn.JSON.Keys (AddKeyData(..), ListKeysRow(..))
 import Holborn.Auth (AuthToken(..), userFromToken, Permission(..), hasPermission)
 
@@ -84,17 +84,12 @@ getKey conf keyId = undefined
 deleteKey :: AppConf -> Int -> ExceptT KeyError IO ()
 deleteKey conf keyId = undefined
 
--- TODO: Unclear what his type will be so using a type alias for now.
-type SSHKey = Text
-
-toSSHKey :: Text -> Maybe SSHKey
-toSSHKey key = Just key
 
 
 addKey :: AppConf -> Maybe AuthToken -> AddKeyData -> ExceptT KeyError IO ListKeysRow
 addKey AppConf{conn=conn} token AddKeyData{..} = do
 
-    when (isNothing (toSSHKey _AddKeyData_key)) (throwE InvalidSSHKey)
+    when (isNothing (parseSSHKey (encodeUtf8 _AddKeyData_key))) (throwE InvalidSSHKey)
     when (_AddKeyData_title == "") (throwE EmptyTitle)
     (userId, permissions) <- getAuth
     unless (hasPermission permissions Web) (throwE InsufficientPermissions)

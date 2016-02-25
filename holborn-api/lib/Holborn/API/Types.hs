@@ -9,6 +9,8 @@ module Holborn.API.Types
        , Password
        , ApiError(..)
        , AppConf(..)
+       , SSHKey
+       , parseSSHKey
        ) where
 
 import BasicPrelude
@@ -20,6 +22,10 @@ import Data.Aeson (FromJSON(..), ToJSON(..), Value(..))
 import Data.Aeson.Types (typeMismatch)
 import Database.PostgreSQL.Simple.FromField (FromField(..))
 
+import System.Process (runInteractiveCommand)
+import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
+import Data.ByteString as BS
+import System.IO (hClose)
 
 newtype Username = Username Text deriving (Eq, Ord, Show, ToField)
 newtype Email = Email Text deriving (Eq, Ord, Show, ToField)
@@ -79,3 +85,23 @@ instance ToJSON Username where
 instance FromJSON Email where
     parseJSON (String v) = pure (Email v)
     parseJSON x = typeMismatch "Email" x
+
+
+data SSHKey = SSHKey ByteString ByteString
+
+parseSSHKey :: ByteString -> Maybe SSHKey
+parseSSHKey keyData = case fingerprint keyData of
+    Nothing -> Nothing
+    Just fp -> Just (SSHKey keyData fp)
+  where
+    -- Using unsafeperformIO because fingerprinting is morally a pure
+    -- action but we 're usingn ssh-keygen for now.
+    fingerprint keyData = unsafePerformIO $ do
+        -- e.g. ssh-keygen -l -f /dev/stdin <~/.ssh/id_rsa.pub
+        (i, o, e, p) <- runInteractiveCommand "ssh-keygen -l -f /dev/stdin"
+        BS.hPut i keyData
+        hClose i
+        f <- BS.hGetContents o
+        return $ case f of
+            "" -> Nothing
+            x -> Just x
