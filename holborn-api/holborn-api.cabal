@@ -34,6 +34,7 @@ library
                      , containers
                      , attoparsec
                      , time
+                     , entropy
                      , transformers
                      , servant-docs >= 0.4 && <0.5
 

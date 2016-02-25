@@ -4,6 +4,9 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeOperators      #-}
+{-# LANGUAGE QuasiQuotes        #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Holborn.API.Api
        ( API
        , server
@@ -21,17 +24,20 @@ import Servant
 import Servant.HTML.Blaze (HTML)
 import Text.Blaze.Html (Html, toHtml)
 import Text.Hamlet (shamletFile)
-import qualified Holborn.JSON.User as U
 import qualified Web.JWT as JWT
+import Database.PostgreSQL.Simple (Only (..), execute, query)
+import Database.PostgreSQL.Simple.SqlQQ (sql)
 
-import Holborn.API.Types (ApiError(..), newEmail, newPassword, newUsername, Username, AppConf(..))
+import Holborn.API.Types (ApiError(..), newEmail, newPassword, newUsername, checkPassword, Password, Username, AppConf(..))
 import Holborn.JSON.User (SigninData(..), SigninOK(..))
 import qualified Holborn.API.User as U
+import qualified Holborn.JSON.User as U
+import Holborn.Auth (webPermissions, createAuthToken)
 
 data SignupData = SignupData
     { username :: Text
     , email ::Text
-    , password :: Text
+    , _password :: Text
     } deriving Generic
 
 data SignupError = EUserExists Text | EOtherError deriving Generic
@@ -69,7 +75,7 @@ getUser (AppConf conn _) username = do
 
 signupPost :: AppConf -> SignupData -> EitherT ServantErr IO (Either SignupError SignupOk)
 signupPost (AppConf conn jwtSecret) SignupData{..} = do
-    pwd <- liftIO (newPassword password)
+    pwd <- liftIO (newPassword _password)
     result <- liftIO (runExceptT (U.signup conn (newUsername username) (newEmail email) pwd))
     case result of
         Left (UserAlreadyExists u) -> return $ Left (EUserExists "user already exists")
@@ -84,8 +90,28 @@ signupPost (AppConf conn jwtSecret) SignupData{..} = do
 
 
 signin :: AppConf -> SigninData -> EitherT ServantErr IO SigninOK
-signin (AppConf conn jwtSecret) SigninData {..} = do
-    return (SigninOK "token")
+signin (AppConf conn jwtSecret) SigninData{..} = do
+    pwd <- liftIO (newPassword _SigninData_password)
+    r <- liftIO $ query conn [sql|
+                   select id, password
+                   from "user"
+                   where username = ?
+               |] (Only _SigninData_username)
+
+    (ownerId, password) <- case r of
+      [(id_ :: Int, pwd :: Password)] -> return (id_, pwd)
+      _ -> left err400 -- TODO encode errors
+
+    unless (checkPassword password (encodeUtf8 _SigninData_password)) (left err400)
+
+    token <- liftIO createAuthToken
+
+    [Only (tokenId :: Int)] <- liftIO $ query conn [sql|
+            insert into "oauth_token" (description, owner_id, token, permissions)
+            values (?, ?, ?, ?) returning id
+            |] ("Web Login" :: Text, ownerId, token, webPermissions)
+
+    return (SigninOK token)
 
 
 server :: AppConf -> Server API

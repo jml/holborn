@@ -55,9 +55,9 @@ keyErrors = Nat (exceptTToEitherT . bimapExceptT handleError id)
     exceptTToEitherT = EitherT . runExceptT
     handleError EmptyTitle = err400 { errBody = "{\"title\": \"Title can not be empty\"}" }
     handleError InvalidSSHKey = err400 { errBody = "{\"key\": \"SSH key invalid\"}" }
-    handleError MissingAuthToken = err400 { errBody = "{\"error\": \"Authorization token missing\"}" }
-    handleError InvalidAuthToken = err400 { errBody = "{\"error\": \"Authorization token invalid\"}" }
-    handleError InsufficientPermissions = err400 { errBody = "{\"error\": \"Not permitted\"}" }
+    handleError MissingAuthToken = err401 { errBody = "{\"error\": \"Authorization token missing\"}" }
+    handleError InvalidAuthToken = err401 { errBody = "{\"error\": \"Authorization token invalid\"}" }
+    handleError InsufficientPermissions = err403 { errBody = "{\"error\": \"Not permitted\"}" }
 
 
 server :: AppConf -> Server API

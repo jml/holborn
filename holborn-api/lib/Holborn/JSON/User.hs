@@ -12,10 +12,12 @@ import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier, constructorTagModifier)
 import GHC.Generics (Generic)
+import Holborn.API.Types (Username, Email)
+import Holborn.Auth (AuthToken)
 
 data ListUsersRow = ListUsersRow
     { _ListUsersRow_id :: Int
-    , _ListUsersRow_username :: Text
+    , _ListUsersRow_username :: Username
     } deriving (Show, Generic)
 
 instance ToJSON ListUsersRow where
@@ -26,7 +28,7 @@ instance FromRow ListUsersRow where
     fromRow = ListUsersRow <$> field <*> field
 
 data SigninData = SigninData
-   { _SigninData_username :: Text
+   { _SigninData_username :: Username
    , _SigninData_password :: Text
    } deriving (Show, Generic)
 
@@ -36,7 +38,7 @@ data SigninErrors = SigninErrors
    } deriving (Show, Generic)
 
 data SigninOK = SigninOK
-   { _SigninOK_token :: Text
+   { _SigninOK_token :: AuthToken
    } deriving (Show, Generic)
 
 instance ToJSON SigninOK where

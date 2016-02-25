@@ -12,6 +12,8 @@ import Web.Cookies as C
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Eff.Exception (error)
+import Network.HTTP.StatusCode (StatusCode(..))
+
 
 authTokenMissing = error "auth-token cookie missing. This is unexpected because you should't see the signed in page without this cookie."
 

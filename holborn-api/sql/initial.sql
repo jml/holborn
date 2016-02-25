@@ -18,7 +18,8 @@ create table "user"
     , password varchar(256) not null
     , created timestamp without time zone default (now() at time zone 'utc') not null
     );
-insert into "user" (username, signup_email, password) values ('alice', 'alice@exampe.com', 'password');
+-- password is 'test'
+insert into "user" (username, signup_email, password) values ('alice', 'alice@exampe.com', '$2y$04$iTvtwfwFymYDEk9EmC4rkeDD5VD21KgdAfC7Fseqh7CyWXaSIhR8u');
 
 
 create table "org"

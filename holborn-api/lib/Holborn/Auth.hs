@@ -14,6 +14,8 @@ module Holborn.Auth
        , AuthToken(..)
        , userFromToken
        , hasPermission
+       , webPermissions
+       , createAuthToken
        ) where
 
 import BasicPrelude
@@ -23,7 +25,10 @@ import Database.PostgreSQL.Simple (Connection, Only (..), execute, query)
 import Database.PostgreSQL.Simple.FromField (FromField(..))
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-
+import Data.Aeson (ToJSON(..), Value(..))
+import System.Entropy (getEntropy)
+import qualified Data.ByteString.Builder
+import Data.ByteString.Lazy (toStrict)
 
 data AuthToken = AuthToken ByteString deriving Show
 
@@ -54,6 +59,11 @@ instance FromField Permissions where
 instance ToField AuthToken where
     toField (AuthToken a) = Escape a
 
+instance ToField Permissions where
+    toField  = Escape . encodeUtf8 . show
+
+webPermissions :: Permissions
+webPermissions = Permissions (Set.fromList [Web])
 
 hasPermission :: Permissions -> Permission -> Bool
 hasPermission (Permissions x) p = Set.member p x
@@ -68,3 +78,13 @@ userFromToken conn token = do
     return $ case r of
       [one] -> Just one
       _ -> Nothing
+
+-- hex-encoded token
+createAuthToken :: IO AuthToken
+createAuthToken = fmap tok (getEntropy 12)
+  where
+    tok x = (AuthToken . toStrict . Data.ByteString.Builder.toLazyByteString) (Data.ByteString.Builder.byteStringHex x)
+
+
+instance ToJSON AuthToken where
+    toJSON (AuthToken x) = String (decodeUtf8 x)
