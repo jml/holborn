@@ -60,11 +60,6 @@ initialState =
 type Props = {keys :: List Key}
 
 
--- We need to unsafeCoerce event because the purescript-react bindings
--- aren't exposing preventDefault.
-preventDefault :: forall m. React.Event -> m
-preventDefault ev = (unsafeCoerce ev).preventDefault
-
 -- We need unsafeCoerce because purescript-react bindings arent
 -- exposing target.value yet.
 fieldUpdater :: forall a s x. LensP s x -> React.Event -> s -> s

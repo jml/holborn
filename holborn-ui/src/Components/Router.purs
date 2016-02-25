@@ -9,6 +9,7 @@ import Control.Monad.Eff.Exception as E
 import Control.Monad.Eff.Console (CONSOLE())
 
 import Holborn.SettingsRoute as SettingsRoute
+import Holborn.Signin as Signin
 
 
 import Holborn.Routing (RootRoutes(..), SettingsRoutes(..), rootRoutes, fetchData)
@@ -43,7 +44,7 @@ spec = T.simpleSpec performAction render
     render :: T.Render State props Action
     render dispatch _ s _ = pickRoute s.currentRoute
 
-    pickRoute SigninRoute = [ R.text "sign in please" ]
+    pickRoute SigninRoute = [ Signin.component {} ]
 
     pickRoute EmptyRoute = [ R.text "loading..." ]
     pickRoute Route404 = [ R.text "404 not found" ]

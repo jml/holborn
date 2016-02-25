@@ -9,8 +9,9 @@ import Test.Unit (test, runTest)
 import Test.Unit.Assert as Assert
 import Data.Either.Unsafe (fromRight)
 import Data.Maybe (Maybe(..))
+import Data.Argonaut.Printer (printJson)
 
-import Holborn.JSON.Generic (gDecode)
+import Holborn.JSON.Generic (gDecode, gEncode)
 
 -- Need eq instance for test
 newtype A = A { name :: String }
@@ -48,3 +49,5 @@ main = runTest do
     Assert.equal (Right (MA {name: Nothing})) (gDecode emptyJson)
   test "gDecode maybe valid JSON should be Just" $
     Assert.equal (Right (MA {name: Just "name"})) (gDecode testJson)
+  test "gEncode doesn't encode tag" $
+    Assert.equal "{\"name\":\"name\"}" (printJson (gEncode (A {name: "name"})))

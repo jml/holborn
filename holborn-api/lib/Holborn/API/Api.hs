@@ -25,6 +25,7 @@ import qualified Holborn.JSON.User as U
 import qualified Web.JWT as JWT
 
 import Holborn.API.Types (ApiError(..), newEmail, newPassword, newUsername, Username, AppConf(..))
+import Holborn.JSON.User (SigninData(..), SigninOK(..))
 import qualified Holborn.API.User as U
 
 data SignupData = SignupData
@@ -32,13 +33,13 @@ data SignupData = SignupData
     , email ::Text
     , password :: Text
     } deriving Generic
+
 data SignupError = EUserExists Text | EOtherError deriving Generic
 data SignupOk = AuthJwt Text deriving Generic
 
 instance FromJSON SignupData
 instance ToJSON SignupError
 instance ToJSON SignupOk
-
 
 instance FromText Username where
     fromText x = Just (newUsername x)
@@ -49,8 +50,9 @@ type API =
     -- normal user api
     :<|> "v1" :> "users" :> Capture "username" Username :> Get '[JSON] U.ListUsersRow
 
-    -- Special POST for signing up:
+    -- Special POST for signing up / in etc
     :<|> "users" :> "signup" :> ReqBody '[JSON] SignupData :> Post '[JSON] (Either SignupError SignupOk)
+    :<|> "v1" :> "signin" :> ReqBody '[JSON] SigninData :> Post '[JSON] SigninOK
 
 
 landing :: EitherT ServantErr IO Html
@@ -81,8 +83,14 @@ signupPost (AppConf conn jwtSecret) SignupData{..} = do
             return (Right (AuthJwt encodedJwt))
 
 
+signin :: AppConf -> SigninData -> EitherT ServantErr IO SigninOK
+signin (AppConf conn jwtSecret) SigninData {..} = do
+    return (SigninOK "token")
+
+
 server :: AppConf -> Server API
 server conf =
     landing
     :<|> (getUser conf)
     :<|> (signupPost conf)
+    :<|> (signin conf)
