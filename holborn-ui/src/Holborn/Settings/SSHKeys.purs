@@ -27,6 +27,7 @@ import Holborn.Forms as HF
 import Unsafe.Coerce (unsafeCoerce)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Data.Lens (LensP)
+import Data.List (filter)
 
 import Debug.Trace (traceAnyM)
 
@@ -42,7 +43,7 @@ type State =
   }
 
 -- All possible state-modifying actions for this component.
-data Action = AddKey | UpdateKeyData AddKeyData
+data Action = AddKey | UpdateKeyData AddKeyData | RemoveKey Int
 
 emptyAddKeyData = AddKeyData { key: "", title: "" }
 
@@ -88,25 +89,45 @@ spec = T.simpleSpec performAction render
     render :: T.Render State Props Action
     render dispatch props ({ addKeyData, error: AddKeyDataError err, loading, keys }) _ =
       [ R.h1 [] [R.text "Manage SSH keys"]
+      , R.div [] keyArray
+      , R.h2 [] [R.text "Add new key"]
       , renderGlobalError err.global
        , R.form [RP.onSubmit onSubmit]
         [ HF.text "Key name" err.title title (dispatch <<< UpdateKeyData) addKeyData
         , HF.textarea "Key" err.key key (dispatch <<< UpdateKeyData) addKeyData
         , R.button [RP.disabled loading, RP.className "btn btn-default"] [R.text if loading then "Adding key ..." else "Add new key"]
         ]
-      , R.div [] keyArray
       ]
       where
         onSubmit ev = do
           (unsafeCoerce ev).preventDefault
           dispatch AddKey
-        keyArray = toUnfoldable (map (\(Key key) -> (R.div [] [R.text key.title])) keys)
+        keyArray = toUnfoldable (map oneKey keys)
+        oneKey (Key key) =
+          R.div []
+          [ R.text key.title
+          , R.text key.key.fingerprint
+          , if key.read_only
+            then R.span [RP.className "readonly"] [R.text "readonly"]
+            else R.span [RP.className "write"] [R.text "write"]
+          , if key.verified
+            then R.span [RP.className "verified"] [R.text "verified"]
+            else R.span [RP.className "notverified"] [R.text "not verified"]
+          , R.a [RP.onClick \ev -> do
+                    (unsafeCoerce ev).preventDefault
+                    dispatch (RemoveKey key.id)
+                ] [R.text "Remove this key"]
+          ]
 
     -- performAction is a purescript-thermite callback. It takes an
     -- action and modifies the state by calling the callback k and
     -- passing it the modified state.
-    performAction :: forall eff props. T.PerformAction (ajax :: AJAX, cookie :: C.COOKIE | eff) State props Action
+    -- performAction :: forall eff props. T.PerformAction (ajax :: AJAX, cookie :: C.COOKIE | eff) State props Action
     performAction (UpdateKeyData x) props state k = k $ state { addKeyData = x }
+    performAction (RemoveKey keyId) props state k = do
+      k (state { loading = true })
+      runAff (\_ -> k state) k (removeKey keyId state)
+
     performAction AddKey props state k = do
       k (state { loading = true })
       runAff (\err -> traceAnyM err >>= \_ -> k $ state { error = networkAddKeyDataError "No network connection. Please try again later"}) k (addKey state)
@@ -121,7 +142,7 @@ spec = T.simpleSpec performAction render
       return case r.status of
          StatusCode 201 -> case decodeJson r.response of
              Left err -> state { loading = false, error = networkAddKeyDataError "Something unexpeced broke." }
-             Right key -> state { loading = false, keys = key : state.keys, addKeyData = emptyAddKeyData}
+             Right key -> state { loading = false, keys = key : state.keys, addKeyData = emptyAddKeyData, error = emptyAddKeyDataError }
 
          -- Note that by calling `decodeJson` in the 201 branch the
          -- type inference decided that the response must be JSON so
@@ -129,6 +150,13 @@ spec = T.simpleSpec performAction render
          StatusCode 400 -> case decodeJson r.response of
              Left _ -> state { loading = false, error = networkAddKeyDataError "Something unexpeced broke." }
              Right errors -> state { loading = false, error = errors }
+
+    removeKey :: forall eff. Int -> State -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) State
+    removeKey keyId state = do
+      r <- HA.delete ("http://127.0.0.1:8002/v1/user/keys/" ++ show keyId) :: AJ.Affjax (cookie :: C.COOKIE | eff) Unit
+      return $ case r.status of
+          StatusCode 204 -> state { keys = filter (\(Key { id }) -> id /= keyId) state.keys }
+          _ -> state -- TODO error handling
 
 component :: Props -> React.ReactElement
 component props =

@@ -15,7 +15,7 @@ import Data.Generic (class Generic)
 import Holborn.JSON.Generic (gDecode, gEncode)
 
 -- The following three feel like they ought to be parametrized ...
-data Key = Key { key :: String , title :: String }
+data Key = Key { id :: Int, key :: { key :: String, fingerprint :: String } , title :: String, verified :: Boolean, read_only :: Boolean }
 data AddKeyData = AddKeyData { key :: String, title :: String }
 data AddKeyDataError = AddKeyDataError { global :: Maybe String, key :: Maybe String, title :: Maybe String }
 

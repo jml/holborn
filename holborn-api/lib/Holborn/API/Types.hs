@@ -18,9 +18,9 @@ import qualified Crypto.BCrypt as BCrypt
 import Database.PostgreSQL.Simple.ToField (ToField)
 import Database.PostgreSQL.Simple (Connection)
 import qualified Prelude
-import Data.Aeson (FromJSON(..), ToJSON(..), Value(..))
+import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), object, (.=))
 import Data.Aeson.Types (typeMismatch)
-import Database.PostgreSQL.Simple.FromField (FromField(..))
+import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultError(ConversionFailed))
 
 import System.Process (runInteractiveCommand)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
@@ -87,7 +87,16 @@ instance FromJSON Email where
     parseJSON x = typeMismatch "Email" x
 
 
-data SSHKey = SSHKey ByteString ByteString
+instance ToJSON SSHKey where
+    toJSON (SSHKey key fingerprint) = object ["key" .= decodeUtf8 key, "fingerprint" .= decodeUtf8 fingerprint]
+
+
+instance FromField SSHKey where
+    fromField f (Just bs) = case parseSSHKey bs of
+        Just x -> return x
+        _ -> returnError ConversionFailed f "Could not parse ssh key"
+
+data SSHKey = SSHKey ByteString ByteString deriving Show
 
 parseSSHKey :: ByteString -> Maybe SSHKey
 parseSSHKey keyData = case fingerprint keyData of

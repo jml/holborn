@@ -6,7 +6,7 @@ import Network.HTTP.Affjax.Request (class Requestable)
 import Network.HTTP.Affjax (Affjax, URL, defaultRequest, affjax)
 import Data.Maybe (Maybe(..))
 import Network.HTTP.Affjax.Response (class Respondable)
-import Network.HTTP.Method (Method(POST))
+import Network.HTTP.Method (Method(POST, DELETE))
 import Network.HTTP.RequestHeader (RequestHeader(..))
 import Web.Cookies as C
 import Control.Monad.Eff.Class (liftEff)
@@ -43,4 +43,16 @@ get u = do
   affjax $ defaultRequest
     { url = u
     , headers = [RequestHeader "Authorization" t]
+    }
+
+delete :: forall e b. (Respondable b) => URL -> Affjax (cookie :: C.COOKIE | e)  b
+delete u = do
+  maybeToken <- liftEff $ C.getCookie "auth-token"
+  t <- case maybeToken of
+    Nothing -> throwError authTokenMissing
+    Just x -> return x
+  affjax $ defaultRequest
+    { method = DELETE
+    , url = u
+    , headers = [RequestHeader "Authorization" t ]
     }

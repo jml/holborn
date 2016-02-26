@@ -35,7 +35,7 @@ instance FromText AuthToken where
 type API =
          "v1" :> "users" :> Capture "username" Username :> "keys" :> Get '[JSON] [ListKeysRow]
     :<|> "v1" :> "user" :> "keys" :> Capture "id" Int :> Get '[JSON] ListKeysRow
-    :<|> "v1" :> "user" :> "keys" :> Capture "id" Int :> Delete '[JSON] ()
+    :<|> "v1" :> Header "Authorization" AuthToken :> "user" :> "keys" :> Capture "id" Int :> Delete '[JSON] ()
     :<|> "v1" :> Header "Authorization" AuthToken :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> Post '[JSON] ListKeysRow
 
 
@@ -81,8 +81,16 @@ getKey :: AppConf -> Int -> ExceptT KeyError IO ListKeysRow
 getKey conf keyId = undefined
 
 
-deleteKey :: AppConf -> Int -> ExceptT KeyError IO ()
-deleteKey conf keyId = undefined
+deleteKey :: AppConf -> Maybe AuthToken -> Int -> ExceptT KeyError IO ()
+deleteKey AppConf{conn=conn} token keyId = do
+    (userId, permissions) <- getAuth conn token
+    unless (hasPermission permissions Web) (throwE InsufficientPermissions)
+
+    count <- liftIO $ execute conn [sql|
+            delete from "public_key" where id = ? and owner_id = ?
+            |] (keyId, userId)
+    liftIO $ print count
+    return ()
 
 
 
@@ -91,7 +99,7 @@ addKey AppConf{conn=conn} token AddKeyData{..} = do
 
     when (isNothing (parseSSHKey (encodeUtf8 _AddKeyData_key))) (throwE InvalidSSHKey)
     when (_AddKeyData_title == "") (throwE EmptyTitle)
-    (userId, permissions) <- getAuth
+    (userId, permissions) <- getAuth conn token
     unless (hasPermission permissions Web) (throwE InsufficientPermissions)
 
     [Only id_] <- liftIO $ query conn [sql|
@@ -105,13 +113,14 @@ addKey AppConf{conn=conn} token AddKeyData{..} = do
                |] (Only id_ :: Only Integer)
     return r
 
-  where
-    getAuth = do
-      authToken <- case token of
-          Nothing -> throwE MissingAuthToken
-          Just x -> return x
 
-      maybeUser <- liftIO $ userFromToken conn authToken
-      case maybeUser of
-          Just (userId, permissions) -> return (userId, permissions)
-          Nothing -> throwE InvalidAuthToken
+-- ExceptT trying to auth the user
+getAuth conn token = do
+    authToken <- case token of
+        Nothing -> throwE MissingAuthToken
+        Just x -> return x
+
+    maybeUser <- liftIO $ userFromToken conn authToken
+    case maybeUser of
+        Just (userId, permissions) -> return (userId, permissions)
+        Nothing -> throwE InvalidAuthToken
