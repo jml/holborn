@@ -23,6 +23,7 @@ import Web.Cookies as C
 
 import Holborn.ManualEncoding.Keys (Key(..), AddKeyData(..), AddKeyDataError(..), title, key)
 import Holborn.Auth as HA
+import Holborn.Forms as HF
 import Unsafe.Coerce (unsafeCoerce)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Data.Lens (LensP)
@@ -89,14 +90,8 @@ spec = T.simpleSpec performAction render
       [ R.h1 [] [R.text "Manage SSH keys"]
       , renderGlobalError err.global
        , R.form [RP.onSubmit onSubmit]
-        [ labeled "Key name" err.title $ R.input [ RP.value (view title addKeyData)
-                  , RP.className "form-control"
-                  , RP.onChange \ev -> dispatch (UpdateKeyData (fieldUpdater title ev addKeyData))
-                  ] []
-        , labeled "Key" err.key $ R.textarea [ RP.value (view key addKeyData)
-                     , RP.onChange \ev -> dispatch (UpdateKeyData (fieldUpdater key ev addKeyData))
-                     , RP.className "form-control"
-                     ] []
+        [ HF.text "Key name" err.title title (dispatch <<< UpdateKeyData) addKeyData
+        , HF.textarea "Key" err.key key (dispatch <<< UpdateKeyData) addKeyData
         , R.button [RP.disabled loading, RP.className "btn btn-default"] [R.text if loading then "Adding key ..." else "Add new key"]
         ]
       , R.div [] keyArray
