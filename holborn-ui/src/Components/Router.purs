@@ -19,7 +19,6 @@ import Routing (matches)
 import Control.Monad.Aff (runAff)
 import Control.Monad.Eff (Eff)
 import Network.HTTP.Affjax (AJAX)
-import Web.Cookies as C
 
 
 import Debug.Trace (traceAnyM)
@@ -53,7 +52,7 @@ spec = T.simpleSpec performAction render
     pickRoute (Settings x) = [ SettingsRoute.component {route: x} ]
     pickRoute ErrorRoute = [ R.text "error" ]
 
-    performAction action@(UpdateRoute r) props state k = k $ state { currentRoute = r }
+    performAction action@(UpdateRoute r) props state k = k $ \state -> state { currentRoute = r }
 
 
 -- The following is a hack to listen on route changes for the "root"

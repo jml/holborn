@@ -19,9 +19,11 @@ data Key = Key { id :: Int, key :: { key :: String, fingerprint :: String } , ti
 data AddKeyData = AddKeyData { key :: String, title :: String }
 data AddKeyDataError = AddKeyDataError { global :: Maybe String, key :: Maybe String, title :: Maybe String }
 
+
 derive instance genericKey :: Generic Key
 derive instance genericAddKeyDataError :: Generic AddKeyDataError
 derive instance genericAddKeyData :: Generic AddKeyData
+
 
 title :: LensP AddKeyData String
 title = lens

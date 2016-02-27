@@ -2,30 +2,46 @@
 -- settings content on the right (cf Twitter settings)
 module Holborn.SettingsRoute where
 
-import Prelude
+import Prelude (Unit, pure, unit, ($))
 import Thermite as T
 import React.DOM as R
 import React.DOM.Props as RP
 import Control.Monad.Eff.Exception as E
 import Network.HTTP.Affjax as AJ
 import Web.Cookies as C
-
+import Data.Lens(PrismP, LensP, lens, prism, over)
+import Data.Either (Either(..))
 import Holborn.Routing (SettingsRoutes(..))
 import Holborn.Settings.SSHKeys as SSHKeys
+import Data.Foldable (fold)
 
-type State = {}
-type Action = Unit
+type State = {sshKeysState :: SSHKeys.State}
+data Action = SSHKeyAction SSHKeys.Action
 type Props = {route :: SettingsRoutes}
+initialState = {sshKeysState: SSHKeys.initialState}
 
+
+_SSHKeyAction :: PrismP Action SSHKeys.Action
+_SSHKeyAction = prism SSHKeyAction \ta ->
+  case ta of
+    SSHKeyAction x -> Right x
+    _ -> Left ta
+
+
+sshkeystate :: LensP State SSHKeys.State
+sshkeystate = lens
+              _.sshKeysState
+              (\state x -> state { sshKeysState = x })
 
 spec :: forall eff. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State Props Action
-spec = T.simpleSpec T.defaultPerformAction render
+spec = container $ fold
+       [ T.focus sshkeystate _SSHKeyAction SSHKeys.spec
+       ]
   where
-    render _ props _ _ =
+    container = over T._render \render d p s c ->
       [ R.div [RP.className "container-fluid"]
         [ R.div [RP.className "row"]
-          [ R.div [RP.className "col-md-2"] [(menu props.route)]
-          , R.div [RP.className "col-md-8"] [(settings props.route)]
+          [ R.div [RP.className "col-md-8"] (render d p s c)
           ]
         ]
       ]
@@ -87,4 +103,4 @@ spec = T.simpleSpec T.defaultPerformAction render
 
 component :: Props -> React.ReactElement
 component props =
-  React.createElement (T.createClass spec {}) props []
+  React.createElement (T.createClass spec initialState) props []

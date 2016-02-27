@@ -60,22 +60,22 @@ spec = T.simpleSpec performAction render
           dispatch SignIn
 
     performAction SignIn props state k = do
-      k $ state { loading = true }
-      runAff (\err -> traceAnyM err >>= \_ -> k $ state) k (runSignin state)
-    performAction (UpdateFormData x) props state k = k $ state { formData = x }
+      k $ \state -> state { loading = true }
+      runAff (\err -> traceAnyM err >>= \_ -> k id) k (runSignin state)
+    performAction (UpdateFormData x) props state k = k $ \state -> state { formData = x }
 
     --runSignin :: forall eff. State -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) State
     runSignin state = do
       r <- AJ.post "http://127.0.0.1:8002/v1/signin" (encodeJson state.formData)
       case r.status of
         StatusCode 201 -> case decodeJson r.response of
-          Left err -> return (state { loading = false })
+          Left err -> return (\state -> state { loading = false })
           Right (SigninOK { token }) -> do
             liftEff $ C.setCookie "auth-token" token {}
-            return (state { loading = false })
+            return (\state -> state { loading = false })
         StatusCode 400 -> case decodeJson r.response of
-          Left _ -> return (state { loading = false }) -- TODO error hanldinf
-          Right errors -> return (state { loading = false, formErrors = errors })
+          Left _ -> return (\state -> state { loading = false }) -- TODO error hanldinf
+          Right errors -> return (\state -> state { loading = false, formErrors = errors })
 
 
 
