@@ -60,8 +60,6 @@ initialState =
   , addKeyData: emptyAddKeyData
   }
 
--- type Props = {keys :: List Key}
-
 
 -- We need unsafeCoerce because purescript-react bindings arent
 -- exposing target.value yet.
@@ -124,7 +122,8 @@ spec = T.simpleSpec performAction render
     -- action and modifies the state by calling the callback k and
     -- passing it the modified state.
     performAction :: forall eff a. T.PerformAction (ajax :: AJAX, cookie :: C.COOKIE | eff) State props Action
-    performAction (UpdateKeyData x) props state k = k $ \state -> state { addKeyData = x }
+    performAction (UpdateKeyData x) props state k = do
+      k $ \state -> state { addKeyData = x }
     performAction (RemoveKey keyId) props state k = do
       k (\state -> state { loading = true })
       runAff (\_ -> k id) k (removeKey keyId)
@@ -156,9 +155,5 @@ spec = T.simpleSpec performAction render
     removeKey keyId = do
       r <- HA.delete ("http://127.0.0.1:8002/v1/user/keys/" ++ show keyId) :: AJ.Affjax (cookie :: C.COOKIE | eff) Unit
       return $ case r.status of
-          StatusCode 204 -> \state -> state { keys = filter (\(Key { id }) -> id /= keyId) state.keys }
+          StatusCode 204 -> \state -> state { keys = filter (\(Key { id }) -> id /= keyId) state.keys, loading = false }
           _ -> id -- TODO error handling
-
-component :: forall props. props -> React.ReactElement
-component props =
-  React.createElement (T.createClass spec initialState) props []

@@ -2,54 +2,63 @@
 -- settings content on the right (cf Twitter settings)
 module Holborn.SettingsRoute where
 
-import Prelude (Unit, pure, unit, ($))
+import Prelude
 import Thermite as T
 import React.DOM as R
 import React.DOM.Props as RP
 import Control.Monad.Eff.Exception as E
 import Network.HTTP.Affjax as AJ
 import Web.Cookies as C
-import Data.Lens(PrismP, LensP, lens, prism, over)
+import Data.Lens(PrismP, LensP, lens, prism, over, set)
 import Data.Either (Either(..))
 import Holborn.Routing (SettingsRoutes(..))
 import Holborn.Settings.SSHKeys as SSHKeys
 import Data.Foldable (fold)
+import Data.Maybe (maybe)
 
-type State = {sshKeysState :: SSHKeys.State}
+import Debug.Trace
+
+type State = {sshKeysState :: SSHKeys.State, route :: SettingsRoutes, error :: String}
 data Action = SSHKeyAction SSHKeys.Action
 type Props = {route :: SettingsRoutes}
-initialState = {sshKeysState: SSHKeys.initialState}
+initialState = {sshKeysState: SSHKeys.initialState, route: SSHKeySettings, error: "no error"}
 
 
 _SSHKeyAction :: PrismP Action SSHKeys.Action
-_SSHKeyAction = prism SSHKeyAction \ta ->
-  case ta of
+_SSHKeyAction = prism SSHKeyAction \action ->
+  case action of
     SSHKeyAction x -> Right x
-    _ -> Left ta
+    _ -> Left action
 
 
-sshkeystate :: LensP State SSHKeys.State
-sshkeystate = lens
-              _.sshKeysState
-              (\state x -> state { sshKeysState = x })
+_SSHKeyState :: PrismP State SSHKeys.State
+_SSHKeyState = prism (\state -> initialState { sshKeysState = state, route = SSHKeySettingsOK state.keys, error = "" }) \state ->
+  case state.route of
+    SSHKeySettingsOK keys -> Right (state.sshKeysState { keys = keys })
+    _ -> Left state
+
 
 spec :: forall eff. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State Props Action
-spec = container $ fold
-       [ T.focus sshkeystate _SSHKeyAction SSHKeys.spec
+spec = container $ handleErrors $ fold
+       [ T.match _SSHKeyAction (T.split _SSHKeyState SSHKeys.spec)
        ]
   where
     container = over T._render \render d p s c ->
       [ R.div [RP.className "container-fluid"]
         [ R.div [RP.className "row"]
-          [ R.div [RP.className "col-md-8"] (render d p s c)
+          [ R.div [RP.className "col-md-2"] [R.text s.error, menu p.route]
+          , R.div [RP.className "col-md-8"] (render d p s c)
           ]
         ]
       ]
 
-    settings (SSHKeySettingsOK keys) = SSHKeys.component {keys: keys}
-    settings AccountSettingsOK = R.div [] [R.text "AccountSettingsOK"]
+    handleErrors = over T._performAction (\performNested a p s k -> do
+                                             performNested a p s k
+                                             performAction a p s k)
 
-    settings _ = R.div [] [R.text "loading..."]
+    performAction (SSHKeyAction _) p s k = do
+      pure unit
+
 
     lgi label link = R.a [RP.href link, RP.className "list-group-item"] [R.text label]
     lgia label link = R.a [RP.href link, RP.className "list-group-item active"] [R.text label]
@@ -103,4 +112,4 @@ spec = container $ fold
 
 component :: Props -> React.ReactElement
 component props =
-  React.createElement (T.createClass spec initialState) props []
+  React.createElement (T.createClass spec (initialState { route = props.route })) props []
