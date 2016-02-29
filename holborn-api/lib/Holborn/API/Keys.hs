@@ -23,11 +23,8 @@ import Data.Aeson (Value(..), object, encode)
 
 import Holborn.API.Types (AppConf(..), Username, parseSSHKey, SSHKey)
 import Holborn.JSON.Keys (AddKeyData(..), ListKeysRow(..))
-import Holborn.Auth (AuthToken(..), userFromToken, Permission(..), hasPermission)
+import Holborn.Auth (AuthToken(..), userFromToken, Permission(..), hasPermission, Permissions, getAuthFromToken)
 import Holborn.Errors (jsonErrorHandler, GeneralError(..), JSONCodableError(..))
-
-instance FromText AuthToken where
-    fromText token = Just (AuthToken (encodeUtf8 token))
 
 
 type API =
@@ -70,8 +67,8 @@ getKey conf keyId = undefined
 
 
 deleteKey :: AppConf -> Maybe AuthToken -> Int -> ExceptT (GeneralError KeyError) IO ()
-deleteKey AppConf{conn=conn} token keyId = do
-    (userId, permissions) <- getAuth conn token
+deleteKey appconf@AppConf{conn=conn} token keyId = do
+    (userId, permissions) <- getAuthFromToken appconf token
     unless (hasPermission permissions Web) (throwE InsufficientPermissions)
 
     count <- liftIO $ execute conn [sql|
@@ -81,13 +78,12 @@ deleteKey AppConf{conn=conn} token keyId = do
     return ()
 
 
-
 addKey :: AppConf -> Maybe AuthToken -> AddKeyData -> ExceptT (GeneralError KeyError) IO ListKeysRow
-addKey AppConf{conn=conn} token AddKeyData{..} = do
+addKey appconf@AppConf{conn=conn} token AddKeyData{..} = do
 
     when (isNothing (parseSSHKey (encodeUtf8 _AddKeyData_key))) (throwE (SpecificError InvalidSSHKey))
     when (_AddKeyData_title == "") (throwE (SpecificError EmptyTitle))
-    (userId, permissions) <- getAuth conn token
+    (userId, permissions) <- getAuthFromToken appconf token
     unless (hasPermission permissions Web) (throwE InsufficientPermissions)
 
     [Only id_] <- liftIO $ query conn [sql|
@@ -100,15 +96,3 @@ addKey AppConf{conn=conn} token AddKeyData{..} = do
                    from "public_key" where id = ?
                |] (Only id_ :: Only Integer)
     return r
-
-
--- ExceptT trying to auth the user
-getAuth conn token = do
-    authToken <- case token of
-        Nothing -> throwE MissingAuthToken
-        Just x -> return x
-
-    maybeUser <- liftIO $ userFromToken conn authToken
-    case maybeUser of
-        Just (userId, permissions) -> return (userId, permissions)
-        Nothing -> throwE InvalidAuthToken
