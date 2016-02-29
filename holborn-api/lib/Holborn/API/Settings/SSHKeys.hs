@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes        #-}
 
-module Holborn.API.Keys
+module Holborn.API.Settings.SSHKeys
        ( API
        , server
        ) where
@@ -21,7 +21,7 @@ import Servant
 import Data.Aeson (Value(..), object, (.=))
 
 import Holborn.API.Types (AppConf(..), Username, parseSSHKey)
-import Holborn.JSON.Keys (AddKeyData(..), ListKeysRow(..))
+import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
 import Holborn.Auth (AuthToken(..), Permission(..), hasPermission, getAuthFromToken)
 import Holborn.Errors (jsonErrorHandler, GeneralError(..), JSONCodableError(..))
 

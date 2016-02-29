@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Holborn.JSON.Keys
+module Holborn.JSON.Settings.SSHKeys
        ( ListKeysRow(..)
        , AddKeyData(..)
        ) where
