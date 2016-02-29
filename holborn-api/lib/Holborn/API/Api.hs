@@ -52,9 +52,6 @@ instance FromText Username where
 
 type API =
     Get '[HTML] Html
-    -- normal user api
-    :<|> "v1" :> "users" :> Capture "username" Username :> Get '[JSON] U.ListUsersRow
-
     -- Special POST for signing up / in etc
     :<|> "users" :> "signup" :> ReqBody '[JSON] SignupData :> Post '[JSON] (Either SignupError SignupOk)
     :<|> "v1" :> "signin" :> ReqBody '[JSON] SigninData :> Post '[JSON] SigninOK
@@ -62,14 +59,6 @@ type API =
 
 landing :: EitherT ServantErr IO Html
 landing = return $(shamletFile "./templates/landing.html")
-
-
-getUser :: AppConf -> Username -> EitherT ServantErr IO U.ListUsersRow
-getUser (AppConf conn _) username = do
-    r <- liftIO (runExceptT (U.getUser conn username))
-    case r of
-        Left (UserNotFound _) -> left err404
-        Right row -> return row
 
 
 signupPost :: AppConf -> SignupData -> EitherT ServantErr IO (Either SignupError SignupOk)
@@ -115,6 +104,5 @@ signin (AppConf conn _) SigninData{..} = do
 server :: AppConf -> Server API
 server conf =
     landing
-    :<|> (getUser conf)
     :<|> (signupPost conf)
     :<|> (signin conf)

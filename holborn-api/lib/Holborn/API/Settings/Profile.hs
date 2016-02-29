@@ -4,6 +4,7 @@
 {-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes        #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 
 module Holborn.API.Settings.Profile
        ( API
@@ -31,11 +32,12 @@ type API =
     :<|> "v1" :> Header "Authorization" AuthToken :> "user" :> ReqBody '[JSON] ProfileData :> Post '[JSON] ()
 
 
-data Error = InvalidUrl
+data Error = InvalidUrl | UserNotFound Text
 
 
 instance JSONCodableError Error where
     toJSON InvalidUrl = (400, object ["url" .= ("Not a valid URL" :: Text)])
+    toJSON (UserNotFound x) = (404, object ["message" .= ("User " <> x <> " not found")])
 
 
 server :: AppConf -> Server API
@@ -46,7 +48,15 @@ server conf = enter jsonErrorHandler $
 
 
 getUser :: AppConf -> Username -> ExceptT (GeneralError Error) IO ProfileData
-getUser conf username = undefined
+getUser AppConf{conn} username = do
+    r <- liftIO $ query conn [sql|
+                   select id, username, created
+                   from "user" where username = ?
+               |] (Only username)
+
+    case r of
+        [] -> throwE (SpecificError (UserNotFound (show username)))
+        [(id_, un, created)] -> return (ProfileData id_ un "about" created)
 
 
 getAuthorizedUser :: AppConf -> Maybe AuthToken -> ExceptT (GeneralError Error) IO ProfileData
