@@ -6,15 +6,13 @@ module Holborn.JSON.Keys
        ) where
 
 import BasicPrelude
-import Data.Char (toLower)
 import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
-import Database.PostgreSQL.Simple.Time (UTCTimestamp)
-import Data.Aeson.TH (deriveJSON, defaultOptions, fieldLabelModifier, constructorTagModifier)
-import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON)
+import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions)
+import Data.Aeson.Types (Options(fieldLabelModifier))
 import Data.Time.LocalTime (LocalTime)
 import GHC.Generics (Generic)
 
-import Holborn.API.Types (SSHKey, parseSSHKey)
+import Holborn.API.Types (SSHKey)
 
 data ListKeysRow = ListKeysRow
     { _ListKeysRow_id :: Int
@@ -28,9 +26,7 @@ data ListKeysRow = ListKeysRow
 
 instance ToJSON ListKeysRow where
   toJSON = genericToJSON defaultOptions
-    { fieldLabelModifier = drop (length ("_ListKeysRow_" :: String))
-    , constructorTagModifier = map toLower
-    }
+    { fieldLabelModifier = drop (length ("_ListKeysRow_" :: String)) }
 
 
 data AddKeyData = AddKeyData
@@ -41,9 +37,7 @@ data AddKeyData = AddKeyData
 
 instance FromJSON AddKeyData where
   parseJSON = genericParseJSON defaultOptions
-    { fieldLabelModifier = drop (length ("_AddKeyData_" :: String))
-    , constructorTagModifier = map toLower
-    }
+    { fieldLabelModifier = drop (length ("_AddKeyData_" :: String)) }
 
 
 instance FromRow ListKeysRow where

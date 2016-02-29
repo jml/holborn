@@ -1,5 +1,5 @@
 -- | Fetch some keys:
--- $ curl 127.0.0.1:8002/v1/users/tom/keys
+-- $ curl 127.0.0.1:8002/v1/users/alice/keys
 
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE RecordWildCards    #-}
@@ -17,9 +17,8 @@ import Control.Monad.Trans.Either (left)
 import Database.PostgreSQL.Simple (Only (..), execute, query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Control.Monad.Trans.Except (ExceptT, throwE)
-import Control.Error (bimapExceptT)
 import Servant
-import Data.Aeson (Value(..), object)
+import Data.Aeson (Value(..), object, (.=))
 
 import Holborn.API.Types (AppConf(..), Username, parseSSHKey)
 import Holborn.JSON.Keys (AddKeyData(..), ListKeysRow(..))
@@ -41,8 +40,8 @@ data KeyError = EmptyTitle | InvalidSSHKey
 
 
 instance JSONCodableError KeyError where
-    toJSON EmptyTitle = (400, object [])
-    toJSON InvalidSSHKey = (400, object [])
+    toJSON EmptyTitle = (400, object ["title" .= ("Title cannot be empty" :: Text)])
+    toJSON InvalidSSHKey = (400, object ["key" .= ("Invalid SSH key" :: Text)])
 
 
 server :: AppConf -> Server API
