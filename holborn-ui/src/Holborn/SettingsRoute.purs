@@ -18,7 +18,11 @@ import Data.Maybe (maybe)
 
 import Debug.Trace
 
-type State = {sshKeysState :: SSHKeys.State, route :: SettingsRoutes, error :: String}
+type State =
+  { sshKeysState :: SSHKeys.State
+  , route :: SettingsRoutes
+  , error :: String
+  }
 data Action = SSHKeyAction SSHKeys.Action
 type Props = {route :: SettingsRoutes}
 initialState = {sshKeysState: SSHKeys.initialState, route: SSHKeySettings, error: "no error"}
@@ -39,7 +43,7 @@ _SSHKeyState = prism (\state -> initialState { sshKeysState = state, route = SSH
 
 
 spec :: forall eff. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State Props Action
-spec = container $ handleErrors $ fold
+spec = container $ fold
        [ T.match _SSHKeyAction (T.split _SSHKeyState SSHKeys.spec)
        ]
   where
@@ -51,14 +55,6 @@ spec = container $ handleErrors $ fold
           ]
         ]
       ]
-
-    handleErrors = over T._performAction (\performNested a p s k -> do
-                                             performNested a p s k
-                                             performAction a p s k)
-
-    performAction (SSHKeyAction _) p s k = do
-      pure unit
-
 
     lgi label link = R.a [RP.href link, RP.className "list-group-item"] [R.text label]
     lgia label link = R.a [RP.href link, RP.className "list-group-item active"] [R.text label]
