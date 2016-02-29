@@ -23,20 +23,20 @@ type State =
   , route :: SettingsRoutes
   , error :: String
   }
-data Action = SSHKeyAction SSHKeys.Action
+data Action = SSHKeysAction SSHKeys.Action
 type Props = {route :: SettingsRoutes}
 initialState = {sshKeysState: SSHKeys.initialState, route: SSHKeySettings, error: "no error"}
 
 
-_SSHKeyAction :: PrismP Action SSHKeys.Action
-_SSHKeyAction = prism SSHKeyAction \action ->
+_SSHKeysAction :: PrismP Action SSHKeys.Action
+_SSHKeysAction = prism SSHKeysAction \action ->
   case action of
-    SSHKeyAction x -> Right x
+    SSHKeysAction x -> Right x
     _ -> Left action
 
 
-_SSHKeyState :: PrismP State SSHKeys.State
-_SSHKeyState = prism (\state -> initialState { sshKeysState = state, route = SSHKeySettingsOK state.keys, error = "" }) \state ->
+_SSHKeysState :: PrismP State SSHKeys.State
+_SSHKeysState = prism (\state -> initialState { sshKeysState = state, route = SSHKeySettingsOK state.keys, error = "" }) \state ->
   case state.route of
     SSHKeySettingsOK keys -> Right (state.sshKeysState { keys = keys })
     _ -> Left state
@@ -44,7 +44,8 @@ _SSHKeyState = prism (\state -> initialState { sshKeysState = state, route = SSH
 
 spec :: forall eff. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State Props Action
 spec = container $ fold
-       [ T.match _SSHKeyAction (T.split _SSHKeyState SSHKeys.spec)
+       [ T.match _SSHKeysAction (T.split _SSHKeysState SSHKeys.spec)
+       , T.match _AccountAction (T.split _AccountState Account.spec)
        ]
   where
     container = over T._render \render d p s c ->
