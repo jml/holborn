@@ -12,6 +12,7 @@ library
                      , Holborn.API.Internal
                      , Holborn.Docs
                      , Holborn.Auth
+                     , Holborn.Errors
                      , Holborn.JSON.User
                      , Holborn.JSON.Response
                      , Holborn.JSON.Keys

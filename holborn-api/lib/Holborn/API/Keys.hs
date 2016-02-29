@@ -1,7 +1,4 @@
--- | Add a key e.g.
--- Post a new key (we don't do auth yet).
--- $ curl 127.0.0.1:8002/v1/user/keys/ -H "content-type: application/json" -d '{"key": "key", "title": "tom"}'
--- Fetch some keys:
+-- | Fetch some keys:
 -- $ curl 127.0.0.1:8002/v1/users/tom/keys
 
 {-# LANGUAGE DataKinds          #-}
@@ -22,11 +19,12 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
 import Control.Error (bimapExceptT)
 import Servant
+import Data.Aeson (Value(..), object, encode)
 
 import Holborn.API.Types (AppConf(..), Username, parseSSHKey, SSHKey)
 import Holborn.JSON.Keys (AddKeyData(..), ListKeysRow(..))
 import Holborn.Auth (AuthToken(..), userFromToken, Permission(..), hasPermission)
-
+import Holborn.Errors (jsonErrorHandler, GeneralError(..), JSONCodableError(..))
 
 instance FromText AuthToken where
     fromText token = Just (AuthToken (encodeUtf8 token))
@@ -42,33 +40,23 @@ type API =
 -- TODO Tom would really rather have an applicative validator that can
 -- check & mark several errors at the same time because that's a much
 -- better user experience.
-data KeyError =
-    EmptyTitle
-    | InvalidSSHKey
-    | MissingAuthToken
-    | InvalidAuthToken
-    | InsufficientPermissions
+data KeyError = EmptyTitle | InvalidSSHKey
 
-keyErrors :: ExceptT KeyError IO :~> EitherT ServantErr IO
-keyErrors = Nat (exceptTToEitherT . bimapExceptT handleError id)
-  where
-    exceptTToEitherT = EitherT . runExceptT
-    handleError EmptyTitle = err400 { errBody = "{\"title\": \"Title can not be empty\"}" }
-    handleError InvalidSSHKey = err400 { errBody = "{\"key\": \"SSH key invalid\"}" }
-    handleError MissingAuthToken = err401 { errBody = "{\"error\": \"Authorization token missing\"}" }
-    handleError InvalidAuthToken = err401 { errBody = "{\"error\": \"Authorization token invalid\"}" }
-    handleError InsufficientPermissions = err403 { errBody = "{\"error\": \"Not permitted\"}" }
+
+instance JSONCodableError KeyError where
+    toJSON EmptyTitle = (400, object [])
+    toJSON InvalidSSHKey = (400, object [])
 
 
 server :: AppConf -> Server API
-server conf = enter keyErrors $
+server conf = enter jsonErrorHandler $
     (listKeys conf)
     :<|> (getKey conf)
     :<|> (deleteKey conf)
     :<|> (addKey conf)
 
 
-listKeys :: AppConf -> Username -> ExceptT KeyError IO [ListKeysRow]
+listKeys :: AppConf -> Username -> ExceptT (GeneralError KeyError) IO [ListKeysRow]
 listKeys AppConf{conn=conn} username = do
     r <- liftIO $ query conn [sql|
                    select id, pubkey, name, verified, readonly, created
@@ -77,11 +65,11 @@ listKeys AppConf{conn=conn} username = do
     return r
 
 
-getKey :: AppConf -> Int -> ExceptT KeyError IO ListKeysRow
+getKey :: AppConf -> Int -> ExceptT (GeneralError KeyError) IO ListKeysRow
 getKey conf keyId = undefined
 
 
-deleteKey :: AppConf -> Maybe AuthToken -> Int -> ExceptT KeyError IO ()
+deleteKey :: AppConf -> Maybe AuthToken -> Int -> ExceptT (GeneralError KeyError) IO ()
 deleteKey AppConf{conn=conn} token keyId = do
     (userId, permissions) <- getAuth conn token
     unless (hasPermission permissions Web) (throwE InsufficientPermissions)
@@ -94,11 +82,11 @@ deleteKey AppConf{conn=conn} token keyId = do
 
 
 
-addKey :: AppConf -> Maybe AuthToken -> AddKeyData -> ExceptT KeyError IO ListKeysRow
+addKey :: AppConf -> Maybe AuthToken -> AddKeyData -> ExceptT (GeneralError KeyError) IO ListKeysRow
 addKey AppConf{conn=conn} token AddKeyData{..} = do
 
-    when (isNothing (parseSSHKey (encodeUtf8 _AddKeyData_key))) (throwE InvalidSSHKey)
-    when (_AddKeyData_title == "") (throwE EmptyTitle)
+    when (isNothing (parseSSHKey (encodeUtf8 _AddKeyData_key))) (throwE (SpecificError InvalidSSHKey))
+    when (_AddKeyData_title == "") (throwE (SpecificError EmptyTitle))
     (userId, permissions) <- getAuth conn token
     unless (hasPermission permissions Web) (throwE InsufficientPermissions)
 
