@@ -43,13 +43,22 @@ warpSettings config =
     port' = _port config
 
 
-api :: Proxy (AApi.API :<|> AInternal.API :<|> ASSHKeys.API :<|> Docs.API)
+type FullAPI =
+    AApi.API
+    :<|> AInternal.API
+    :<|> ASSHKeys.API
+    :<|> Docs.API
+
+api :: Proxy FullAPI
 api = Proxy
 
 
 app :: AppConf -> Application
-app conf = serve api
-  ((AApi.server conf) :<|> AInternal.server :<|> (ASSHKeys.server conf) :<|> Docs.server)
+app conf = serve api $
+  AApi.server conf
+   :<|> AInternal.server
+   :<|> ASSHKeys.server conf
+   :<|> Docs.server
 
 
 
