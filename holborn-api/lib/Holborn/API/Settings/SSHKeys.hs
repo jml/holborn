@@ -17,8 +17,8 @@ import Control.Monad.Trans.Either (left)
 import Database.PostgreSQL.Simple (Only (..), execute, query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Control.Monad.Trans.Except (ExceptT, throwE)
-import Servant
 import Data.Aeson (Value(..), object, (.=))
+import Servant
 
 import Holborn.API.Types (AppConf(..), Username, parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
@@ -46,10 +46,10 @@ instance JSONCodableError KeyError where
 
 server :: AppConf -> Server API
 server conf = enter jsonErrorHandler $
-    (listKeys conf)
-    :<|> (getKey conf)
-    :<|> (deleteKey conf)
-    :<|> (addKey conf)
+    listKeys conf
+    :<|> getKey conf
+    :<|> deleteKey conf
+    :<|> addKey conf
 
 
 listKeys :: AppConf -> Username -> ExceptT (GeneralError KeyError) IO [ListKeysRow]

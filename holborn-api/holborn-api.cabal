@@ -15,8 +15,12 @@ library
                      , Holborn.Errors
                      , Holborn.JSON.User
                      , Holborn.JSON.Response
+
                      , Holborn.JSON.Settings.SSHKeys
                      , Holborn.API.Settings.SSHKeys
+
+                     , Holborn.JSON.Settings.Profile
+                     , Holborn.API.Settings.Profile
   build-depends:       base >=4.8 && <5
                      , postgresql-simple
                      , text
