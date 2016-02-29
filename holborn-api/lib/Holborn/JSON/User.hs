@@ -7,7 +7,6 @@ module Holborn.JSON.User
        ) where
 
 import BasicPrelude
-import Data.Char (toLower)
 import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier, constructorTagModifier)

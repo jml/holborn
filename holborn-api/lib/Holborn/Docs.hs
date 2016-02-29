@@ -11,6 +11,7 @@ module Holborn.Docs
 import BasicPrelude
 
 import Servant.Docs (docsWithIntros, markdown, ToSample(..), ToCapture(..), DocCapture(..))
+import qualified Servant.Docs
 import Servant
 
 import Data.Text (pack)
@@ -18,12 +19,12 @@ import qualified Holborn.API.Keys as AKeys
 import qualified Holborn.JSON.Keys
 import qualified Holborn.API.Types
 
-import Data.Proxy (Proxy(..))
 
 type API =
     "docs" :> Get '[PlainText] Text
 
 
+docsKeys :: Servant.Docs.API
 docsKeys = docsWithIntros [] (Proxy :: Proxy AKeys.API)
 
 
@@ -32,7 +33,7 @@ server = return (pack (markdown docsKeys))
 
 
 instance ToSample [Holborn.JSON.Keys.ListKeysRow] Text where
-    toSample x = Just "many"
+    toSample _ = Just "many"
 
 
 instance ToSample Holborn.JSON.Keys.ListKeysRow Text where

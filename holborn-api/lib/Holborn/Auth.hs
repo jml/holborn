@@ -22,7 +22,7 @@ module Holborn.Auth
 import BasicPrelude
 
 import qualified Data.Set as Set
-import Database.PostgreSQL.Simple (Connection, Only (..), execute, query)
+import Database.PostgreSQL.Simple (Connection, Only (..), query)
 import Database.PostgreSQL.Simple.FromField (FromField(..))
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
@@ -60,7 +60,8 @@ type UserId = Int
 
 
 instance FromField Permissions where
-    fromField f (Just bs) = return (read (decodeUtf8 bs))
+    fromField _ (Just bs) = return (read (decodeUtf8 bs))
+    fromField _ Nothing = terror "FromField Permissions should always decode correctly"
 
 instance ToField AuthToken where
     toField (AuthToken a) = Escape a
@@ -75,8 +76,8 @@ hasPermission :: Permissions -> Permission -> Bool
 hasPermission (Permissions x) p = Set.member p x
 
 userFromToken :: Connection -> AuthToken -> IO (Maybe (UserId, Permissions))
-userFromToken conn token = do
-    r <- query conn [sql|
+userFromToken c token = do
+    r <- query c [sql|
         select owner_id, permissions
         from oauth_token where token = ?
         |] (Only token) :: IO [(UserId, Permissions)]

@@ -13,17 +13,17 @@ module Holborn.API.Keys
 
 import BasicPrelude
 
-import Control.Monad.Trans.Either (EitherT(..), left)
+import Control.Monad.Trans.Either (left)
 import Database.PostgreSQL.Simple (Only (..), execute, query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
+import Control.Monad.Trans.Except (ExceptT, throwE)
 import Control.Error (bimapExceptT)
 import Servant
-import Data.Aeson (Value(..), object, encode)
+import Data.Aeson (Value(..), object)
 
-import Holborn.API.Types (AppConf(..), Username, parseSSHKey, SSHKey)
+import Holborn.API.Types (AppConf(..), Username, parseSSHKey)
 import Holborn.JSON.Keys (AddKeyData(..), ListKeysRow(..))
-import Holborn.Auth (AuthToken(..), userFromToken, Permission(..), hasPermission, Permissions, getAuthFromToken)
+import Holborn.Auth (AuthToken(..), Permission(..), hasPermission, getAuthFromToken)
 import Holborn.Errors (jsonErrorHandler, GeneralError(..), JSONCodableError(..))
 
 
@@ -57,8 +57,8 @@ listKeys :: AppConf -> Username -> ExceptT (GeneralError KeyError) IO [ListKeysR
 listKeys AppConf{conn=conn} username = do
     r <- liftIO $ query conn [sql|
                    select id, pubkey, name, verified, readonly, created
-                   from "public_key"
-               |] ()
+                   from "public_key" where owner_id = (select id from "user" where username = ?)
+               |] (Only username)
     return r
 
 

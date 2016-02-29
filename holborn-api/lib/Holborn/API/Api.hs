@@ -18,11 +18,10 @@ import Control.Error (runExceptT)
 import Control.Monad.Trans.Either (EitherT, left)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Data.Proxy (Proxy)
 import Data.Text (unpack)
 import Servant
 import Servant.HTML.Blaze (HTML)
-import Text.Blaze.Html (Html, toHtml)
+import Text.Blaze.Html (Html)
 import Text.Hamlet (shamletFile)
 import qualified Web.JWT as JWT
 import Database.PostgreSQL.Simple (Only (..), execute, query)
@@ -69,7 +68,7 @@ getUser :: AppConf -> Username -> EitherT ServantErr IO U.ListUsersRow
 getUser (AppConf conn _) username = do
     r <- liftIO (runExceptT (U.getUser conn username))
     case r of
-        Left (UserNotFound u) -> left err404
+        Left (UserNotFound _) -> left err404
         Right row -> return row
 
 
@@ -78,9 +77,8 @@ signupPost (AppConf conn jwtSecret) SignupData{..} = do
     pwd <- liftIO (newPassword _password)
     result <- liftIO (runExceptT (U.signup conn (newUsername username) (newEmail email) pwd))
     case result of
-        Left (UserAlreadyExists u) -> return $ Left (EUserExists "user already exists")
-        Left err@(UnexpectedConstraintViolation x) -> do
-            liftIO $ print ("ERROR", err)
+        Left (UserAlreadyExists _) -> return $ Left (EUserExists "user already exists")
+        Left err@(UnexpectedConstraintViolation _) -> do
             left err400
         Left _ -> left err400
         Right _ -> do
@@ -90,7 +88,7 @@ signupPost (AppConf conn jwtSecret) SignupData{..} = do
 
 
 signin :: AppConf -> SigninData -> EitherT ServantErr IO SigninOK
-signin (AppConf conn jwtSecret) SigninData{..} = do
+signin (AppConf conn _) SigninData{..} = do
     pwd <- liftIO (newPassword _SigninData_password)
     r <- liftIO $ query conn [sql|
                    select id, password
@@ -106,7 +104,7 @@ signin (AppConf conn jwtSecret) SigninData{..} = do
 
     token <- liftIO createAuthToken
 
-    [Only (tokenId :: Int)] <- liftIO $ query conn [sql|
+    [Only (_ :: Int)] <- liftIO $ query conn [sql|
             insert into "oauth_token" (description, owner_id, token, permissions)
             values (?, ?, ?, ?) returning id
             |] ("Web Login" :: Text, ownerId, token, webPermissions)
