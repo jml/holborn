@@ -24,7 +24,7 @@ import Data.Lens(PrismP, prism, over)
 import Data.Foldable (fold)
 import Data.Either (Either(..))
 import Holborn.Fetchable (fetch)
-
+import Debug.Trace
 
 type State = { currentRoute :: RootRoutes }
 
@@ -52,9 +52,9 @@ _SigninAction = prism SigninAction \action ->
     _ -> Left action
 
 _SettingsState :: PrismP State SettingsRoute.State
-_SettingsState = prism (\s -> initialState { currentRoute = Settings s s.route}  ) \state ->
+_SettingsState = prism (\s -> initialState { currentRoute = Settings s}) \state ->
   case state.currentRoute of
-    Settings s route -> Right (s { route = route })
+    Settings x -> Right x
     _ -> Left state
 
 _SettingsAction :: PrismP Action SettingsRoute.Action
@@ -79,7 +79,7 @@ spec = container $ handleActions $ fold
 
     -- TODO error handling when fetch fails
     handleAction action@(UpdateRoute r) p s k = do
-      runAff (\err -> k id) (\result -> k \s -> s { currentRoute = result }) (fetch r)
+      runAff (\err -> traceAnyM err >>= const (k id)) (\result -> k \s -> s { currentRoute = result }) (fetch r)
     handleAction _ _ _ _ = pure unit
 
 
