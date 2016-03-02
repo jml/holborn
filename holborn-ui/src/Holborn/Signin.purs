@@ -31,7 +31,6 @@ import Debug.Trace (traceAnyM)
 
 type State = { loading :: Boolean, formData :: SigninData, formErrors :: SigninDataErrors }
 data Action = SignIn | UpdateFormData SigninData
-type Props = {}
 
 
 initialState =
@@ -41,10 +40,10 @@ initialState =
   }
 
 
-spec :: forall eff. T.Spec (ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State Props Action
+spec :: forall eff props. T.Spec (ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = T.simpleSpec performAction render
   where
-    render :: T.Render State Props Action
+    render :: T.Render State props Action
     render dispatch _ ({loading, formData, formErrors: SigninDataErrors errs}) _ =
       [ R.h1 [] [R.text "Sign in"]
       , R.form [RP.onSubmit onSubmit]
@@ -76,9 +75,3 @@ spec = T.simpleSpec performAction render
         StatusCode 400 -> case decodeJson r.response of
           Left _ -> return (\state -> state { loading = false }) -- TODO error hanldinf
           Right errors -> return (\state -> state { loading = false, formErrors = errors })
-
-
-
-component :: Props -> React.ReactElement
-component props =
-  React.createElement (T.createClass spec initialState) props []

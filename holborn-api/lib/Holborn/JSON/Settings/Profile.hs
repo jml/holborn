@@ -11,6 +11,9 @@ import Data.Aeson.Types (Options(fieldLabelModifier))
 import Data.Time.LocalTime (LocalTime)
 import GHC.Generics (Generic)
 
+-- TODO - the response profile data should be much more detailed
+-- (number of repos, gravatar, followers, following, gists, company,
+-- ...)
 data ProfileData = ProfileData
     { _ProfileData_id :: Int
     , _ProfileData_username :: Text

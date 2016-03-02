@@ -22,7 +22,7 @@ import Data.Lens (view, set)
 import Data.Maybe (Maybe(..))
 import Web.Cookies as C
 
-import Holborn.ManualEncoding.Keys (Key(..), AddKeyData(..), AddKeyDataError(..), title, key)
+import Holborn.ManualEncoding.SSHKeys (Key(..), AddKeyData(..), AddKeyDataError(..), title, key)
 import Holborn.Auth as HA
 import Holborn.Forms as HF
 import Unsafe.Coerce (unsafeCoerce)
@@ -37,27 +37,26 @@ import Debug.Trace (traceAnyM, traceAny)
 -- and props. State is internal (e.g. component was loaded) and props
 -- are external (e.g. colour of the button).
 type State =
-  { error :: AddKeyDataError
+  { formErrors :: AddKeyDataError
   , loading :: Boolean
   , keys :: List Key
-  , addKeyData :: AddKeyData
+  , formData :: AddKeyData
   }
 
 -- All possible state-modifying actions for this component.
-data Action = AddKey | UpdateKeyData AddKeyData | RemoveKey Int
+data Action = AddKey | UpdateFormData AddKeyData | RemoveKey Int
 
 emptyAddKeyData = AddKeyData { key: "", title: "" }
-
 emptyAddKeyDataError = AddKeyDataError { global: Nothing, key: Nothing, title: Nothing }
 networkAddKeyDataError msg =  AddKeyDataError { global: Just msg, key: Nothing, title: Nothing }
 
 -- Initial State each time this component is inserted in the DOM.
 initialState :: State
 initialState =
-  { error: emptyAddKeyDataError
+  { formErrors: emptyAddKeyDataError
   , loading: false
   , keys: Nil
-  , addKeyData: emptyAddKeyData
+  , formData: emptyAddKeyData
   }
 
 
@@ -86,14 +85,14 @@ spec = T.simpleSpec performAction render
     -- insert it efficiently by diffing the document-DOM with the
     -- fragment.
     render :: forall props. T.Render State props Action
-    render dispatch props ({ addKeyData, error: AddKeyDataError err, loading, keys }) _ =
+    render dispatch props ({ formData, formErrors: AddKeyDataError err, loading, keys }) _ =
       [ R.h1 [] [R.text "Manage SSH keys"]
       , R.div [] renderKeyArray
       , R.h2 [] [R.text "Add new key"]
       , renderGlobalError err.global
        , R.form [RP.onSubmit onSubmit]
-        [ HF.text "Key name" err.title title (dispatch <<< UpdateKeyData) addKeyData
-        , HF.textarea "Key" err.key key (dispatch <<< UpdateKeyData) addKeyData
+        [ HF.text "Key name" err.title title (dispatch <<< UpdateFormData) formData
+        , HF.textarea "Key" err.key key (dispatch <<< UpdateFormData) formData
         , R.button [RP.disabled loading, RP.className "btn btn-default"] [R.text if loading then "Adding key ..." else "Add new key"]
         ]
       ]
@@ -122,15 +121,14 @@ spec = T.simpleSpec performAction render
     -- action and modifies the state by calling the callback k and
     -- passing it the modified state.
     performAction :: forall eff a. T.PerformAction (ajax :: AJAX, cookie :: C.COOKIE | eff) State props Action
-    performAction (UpdateKeyData x) props state k = do
-      k $ \state -> state { addKeyData = x }
+    performAction (UpdateFormData x) props state k =  k $ \state -> state { formData = x }
     performAction (RemoveKey keyId) props state k = do
       k (\state -> state { loading = true })
       runAff (\_ -> k id) k (removeKey keyId)
 
     performAction AddKey props state k = do
       k (\state -> state { loading = true })
-      runAff (\err -> traceAnyM err >>= \_ -> k $ \staet -> state { error = networkAddKeyDataError "No network connection. Please try again later"}) k (addKey state)
+      runAff (\err -> traceAnyM err >>= \_ -> k $ \state -> state { formErrors = networkAddKeyDataError "No network connection. Please try again later"}) k (addKey state)
 
     -- Server fetching can go in many ways and we'll need to reflect
     -- errors in the state and allow users to move on from there
@@ -138,18 +136,18 @@ spec = T.simpleSpec performAction render
     -- errors etc).
     addKey :: forall eff. State -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) (State -> State)
     addKey state = do
-      r <- HA.post "http://127.0.0.1:8002/v1/user/keys" (encodeJson state.addKeyData)
+      r <- HA.post "http://127.0.0.1:8002/v1/user/keys" (encodeJson state.formData)
       return case r.status of
          StatusCode 201 -> case decodeJson r.response of
-             Left err -> \state -> state { loading = false, error = networkAddKeyDataError "Something unexpeced broke." }
-             Right key -> \state -> state { loading = false, keys = key : state.keys, addKeyData = emptyAddKeyData, error = emptyAddKeyDataError }
+             Left err -> \state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpeced broke." }
+             Right key -> \state -> state { loading = false, keys = key : state.keys, formData = emptyAddKeyData, formErrors = emptyAddKeyDataError }
 
          -- Note that by calling `decodeJson` in the 201 branch the
          -- type inference decided that the response must be JSON so
          -- we need to send back valid JSON in the 400 case as well.
          StatusCode 400 -> case decodeJson r.response of
-             Left _ -> \state -> state { loading = false, error = networkAddKeyDataError "Something unexpeced broke." }
-             Right errors -> \state -> state { loading = false, error = errors }
+             Left _ -> \state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpeced broke." }
+             Right errors -> \state -> state { loading = false, formErrors = errors }
 
     removeKey :: forall eff. Int -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) (State -> State)
     removeKey keyId = do

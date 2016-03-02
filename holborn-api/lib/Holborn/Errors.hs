@@ -38,6 +38,7 @@ instance (JSONCodableError a) => JSONCodableError (GeneralError a) where
     toJSON MissingAuthToken = (401, object [])
     toJSON InvalidAuthToken = (401, object [])
     toJSON InsufficientPermissions = (403, object [])
+    toJSON (SpecificError x) = toJSON x
 
 
 jsonErrorHandler :: JSONCodableError err => ExceptT err IO :~> EitherT ServantErr IO

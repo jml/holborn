@@ -1,4 +1,4 @@
-module Holborn.ManualEncoding.Keys where
+module Holborn.ManualEncoding.SSHKeys where
 
 import Prelude
 

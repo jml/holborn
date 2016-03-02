@@ -9,23 +9,60 @@ import React.DOM.Props as RP
 import Control.Monad.Eff.Exception as E
 import Network.HTTP.Affjax as AJ
 import Web.Cookies as C
-import Data.Lens(PrismP, LensP, lens, prism, over, set)
+import Data.Lens(PrismP, prism, over)
 import Data.Either (Either(..))
-import Holborn.Routing (SettingsRoutes(..))
 import Holborn.Settings.SSHKeys as SSHKeys
 import Data.Foldable (fold)
-import Data.Maybe (maybe)
+import Data.Argonaut.Decode (decodeJson)
+import Holborn.Fetchable (class Fetchable)
 
 import Debug.Trace
 
+-- We have one route to select where we want to go, and an "OK" route
+-- for when the data fetch was successful.
+data SettingsRoutes =
+    SSHKeySettings
+  | SSHKeySettingsOK SSHKeys.State
+  | AccountSettings
+  | AccountSettingsOK
+  | Profile
+  | ProfileOK
+  | EmailSettings
+  | EmailSettingsOK
+  | SecuritySettings
+  | SecuritySettingsOK
+  | RepositorySettings
+  | RepositorySettingsOK
+  | OrganisationSettings
+  | OrganisationSettingsOK
+
+
 type State =
-  { sshKeysState :: SSHKeys.State
-  , route :: SettingsRoutes
+  { route :: SettingsRoutes
   , error :: String
   }
-data Action = SSHKeysAction SSHKeys.Action
-type Props = {route :: SettingsRoutes}
-initialState = {sshKeysState: SSHKeys.initialState, route: SSHKeySettings, error: "no error"}
+
+baseURL :: String
+baseURL = "http://127.0.0.1:8002/v1"
+
+instance fetchSettingsRoutes :: Fetchable SettingsRoutes where
+  fetch SSHKeySettings = do
+    r <- AJ.get (baseURL ++ "/users/alice/keys")
+    return $ case decodeJson r.response of
+      Left err -> SSHKeySettings
+      Right keys -> SSHKeySettingsOK (SSHKeys.initialState { keys = keys })
+  fetch x = pure x
+
+
+initialState =
+  { route: SSHKeySettings
+  , error: "no error"
+  }
+
+
+data Action =
+  SSHKeysAction SSHKeys.Action
+  | UpdateRoute SettingsRoutes
 
 
 _SSHKeysAction :: PrismP Action SSHKeys.Action
@@ -36,22 +73,22 @@ _SSHKeysAction = prism SSHKeysAction \action ->
 
 
 _SSHKeysState :: PrismP State SSHKeys.State
-_SSHKeysState = prism (\state -> initialState { sshKeysState = state, route = SSHKeySettingsOK state.keys, error = "" }) \state ->
+_SSHKeysState = prism (\state -> initialState { route = SSHKeySettingsOK state, error = "" }) \state ->
   case state.route of
-    SSHKeySettingsOK keys -> Right (state.sshKeysState { keys = keys })
+    SSHKeySettingsOK s -> Right s
     _ -> Left state
 
 
-spec :: forall eff. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State Props Action
+spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = container $ fold
        [ T.match _SSHKeysAction (T.split _SSHKeysState SSHKeys.spec)
-       , T.match _AccountAction (T.split _AccountState Account.spec)
+--       , T.match _ProfileAction (T.split _ProfileState Profile.spec)
        ]
   where
     container = over T._render \render d p s c ->
       [ R.div [RP.className "container-fluid"]
         [ R.div [RP.className "row"]
-          [ R.div [RP.className "col-md-2"] [R.text s.error, menu p.route]
+          [ R.div [RP.className "col-md-2"] [R.text s.error, menu s.route]
           , R.div [RP.className "col-md-8"] (render d p s c)
           ]
         ]
@@ -105,8 +142,3 @@ spec = container $ fold
            OrganisationSettingsOK -> lgia label link
            _ -> lgi label link
       ]
-
-
-component :: Props -> React.ReactElement
-component props =
-  React.createElement (T.createClass spec (initialState { route = props.route })) props []
