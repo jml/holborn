@@ -55,7 +55,7 @@ server conf = enter jsonErrorHandler $
 listKeys :: AppConf -> Username -> ExceptT (APIError KeyError) IO [ListKeysRow]
 listKeys AppConf{conn=conn} username = do
     r <- liftIO $ query conn [sql|
-                   select id, pubkey, name, verified, readonly, created
+                   select id, comparison_pubkey, name, verified, readonly, created
                    from "public_key" where owner_id = (select id from "user" where username = ?)
                |] (Only username)
     return r
@@ -79,18 +79,19 @@ deleteKey appconf@AppConf{conn=conn} token keyId = do
 
 addKey :: AppConf -> Maybe AuthToken -> AddKeyData -> ExceptT (APIError KeyError) IO ListKeysRow
 addKey appconf@AppConf{conn=conn} token AddKeyData{..} = do
-    when (isNothing (parseSSHKey (encodeUtf8 _AddKeyData_key))) (throwE (SubAPIError InvalidSSHKey))
+    let sshKey = parseSSHKey (encodeUtf8 _AddKeyData_key)
+    when (isNothing sshKey) (throwE (SubAPIError InvalidSSHKey))
     when (_AddKeyData_title == "") (throwE (SubAPIError EmptyTitle))
     (userId, permissions) <- getAuthFromToken appconf token
     unless (hasPermission permissions Web) (throwE InsufficientPermissions)
 
     [Only id_] <- liftIO $ query conn [sql|
-            insert into "public_key" (id, name, pubkey, owner_id, verified, readonly, created)
-            values (default, ?, ?, ?, false, true, default) returning id
-            |] (_AddKeyData_title, _AddKeyData_key, userId)
+            insert into "public_key" (id, name, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly, created)
+            values (default, ?, ?, ?, ?, false, true, default) returning id
+            |] (_AddKeyData_title, _AddKeyData_key, sshKey, userId)
 
     [r] <- liftIO $ query conn [sql|
-                   select id, pubkey, name, verified, readonly, created
+                   select id, submitted_pubkey, name, verified, readonly, created
                    from "public_key" where id = ?
                |] (Only id_ :: Only Integer)
     return r

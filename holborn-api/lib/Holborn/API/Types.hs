@@ -15,7 +15,7 @@ module Holborn.API.Types
 
 import BasicPrelude
 import qualified Crypto.BCrypt as BCrypt
-import Database.PostgreSQL.Simple.ToField (ToField)
+import Database.PostgreSQL.Simple.ToField (ToField(..), Action(Escape))
 import Database.PostgreSQL.Simple (Connection)
 import qualified Prelude
 import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), object, (.=))
@@ -25,6 +25,7 @@ import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultE
 import System.Process (runInteractiveCommand)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
 import Data.ByteString as BS
+import Data.ByteString.Char8 as BS8
 import System.IO (hClose)
 
 newtype Username = Username Text deriving (Eq, Ord, Show, ToField)
@@ -88,7 +89,7 @@ instance FromJSON Email where
 
 
 instance ToJSON SSHKey where
-    toJSON (SSHKey key fingerprint) = object ["key" .= decodeUtf8 key, "fingerprint" .= decodeUtf8 fingerprint]
+    toJSON (SSHKey _ key fingerprint) = object ["key" .= decodeUtf8 key, "fingerprint" .= decodeUtf8 fingerprint]
 
 
 instance FromField SSHKey where
@@ -96,13 +97,23 @@ instance FromField SSHKey where
         Just x -> return x
         _ -> returnError ConversionFailed f "Could not parse ssh key"
 
-data SSHKey = SSHKey ByteString ByteString deriving Show
+instance ToField SSHKey where
+    -- Serialize the parsed key (the one we usually use for comparisons etc.)
+    toField (SSHKey _ key _) = Escape key
+
+data SSHKey = SSHKey ByteString ByteString ByteString deriving Show
 
 parseSSHKey :: ByteString -> Maybe SSHKey
-parseSSHKey keyData = case fingerprint keyData of
-    Nothing -> Nothing
-    Just fp -> Just (SSHKey keyData fp)
+parseSSHKey keyData = case (parseKeyData keyData, fingerprint keyData) of
+    (Just k, Just fp) -> Just (SSHKey keyData k fp)
+    (_, _) -> Nothing
   where
+    -- keys look like "ssh-rsa AAAAB... ... La2Aw== tom@bla"
+    -- but onlyy the middle bit "AAAB ... La2Aw==" is used during checking so we extract that.
+    parseKeyData key = case BS8.split ' ' key of
+        ["ssh-rsa", k, _] -> Just k
+        _ -> Nothing
+
     -- Using unsafeperformIO because fingerprinting is morally a pure
     -- action but we 're usingn ssh-keygen for now.
     fingerprint keyData = unsafePerformIO $ do

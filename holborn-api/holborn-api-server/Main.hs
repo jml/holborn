@@ -59,7 +59,7 @@ api = Proxy
 app :: AppConf -> Application
 app conf = serve api $
   Holborn.API.Api.server conf
-   :<|> Holborn.API.Internal.server
+   :<|> Holborn.API.Internal.server conf
    :<|> Holborn.API.Settings.SSHKeys.server conf
    :<|> Holborn.API.Settings.Profile.server conf
    :<|> Holborn.Docs.server

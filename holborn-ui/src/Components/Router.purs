@@ -19,13 +19,13 @@ import Data.Maybe (Maybe(..))
 import Routing (matches)
 import Control.Monad.Aff (runAff)
 import Control.Monad.Eff (Eff)
-import Data.Lens(PrismP, prism, over)
+import Data.Lens(PrismP, prism, over, lens, LensP)
 import Data.Foldable (fold)
 import Data.Either (Either(..))
 import Holborn.Fetchable (fetch)
 import Debug.Trace
 
-type State = { currentRoute :: RootRoutes }
+type State = { currentRoute :: RootRoutes, username :: String }
 
 
 data Action =
@@ -35,7 +35,11 @@ data Action =
 
 
 initialState :: State
-initialState = { currentRoute: EmptyRoute}
+initialState = { currentRoute: EmptyRoute, username: "anonymous" }
+
+
+routeLens :: LensP State RootRoutes
+routeLens = lens (_.currentRoute) (\x s -> x { currentRoute = s })
 
 
 _SigninState :: PrismP State Signin.State
@@ -50,11 +54,11 @@ _SigninAction = prism SigninAction \action ->
     SigninAction x -> Right x
     _ -> Left action
 
-_SettingsState :: PrismP State SettingsRoute.State
-_SettingsState = prism (\s -> initialState { currentRoute = Settings s}) \state ->
-  case state.currentRoute of
+_SettingsState :: PrismP RootRoutes SettingsRoute.State
+_SettingsState = prism Settings \route ->
+  case route of
     Settings x -> Right x
-    _ -> Left state
+    _ -> Left route
 
 _SettingsAction :: PrismP Action SettingsRoute.Action
 _SettingsAction = prism SettingsAction \action ->
@@ -66,11 +70,13 @@ _SettingsAction = prism SettingsAction \action ->
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = container $ handleActions $ fold
        [ T.split _SigninState (T.match _SigninAction Signin.spec)
-       , T.split _SettingsState (T.match _SettingsAction  SettingsRoute.spec)
+       , T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  SettingsRoute.spec))
        ]
   where
     container = over T._render \render d p s c ->
-      [ R.div [RP.className "container-fluid"] (render d p s c) ]
+      [ R.div [RP.className "container-fluid"] [R.text s.username]
+      , R.div [RP.className "container-fluid"] (render d p s c)
+      ]
 
     handleActions = over T._performAction \nestedPerformAction a p s k -> do
       nestedPerformAction a p s k
