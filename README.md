@@ -8,3 +8,10 @@ where they are used.
 
 Our intent is that this repository will contain multiple Haskell packages. The
 main one is `holborn-web`.
+
+
+# Notes for production setup.
+
+SSL termination can be done with stunnel:
+
+http://serverfault.com/questions/440225/multiple-ssl-certs-with-stunnel

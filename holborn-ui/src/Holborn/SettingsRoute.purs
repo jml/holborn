@@ -94,8 +94,12 @@ spec = container $ fold
         ]
       ]
 
+    -- just a link
     lgi label link = R.a [RP.href link, RP.className "list-group-item"] [R.text label]
+    -- active
     lgia label link = R.a [RP.href link, RP.className "list-group-item active"] [R.text label]
+    -- disabled
+    lgid label link = R.a [RP.href link, RP.className "list-group-item disabled"] [R.text label]
 
     menu :: SettingsRoutes -> React.ReactElement
     menu route =
@@ -116,29 +120,29 @@ spec = container $ fold
             link = "/#settings/account"
         in case route of
            AccountSettingsOK -> lgia label link
-           _ -> lgi label link
+           _ -> lgid label link
 
       , let label = "Emails"
             link = "/#settings/emails"
         in case route of
            EmailSettingsOK -> lgia label link
-           _ -> lgi label link
+           _ -> lgid label link
 
       , let label = "Security"
             link = "/#settings/security"
         in case route of
            SecuritySettingsOK -> lgia label link
-           _ -> lgi label link
+           _ -> lgid label link
 
       , let label = "Repositories"
             link = "/#settings/repositories"
         in case route of
            RepositorySettingsOK -> lgia label link
-           _ -> lgi label link
+           _ -> lgid label link
 
       , let label = "Oranisations"
             link = "/#settings/organisations"
         in case route of
            OrganisationSettingsOK -> lgia label link
-           _ -> lgi label link
+           _ -> lgid label link
       ]

@@ -7,6 +7,7 @@ import Control.Apply ((<*))
 import Control.Alt ((<|>))
 import Routing.Match (Match)
 import Routing.Match.Class (lit)
+import Network.HTTP.Affjax as AJ
 
 import Holborn.SettingsRoute as SettingsRoute
 import Holborn.SettingsRoute (SettingsRoutes(..), initialState)

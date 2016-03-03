@@ -13,7 +13,7 @@ haskellPackages.override {
       aeson = haskell.lib.dontCheck (self.callPackage ./aeson.nix {});
       language-python = self.callPackage ./language-python.nix {};
       errors = self.callPackage ./errors.nix {};
-      pipes-aeson = self.callPackage ./pipes-aeson.nix {};
+      pipes-aeson = haskell.lib.doJailbreak (self.callPackage ./pipes-aeson.nix {});
       unexceptionalio = self.callPackage ./unexceptionalio.nix {};
 
       purescript = haskell.lib.doJailbreak super.purescript;

@@ -19,7 +19,6 @@ import Data.Maybe (Maybe(..))
 import Routing (matches)
 import Control.Monad.Aff (runAff)
 import Control.Monad.Eff (Eff)
-import Network.HTTP.Affjax (AJAX)
 import Data.Lens(PrismP, prism, over)
 import Data.Foldable (fold)
 import Data.Either (Either(..))
@@ -88,7 +87,7 @@ spec = container $ handleActions $ fold
 -- extracted from the spec but takes a `this` pointer which is only
 -- valid once we mounted a component.
 componentDidMount :: forall props eff. (React.ReactThis props State -> Action -> T.EventHandler)
-                     -> React.ComponentDidMount props State (console :: CONSOLE, ajax :: AJAX, cookie :: C.COOKIE | eff)
+                     -> React.ComponentDidMount props State (console :: CONSOLE, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff)
 componentDidMount dispatch this = do
     matches rootRoutes callback
   where
@@ -96,7 +95,7 @@ componentDidMount dispatch this = do
                 -> Eff ( props :: React.ReactProps
                        , state :: React.ReactState React.ReadWrite
                        , refs :: React.ReactRefs refs
-                       , ajax :: AJAX
+                       , ajax :: AJ.AJAX
                        , cookie :: C.COOKIE | eff2) Unit
     callback _ rt = do
       maybeToken <- C.getCookie "auth-token"
