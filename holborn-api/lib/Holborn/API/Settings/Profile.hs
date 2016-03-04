@@ -23,7 +23,7 @@ import Servant
 import Holborn.API.Types (AppConf(..), Username)
 import Holborn.JSON.Settings.Profile (ProfileData(..))
 import Holborn.Auth (AuthToken(..), Permission(..), hasPermission, getAuthFromToken)
-import Holborn.Errors (jsonErrorHandler, GeneralError(..), JSONCodableError(..))
+import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
 
 
 type API =
@@ -35,7 +35,7 @@ type API =
 data Error = InvalidUrl | UserNotFound Text
 
 
-instance JSONCodableError Error where
+instance JSONCodeableError Error where
     toJSON InvalidUrl = (400, object ["url" .= ("Not a valid URL" :: Text)])
     toJSON (UserNotFound x) = (404, object ["message" .= ("User " <> x <> " not found")])
 
@@ -47,7 +47,7 @@ server conf = enter jsonErrorHandler $
     :<|> postAuthorizedUser conf
 
 
-getUser :: AppConf -> Username -> ExceptT (GeneralError Error) IO ProfileData
+getUser :: AppConf -> Username -> ExceptT (APIError Error) IO ProfileData
 getUser AppConf{conn} username = do
     r <- liftIO $ query conn [sql|
                    select id, username, created
@@ -55,13 +55,13 @@ getUser AppConf{conn} username = do
                |] (Only username)
 
     case r of
-        [] -> throwE (SpecificError (UserNotFound (show username)))
+        [] -> throwE (SubAPIError (UserNotFound (show username)))
         [(id_, un, created)] -> return (ProfileData id_ un "about" created)
 
 
-getAuthorizedUser :: AppConf -> Maybe AuthToken -> ExceptT (GeneralError Error) IO ProfileData
+getAuthorizedUser :: AppConf -> Maybe AuthToken -> ExceptT (APIError Error) IO ProfileData
 getAuthorizedUser conf token = undefined
 
 
-postAuthorizedUser :: AppConf -> Maybe AuthToken -> ProfileData -> ExceptT (GeneralError Error) IO ()
+postAuthorizedUser :: AppConf -> Maybe AuthToken -> ProfileData -> ExceptT (APIError Error) IO ()
 postAuthorizedUser conf token newProfile = undefined

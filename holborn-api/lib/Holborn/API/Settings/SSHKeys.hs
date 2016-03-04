@@ -23,7 +23,7 @@ import Servant
 import Holborn.API.Types (AppConf(..), Username, parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
 import Holborn.Auth (AuthToken(..), Permission(..), hasPermission, getAuthFromToken)
-import Holborn.Errors (jsonErrorHandler, GeneralError(..), JSONCodableError(..))
+import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
 
 
 type API =
@@ -39,7 +39,7 @@ type API =
 data KeyError = EmptyTitle | InvalidSSHKey
 
 
-instance JSONCodableError KeyError where
+instance JSONCodeableError KeyError where
     toJSON EmptyTitle = (400, object ["title" .= ("Title cannot be empty" :: Text)])
     toJSON InvalidSSHKey = (400, object ["key" .= ("Invalid SSH key" :: Text)])
 
@@ -52,7 +52,7 @@ server conf = enter jsonErrorHandler $
     :<|> addKey conf
 
 
-listKeys :: AppConf -> Username -> ExceptT (GeneralError KeyError) IO [ListKeysRow]
+listKeys :: AppConf -> Username -> ExceptT (APIError KeyError) IO [ListKeysRow]
 listKeys AppConf{conn=conn} username = do
     r <- liftIO $ query conn [sql|
                    select id, pubkey, name, verified, readonly, created
@@ -61,11 +61,11 @@ listKeys AppConf{conn=conn} username = do
     return r
 
 
-getKey :: AppConf -> Int -> ExceptT (GeneralError KeyError) IO ListKeysRow
+getKey :: AppConf -> Int -> ExceptT (APIError KeyError) IO ListKeysRow
 getKey conf keyId = undefined
 
 
-deleteKey :: AppConf -> Maybe AuthToken -> Int -> ExceptT (GeneralError KeyError) IO ()
+deleteKey :: AppConf -> Maybe AuthToken -> Int -> ExceptT (APIError KeyError) IO ()
 deleteKey appconf@AppConf{conn=conn} token keyId = do
     (userId, permissions) <- getAuthFromToken appconf token
     unless (hasPermission permissions Web) (throwE InsufficientPermissions)
@@ -77,11 +77,10 @@ deleteKey appconf@AppConf{conn=conn} token keyId = do
     return ()
 
 
-addKey :: AppConf -> Maybe AuthToken -> AddKeyData -> ExceptT (GeneralError KeyError) IO ListKeysRow
+addKey :: AppConf -> Maybe AuthToken -> AddKeyData -> ExceptT (APIError KeyError) IO ListKeysRow
 addKey appconf@AppConf{conn=conn} token AddKeyData{..} = do
-
-    when (isNothing (parseSSHKey (encodeUtf8 _AddKeyData_key))) (throwE (SpecificError InvalidSSHKey))
-    when (_AddKeyData_title == "") (throwE (SpecificError EmptyTitle))
+    when (isNothing (parseSSHKey (encodeUtf8 _AddKeyData_key))) (throwE (SubAPIError InvalidSSHKey))
+    when (_AddKeyData_title == "") (throwE (SubAPIError EmptyTitle))
     (userId, permissions) <- getAuthFromToken appconf token
     unless (hasPermission permissions Web) (throwE InsufficientPermissions)
 

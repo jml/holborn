@@ -76,6 +76,9 @@ signupPost (AppConf conn jwtSecret) SignupData{..} = do
             return (Right (AuthJwt encodedJwt))
 
 
+-- | Signin creates a oauth token for the "Web Login" realm if the
+-- password verified OK (checkPassword). The token is stored as a
+-- cookie in the client.
 signin :: AppConf -> SigninData -> EitherT ServantErr IO SigninOK
 signin (AppConf conn _) SigninData{..} = do
     pwd <- liftIO (newPassword _SigninData_password)

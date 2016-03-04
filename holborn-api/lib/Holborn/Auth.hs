@@ -33,15 +33,18 @@ import Data.ByteString.Lazy (toStrict)
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Servant(FromText(..))
 
-import Holborn.Errors (GeneralError(..))
+import Holborn.Errors (APIError(..))
 import Holborn.API.Types (AppConf(..))
 
 data AuthToken = AuthToken ByteString deriving Show
 
+-- Borrowed fom the github permission system. Not super clear what
+-- each one entails ATM.
 data Permission =
       RepoDelete
     | RepoCreate
     | RepoRead
+    | RepoPush
     | OrgRead
     | OrgWrite
     | PublicKeyRead
@@ -49,7 +52,10 @@ data Permission =
     | Notifications
     | UserFull
     | UserEmail
-    | Web -- special permissions for web users (can do more)
+    | Web -- special permissions for web users (e.g. Google Chrome or
+          -- authenticated CURL). This should really be several
+          -- permissions down the line but easier for now to have a
+          -- catch-all.
     deriving (Show, Read, Eq, Ord)
 
 -- E.g.
@@ -98,7 +104,7 @@ instance ToJSON AuthToken where
 
 
 -- ExceptT trying to auth the user
-getAuthFromToken :: AppConf -> Maybe AuthToken -> ExceptT (GeneralError a) IO (Int, Permissions)
+getAuthFromToken :: AppConf -> Maybe AuthToken -> ExceptT (APIError a) IO (Int, Permissions)
 getAuthFromToken AppConf{conn=conn} token = do
     authToken <- case token of
         Nothing -> throwE MissingAuthToken

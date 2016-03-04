@@ -9,8 +9,8 @@
 
 module Holborn.Errors
        ( HTTPCode
-       , JSONCodableError(..)
-       , GeneralError(..)
+       , JSONCodeableError(..)
+       , APIError(..)
        , jsonErrorHandler
        ) where
 
@@ -23,25 +23,25 @@ import Control.Monad.Trans.Either (EitherT(..))
 
 
 type HTTPCode = Int
-class JSONCodableError a where
+class JSONCodeableError a where
     toJSON :: a -> (HTTPCode, Value)
 
 
-data GeneralError a =
-      SpecificError a
+data APIError a =
+      SubAPIError a
     | InvalidAuthToken
     | InsufficientPermissions
     | MissingAuthToken
 
 
-instance (JSONCodableError a) => JSONCodableError (GeneralError a) where
+instance (JSONCodeableError a) => JSONCodeableError (APIError a) where
     toJSON MissingAuthToken = (401, object [])
     toJSON InvalidAuthToken = (401, object [])
     toJSON InsufficientPermissions = (403, object [])
-    toJSON (SpecificError x) = toJSON x
+    toJSON (SubAPIError x) = toJSON x
 
 
-jsonErrorHandler :: JSONCodableError err => ExceptT err IO :~> EitherT ServantErr IO
+jsonErrorHandler :: JSONCodeableError err => ExceptT err IO :~> EitherT ServantErr IO
 jsonErrorHandler = Nat (exceptTToEitherT . bimapExceptT handleError id)
   where
     exceptTToEitherT = EitherT . runExceptT

@@ -29,6 +29,8 @@ library
                      , basic-prelude
                      , bcrypt
                      , aeson >= 0.10
+                     -- It looks like servant 0.5 is going to be
+                     -- backwards-incompatible so limit upper version:
                      , servant >=0.4 && <0.5
                      , servant-blaze >=0.4 && <0.5
                      , servant-server >=0.4 && <0.5
@@ -45,6 +47,7 @@ library
                      , process
 
   hs-source-dirs:      lib
+-- Disabled because there are too many warnings atm :(
 --  ghc-options:         -Wall
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
