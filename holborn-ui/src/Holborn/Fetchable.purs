@@ -8,5 +8,5 @@ import Network.HTTP.Affjax as AJ
 -- the server (e.g. account data) but we don't know what routes and
 -- nested state we have in advance (they can be nested). So they can
 -- implement how to fetch themselves via this class.
-class Fetchable a where
-  fetch :: forall eff. a -> Aff (ajax :: AJ.AJAX | eff) a
+class Fetchable action state where
+  fetch :: forall eff. action -> state -> Aff (ajax :: AJ.AJAX | eff) state

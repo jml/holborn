@@ -19,13 +19,13 @@ import Data.Maybe (Maybe(..))
 import Routing (matches)
 import Control.Monad.Aff (runAff)
 import Control.Monad.Eff (Eff)
-import Data.Lens(PrismP, prism, over, lens, LensP)
+import Data.Lens(PrismP, prism, over, lens, LensP, view, set)
 import Data.Foldable (fold)
 import Data.Either (Either(..))
-import Holborn.Fetchable (fetch)
+import Holborn.Fetchable (class Fetchable, fetch)
 import Debug.Trace
 
-type State = { currentRoute :: RootRoutes, username :: String }
+data State = RouterState { currentRoute :: RootRoutes, username :: String }
 
 
 data Action =
@@ -34,17 +34,28 @@ data Action =
   | SettingsAction SettingsRoute.Action
 
 
+instance fetchRootRoutes :: Fetchable RootRoutes State where
+  fetch (Settings s) state = do
+    sr <- fetch (view SettingsRoute.routeLens s) s -- of type SettingsRoute
+    pure (set routeLens (Settings sr) state)
+  fetch a s = do
+    pure s
+
+
 initialState :: State
-initialState = { currentRoute: EmptyRoute, username: "anonymous" }
+initialState = RouterState { currentRoute: EmptyRoute, username: "anonymous" }
 
 
 routeLens :: LensP State RootRoutes
-routeLens = lens (_.currentRoute) (\x s -> x { currentRoute = s })
+routeLens = lens (\(RouterState s) -> s.currentRoute) (\(RouterState s) x -> RouterState (s { currentRoute = x }))
+
+usernameLens :: LensP State String
+usernameLens = lens (\(RouterState s) -> s.username) (\(RouterState s) x -> RouterState (s { username = x }))
 
 
 _SigninState :: PrismP State Signin.State
-_SigninState = prism (\s -> initialState { currentRoute = SigninRoute s }) \state ->
-  case state.currentRoute of
+_SigninState = prism (\s -> set routeLens (SigninRoute s) initialState) \state ->
+  case view routeLens state of
     SigninRoute s -> Right s
     _ -> Left state
 
@@ -74,7 +85,7 @@ spec = container $ handleActions $ fold
        ]
   where
     container = over T._render \render d p s c ->
-      [ R.div [RP.className "container-fluid"] [R.text s.username]
+      [ R.div [RP.className "container-fluid"] [R.text (view usernameLens s)]
       , R.div [RP.className "container-fluid"] (render d p s c)
       ]
 
@@ -84,7 +95,7 @@ spec = container $ handleActions $ fold
 
     -- TODO error handling when fetch fails
     handleAction action@(UpdateRoute r) p s k = do
-      runAff (\err -> traceAnyM err >>= const (k id)) (\result -> k \s -> s { currentRoute = result }) (fetch r)
+      runAff (\err -> traceAnyM err >>= const (k id)) (\result -> k \s -> result) (fetch r s)
     handleAction _ _ _ _ = pure unit
 
 

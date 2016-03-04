@@ -10,18 +10,10 @@ import Routing.Match.Class (lit)
 import Network.HTTP.Affjax as AJ
 
 import Holborn.SettingsRoute as SettingsRoute
-import Holborn.SettingsRoute (SettingsRoutes(..), initialState)
+import Holborn.SettingsRoute (SettingsRoutes(..), startWithRoute)
 import Holborn.Signin as Signin
-import Holborn.Fetchable (class Fetchable, fetch)
 
 import Debug.Trace
-
-instance fetchRootRoutes :: Fetchable RootRoutes where
-  fetch (Settings s) = do
-    sr <- fetch s.route
-    pure (Settings (s { route = sr }))
-  fetch x = do
-    pure x
 
 
 data RootRoutes =
@@ -36,11 +28,11 @@ data RootRoutes =
 -- KeySettings route string from the value.
 rootRoutes :: Match RootRoutes
 rootRoutes =
-  Settings (initialState { route = SSHKeySettings }) <$ lit "settings" <* lit "ssh-keys"
-  <|> Settings (initialState { route = AccountSettings }) <$ lit "settings" <* lit "account"
-  <|> Settings (initialState { route = Profile }) <$ lit "settings" <* lit "profile"
-  <|> Settings (initialState { route = EmailSettings }) <$ lit "settings" <* lit "emails"
-  <|> Settings (initialState { route = SecuritySettings }) <$ lit "settings" <* lit "security"
-  <|> Settings (initialState { route = RepositorySettings }) <$ lit "settings" <* lit "repositories"
-  <|> Settings (initialState { route = OrganisationSettings }) <$ lit "settings" <* lit "organisations"
+  Settings (startWithRoute SSHKeySettings) <$ lit "settings" <* lit "ssh-keys"
+  <|> Settings (startWithRoute AccountSettings) <$ lit "settings" <* lit "account"
+  <|> Settings (startWithRoute Profile) <$ lit "settings" <* lit "profile"
+  <|> Settings (startWithRoute EmailSettings) <$ lit "settings" <* lit "emails"
+  <|> Settings (startWithRoute SecuritySettings) <$ lit "settings" <* lit "security"
+  <|> Settings (startWithRoute RepositorySettings) <$ lit "settings" <* lit "repositories"
+  <|> Settings (startWithRoute OrganisationSettings) <$ lit "settings" <* lit "organisations"
   <|> pure Route404
