@@ -10,6 +10,7 @@ module Holborn.API.Types
        , ApiError(..)
        , AppConf(..)
        , SSHKey
+       , KeyType(..)
        , parseSSHKey
        ) where
 
@@ -99,21 +100,23 @@ instance FromField SSHKey where
 
 instance ToField SSHKey where
     -- Serialize the parsed key (the one we usually use for comparisons etc.)
-    toField (SSHKey _ key _) = Escape key
+    toField (SSHKey RSA key _) = Escape ("ssh-rsa " <> key)
+    toField (SSHKey DSA key _) = Escape ("ssh-dsa " <> key)
 
-data SSHKey = SSHKey ByteString ByteString ByteString deriving Show
+data KeyType = RSA | DSA deriving Show
+
+data SSHKey = SSHKey KeyType ByteString ByteString deriving Show
 
 parseSSHKey :: ByteString -> Maybe SSHKey
-parseSSHKey keyData = case (parseKeyData keyData, fingerprint keyData) of
-    (Just k, Just fp) -> Just (SSHKey keyData k fp)
-    (_, _) -> Nothing
-  where
+parseSSHKey keyData = do
+    fp <- fingerprint keyData
     -- keys look like "ssh-rsa AAAAB... ... La2Aw== tom@bla"
     -- but onlyy the middle bit "AAAB ... La2Aw==" is used during checking so we extract that.
-    parseKeyData key = case BS8.split ' ' key of
-        ["ssh-rsa", k, _] -> Just k
+    case BS8.split ' ' keyData of
+        ["ssh-rsa", k, _] -> Just (SSHKey RSA k fp)
+        ["ssh-rsa", k] -> Just  (SSHKey RSA k fp)
         _ -> Nothing
-
+  where
     -- Using unsafeperformIO because fingerprinting is morally a pure
     -- action but we 're usingn ssh-keygen for now.
     fingerprint keyData = unsafePerformIO $ do

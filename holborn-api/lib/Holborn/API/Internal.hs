@@ -50,10 +50,14 @@ checkKey :: AppConf -> CheckKeyRequest -> EitherT ServantErr IO CheckKeyResponse
 checkKey AppConf{conn} request = do
     liftIO $ print ("checkKey", request)
     liftIO $ hFlush stdout
+    let comparison_pubkey = case key_type request of
+            "RSA" -> "ssh-rsa " <> key request
+            "DSA" -> "ssh-dsa " <> key request
+            x -> terror ("Unknown key type: " <> x)
     rows <- liftIO $ query conn [sql|
                    select pk.id, pk.verified
                    from "public_key" as pk  where comparison_pubkey = ?
-               |] (Only (key request))
+               |] (Only comparison_pubkey)
     liftIO $ print rows
 
     return $ case rows of
@@ -107,6 +111,7 @@ checkRepoAccess AppConf{conn} request = do
     -- OpenSSH runs the command we send in bash, so we can use common
     -- shell muckery to first send the metadata and then do a
     -- bidirectional pipe.
+    print (cmd, rows)
     return $ case (cmd, rows) of
         (GitReceivePack org repo, [(False, True)]) ->
             CheckRepoAccessResponse (Just (
