@@ -35,6 +35,11 @@ data Action =
 
 
 instance fetchRootRoutes :: Fetchable RootRoutes State where
+  fetch route@(Settings s) state@(RouterState { username = "anonymous" }) = do
+    traceAnyM "not logged in do a pretend login as alice"
+    -- if the user fetch failed (e.g. cookie expired we'd redirect to the signing route:)
+    --pure (set routeLens (SigninRoute Signin.initialState) state)
+    fetch route (set usernameLens "alice" state)
   fetch (Settings s) state = do
     sr <- fetch (view SettingsRoute.routeLens s) s -- of type SettingsRoute
     pure (set routeLens (Settings sr) state)

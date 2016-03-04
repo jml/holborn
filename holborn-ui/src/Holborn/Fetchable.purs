@@ -8,5 +8,9 @@ import Network.HTTP.Affjax as AJ
 -- the server (e.g. account data) but we don't know what routes and
 -- nested state we have in advance (they can be nested). So they can
 -- implement how to fetch themselves via this class.
+--
+-- We can check state before making a decision.
+-- TODO fetching can always fail so the return value should be an Either
+-- so that downstream can deal with the error.
 class Fetchable action state where
   fetch :: forall eff. action -> state -> Aff (ajax :: AJ.AJAX | eff) state
