@@ -12,8 +12,6 @@ import Control.Monad.Eff.Console (CONSOLE())
 import Holborn.SettingsRoute as SettingsRoute
 import Holborn.Signin as Signin
 
-
-import Holborn.Routing (RootRoutes(..), rootRoutes)
 import Web.Cookies as C
 import Data.Maybe (Maybe(..))
 import Routing (matches)
@@ -22,10 +20,31 @@ import Control.Monad.Eff (Eff)
 import Data.Lens(PrismP, prism, over, lens, LensP, view, set)
 import Data.Foldable (fold)
 import Data.Either (Either(..))
+import Data.Functor (($>))
+import Control.Apply ((*>))
+import Control.Alt ((<|>))
+import Routing.Match (Match)
+import Routing.Match.Class (lit)
+
+import Holborn.Signin as Signin
 import Holborn.Fetchable (class Fetchable, fetch)
 import Debug.Trace
 
 data State = RouterState { currentRoute :: RootRoutes, username :: String }
+
+
+data RootRoutes =
+    EmptyRoute
+  | Route404
+  | SigninRoute Signin.State
+  | Settings SettingsRoute.State
+
+-- TODO tom: Routes should really be "invertible" so I can create a
+-- KeySettings route string from the value.
+rootRoutes :: Match RootRoutes
+rootRoutes =
+  lit "settings" *> (map Settings SettingsRoute.settingsRoutes)
+  <|> pure Route404
 
 
 data Action =
@@ -120,7 +139,7 @@ componentDidMount dispatch this = do
                        , ajax :: AJ.AJAX
                        , cookie :: C.COOKIE | eff2) Unit
     callback _ rt = do
-      maybeToken <- C.getCookie "auth-token"
+      maybeToken <- C.getCookie "auth-token" -- TODO this should go into the user fetching (which needs to check the token anyway)
       case maybeToken of
         -- force sign-in
         Nothing -> dispatch this (UpdateRoute (SigninRoute Signin.initialState))

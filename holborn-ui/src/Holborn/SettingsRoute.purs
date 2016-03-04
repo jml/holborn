@@ -3,6 +3,8 @@
 module Holborn.SettingsRoute where
 
 import Prelude
+import Data.Functor (($>))
+import Control.Alt ((<|>))
 import Thermite as T
 import React.DOM as R
 import React.DOM.Props as RP
@@ -15,6 +17,8 @@ import Holborn.Settings.SSHKeys as SSHKeys
 import Data.Foldable (fold)
 import Data.Argonaut.Decode (decodeJson)
 import Holborn.Fetchable (class Fetchable)
+import Routing.Match (Match)
+import Routing.Match.Class (lit)
 
 import Debug.Trace
 
@@ -44,6 +48,17 @@ data State = State
 
 routeLens :: LensP State SettingsRoutes
 routeLens = lens (\(State s) -> s.route) (\(State s) x -> State (s { route = x }))
+
+
+settingsRoutes :: Match State
+settingsRoutes =
+      lit "ssh-keys" $> (startWithRoute SSHKeySettings)
+  <|> lit "profile" $> (startWithRoute Profile)
+  <|> lit "account" $> (startWithRoute AccountSettings)
+  <|> lit "emails" $> (startWithRoute EmailSettings)
+  <|> lit "security" $> (startWithRoute SecuritySettings)
+  <|> lit "repositories" $> (startWithRoute RepositorySettings)
+  <|> lit "organisations" $> (startWithRoute OrganisationSettings)
 
 
 baseURL :: String
