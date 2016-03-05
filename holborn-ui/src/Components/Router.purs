@@ -11,6 +11,7 @@ import Control.Monad.Eff.Console (CONSOLE())
 
 import Holborn.SettingsRoute as SettingsRoute
 import Holborn.Signin as Signin
+import Holborn.Browse as Browse
 
 import Web.Cookies as C
 import Data.Maybe (Maybe(..))
@@ -37,13 +38,15 @@ data RootRoutes =
     EmptyRoute
   | Route404
   | SigninRoute Signin.State
-  | Settings SettingsRoute.State
+  | Settings SettingsRoute.State -- TODO fix inconsitent naming
+  | BrowseRoute Browse.State
 
 -- TODO tom: Routes should really be "invertible" so I can create a
 -- KeySettings route string from the value.
 rootRoutes :: Match RootRoutes
 rootRoutes =
   lit "settings" *> (map Settings SettingsRoute.settingsRoutes)
+  <|> (map BrowseRoute Browse.browseRoutes)
   <|> pure Route404
 
 
@@ -51,6 +54,7 @@ data Action =
   UpdateRoute RootRoutes
   | SigninAction Signin.Action
   | SettingsAction SettingsRoute.Action
+  | BrowseAction Browse.Action
 
 
 instance fetchRootRoutes :: Fetchable RootRoutes State where
@@ -62,8 +66,8 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
   fetch (Settings s) state = do
     sr <- fetch (view SettingsRoute.routeLens s) s -- of type SettingsRoute
     pure (set routeLens (Settings sr) state)
-  fetch a s = do
-    pure s
+  fetch rt s = do
+    pure (set routeLens rt s)
 
 
 initialState :: State
@@ -95,6 +99,12 @@ _SettingsState = prism Settings \route ->
     Settings x -> Right x
     _ -> Left route
 
+_404State :: PrismP RootRoutes Unit
+_404State = prism (const Route404) \route ->
+  case route of
+    Route404 -> Right unit
+    _ -> Left route
+
 _SettingsAction :: PrismP Action SettingsRoute.Action
 _SettingsAction = prism SettingsAction \action ->
   case action of
@@ -102,10 +112,16 @@ _SettingsAction = prism SettingsAction \action ->
     _ -> Left action
 
 
+spec404 :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) state props action
+spec404 = T.simpleSpec T.defaultPerformAction render
+  where
+    render _ _ _ _ = [R.text "404"]
+
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = container $ handleActions $ fold
        [ T.split _SigninState (T.match _SigninAction Signin.spec)
        , T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  SettingsRoute.spec))
+       , T.focusState routeLens (T.split _404State spec404)
        ]
   where
     container = over T._render \render d p s c ->
