@@ -7,34 +7,40 @@ import Control.Apply ((<*))
 import Control.Alt ((<|>))
 import Routing.Match (Match)
 import Routing.Match.Class (lit)
-import Control.Monad.Aff (Aff)
-import Data.Either (Either(..))
 import Network.HTTP.Affjax as AJ
-import Data.List (List)
-import Holborn.ManualEncoding.Keys (Key)
-import Data.Argonaut.Decode (decodeJson)
+
+import Holborn.SettingsRoute as SettingsRoute
+import Holborn.SettingsRoute (SettingsRoutes(..), initialState)
+import Holborn.Signin as Signin
+import Holborn.Fetchable (class Fetchable, fetch)
+
+import Debug.Trace
+
+instance fetchRootRoutes :: Fetchable RootRoutes where
+  fetch (Settings s) = do
+    sr <- fetch s.route
+    pure (Settings (s { route = sr }))
+  fetch x = do
+    pure x
 
 
 data RootRoutes =
     EmptyRoute
-  | KeySettings
-  | KeySettingsOK (List Key)
+  | Settings SettingsRoute.State
   | Route404
   | ErrorRoute
+  | SigninRoute Signin.State
 
 
+-- TODO tom: Routes should really be "invertible" so I can create a
+-- KeySettings route string from the value.
 rootRoutes :: Match RootRoutes
 rootRoutes =
-  KeySettings <$ lit "settings" <* lit "keys"
+  Settings (initialState { route = SSHKeySettings }) <$ lit "settings" <* lit "ssh-keys"
+  <|> Settings (initialState { route = AccountSettings }) <$ lit "settings" <* lit "account"
+  <|> Settings (initialState { route = Profile }) <$ lit "settings" <* lit "profile"
+  <|> Settings (initialState { route = EmailSettings }) <$ lit "settings" <* lit "emails"
+  <|> Settings (initialState { route = SecuritySettings }) <$ lit "settings" <* lit "security"
+  <|> Settings (initialState { route = RepositorySettings }) <$ lit "settings" <* lit "repositories"
+  <|> Settings (initialState { route = OrganisationSettings }) <$ lit "settings" <* lit "organisations"
   <|> pure Route404
-
-
-fetchData :: forall eff. RootRoutes -> Aff (ajax :: AJ.AJAX | eff) RootRoutes
-fetchData KeySettings = do
-  r <- AJ.get "http://127.0.0.1:8002/v1/users/tom/keys"
-  return $ case decodeJson r.response of
-    Left err -> ErrorRoute
-    Right keys -> KeySettingsOK keys
-
--- General case: Return route unmodified
-fetchData x = return x

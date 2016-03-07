@@ -7,17 +7,19 @@
 -- * We automatically handle Maybe as optionl (entry missing -> Nothing)
 module Holborn.JSON.Generic where
 
-import Prelude ((<<<), pure, ($), bind, unit, (==), (++), const, (<>), (<$>), map)
+import Prelude ((<<<), pure, ($), bind, unit, (==), (++), const, (<>), (<$>), map, (#))
+import Data.Foldable (foldr)
 
 import Data.Generic (class Generic, GenericSignature(..), GenericSpine(..), toSignature, fromSpine, toSpine)
 
 import Data.Argonaut.Core (Json)
 import Data.Either (Either(..))
-import Data.Argonaut.Core (Json, toObject, toArray, toBoolean, toString, toNumber)
+import Data.Argonaut.Core (Json, toObject, toArray, toBoolean, toNumber, toString, fromString, fromBoolean, fromArray, fromObject, fromNumber)
+import Data.Argonaut.Encode (encodeJson)
 
 import Control.Bind ((=<<))
-import Data.Int (fromNumber)
-import Data.String (toChar)
+import Data.Int as Int
+import Data.String (toChar, fromChar)
 import Data.Traversable (traverse, for)
 import Data.StrMap as M
 import Data.Array (zipWithA, length, head)
@@ -30,7 +32,7 @@ import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 gDecode' :: GenericSignature -> Json -> Either String GenericSpine
 gDecode' sig json = case sig of
     SigNumber -> SNumber <$> mFail "Expected a number" (toNumber json)
-    SigInt -> SInt <$> mFail "Expected an integer number" (fromNumber =<< toNumber json)
+    SigInt -> SInt <$> mFail "Expected an integer number" (Int.fromNumber =<< toNumber json)
     SigString -> SString <$> mFail "Expected a string" (toString json)
     SigChar -> SChar <$> mFail "Expected a char" (toChar =<< toString json)
     SigBoolean -> SBoolean <$> mFail "Expected a boolean" (toBoolean json)
@@ -90,3 +92,23 @@ gDecode' sig json = case sig of
 gDecode :: forall a. (Generic a) => Json -> Either String a
 gDecode json = maybe (Left "fromSpine failed") Right <<< fromSpine
                =<< gDecode' (toSignature (Proxy :: Proxy a)) json
+
+
+gEncode :: forall a. (Generic a) => a -> Json
+gEncode = gEncodeJson' <<< toSpine
+
+
+gEncodeJson' :: GenericSpine -> Json
+gEncodeJson' spine = case spine of
+  SInt x            -> fromNumber $ Int.toNumber x
+  SString x         -> fromString x
+  SChar x           -> fromString $ fromChar x
+  SNumber x         -> fromNumber x
+  SBoolean x        -> fromBoolean x
+  SArray thunks     -> fromArray (gEncodeJson' <<< (unit #) <$> thunks)
+  SProd constr args -> case head args of
+    Just x -> gEncodeJson' (x unit)
+    Nothing -> fromArray []
+  SRecord fields    -> fromObject $ foldr addField M.empty fields
+    where addField field = M.insert field.recLabel
+                                     (gEncodeJson' $ field.recValue unit)

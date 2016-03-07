@@ -10,10 +10,17 @@ library
                      , Holborn.API.User
                      , Holborn.API.Api
                      , Holborn.API.Internal
+                     , Holborn.Docs
+                     , Holborn.Auth
+                     , Holborn.Errors
                      , Holborn.JSON.User
                      , Holborn.JSON.Response
-                     , Holborn.JSON.Keys
-                     , Holborn.API.Keys
+
+                     , Holborn.JSON.Settings.SSHKeys
+                     , Holborn.API.Settings.SSHKeys
+
+                     , Holborn.JSON.Settings.Profile
+                     , Holborn.API.Settings.Profile
   build-depends:       base >=4.8 && <5
                      , postgresql-simple
                      , text
@@ -22,6 +29,8 @@ library
                      , basic-prelude
                      , bcrypt
                      , aeson >= 0.10
+                     -- It looks like servant 0.5 is going to be
+                     -- backwards-incompatible so limit upper version:
                      , servant >=0.4 && <0.5
                      , servant-blaze >=0.4 && <0.5
                      , servant-server >=0.4 && <0.5
@@ -32,9 +41,14 @@ library
                      , containers
                      , attoparsec
                      , time
+                     , entropy
                      , transformers
+                     , servant-docs >= 0.4 && <0.5
+                     , process
 
   hs-source-dirs:      lib
+-- Disabled because there are too many warnings atm :(
+--  ghc-options:         -Wall
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings

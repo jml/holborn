@@ -8,9 +8,10 @@
   },
   "dependencies": {
     "bower": "^1.7.7",
-    "pulp": "^8.0.0",
+    "pulp": "/home/tom/src/pulp",
     "purescript-psa": "^0.3.4",
     "react": "^0.14.7",
+    "touch": "^1.0.0",
     "react-dom": "^0.14.7"
   },
   "devDependencies": {},

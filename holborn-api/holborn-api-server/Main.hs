@@ -12,12 +12,15 @@ import qualified Network.Wai.Handler.Warp as Warp
 import Servant (serve)
 import Database.PostgreSQL.Simple (connect, ConnectInfo(..), defaultConnectInfo)
 
-import qualified Holborn.API.Api as AApi
-import qualified Holborn.API.Internal as AInternal
-import qualified Holborn.API.Keys as AKeys
 import Holborn.API.Types (AppConf(..))
 import Servant ((:<|>)(..))
 import Data.Proxy (Proxy(..))
+
+import qualified Holborn.Docs
+import qualified Holborn.API.Api
+import qualified Holborn.API.Internal
+import qualified Holborn.API.Settings.SSHKeys
+import qualified Holborn.API.Settings.Profile
 
 
 data Config = Config { _port :: Warp.Port
@@ -42,13 +45,24 @@ warpSettings config =
     port' = _port config
 
 
-api :: Proxy (AApi.API :<|> AInternal.API :<|> AKeys.API)
+type FullAPI =
+    Holborn.API.Api.API
+    :<|> Holborn.API.Internal.API
+    :<|> Holborn.API.Settings.SSHKeys.API
+    :<|> Holborn.API.Settings.Profile.API
+    :<|> Holborn.Docs.API
+
+
+api :: Proxy FullAPI
 api = Proxy
 
-
 app :: AppConf -> Application
-app conf = serve api
-  ((AApi.server conf) :<|> AInternal.server :<|> (AKeys.server conf))
+app conf = serve api $
+  Holborn.API.Api.server conf
+   :<|> Holborn.API.Internal.server
+   :<|> Holborn.API.Settings.SSHKeys.server conf
+   :<|> Holborn.API.Settings.Profile.server conf
+   :<|> Holborn.Docs.server
 
 
 main = do

@@ -21,8 +21,9 @@ we can do like so:
 
 ```
 rm -rf output # Not sure why needed but pulp breaks without ("Prelude not found")
-pulp browserify -O -t app.js
+NODE_ENV=production pulp browserify -O -t app.js
 closure-compiler app.js -O SIMPLE > app.min.js
+zopfli app.min.js
 ```
 
 Eventually this will go into a nix build of course.

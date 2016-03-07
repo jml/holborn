@@ -12,8 +12,7 @@
   ],
   "dependencies": {
     "purescript-console": "^0.1.0",
-    "purescript-thermite": "~0.12.1",
-    "purescript-thermite-aff": "~0.2.0",
+    "purescript-thermite": "~0.13.1",
     "purescript-affjax": "#master",
     "purescript-generics": "~0.7.0",
     "purescript-argonaut-codecs": "~0.5.1",

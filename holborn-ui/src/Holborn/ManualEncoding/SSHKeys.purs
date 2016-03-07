@@ -1,4 +1,4 @@
-module Holborn.ManualEncoding.Keys where
+module Holborn.ManualEncoding.SSHKeys where
 
 import Prelude
 
@@ -12,15 +12,18 @@ import Data.Either (Either(..))
 import Data.Lens (LensP, lens)
 import Data.Generic (class Generic)
 
-import Holborn.JSON.Generic (gDecode)
+import Holborn.JSON.Generic (gDecode, gEncode)
 
 -- The following three feel like they ought to be parametrized ...
-data Key = Key { key :: String , title :: String }
+data Key = Key { id :: Int, key :: { key :: String, fingerprint :: String } , title :: String, verified :: Boolean, read_only :: Boolean }
 data AddKeyData = AddKeyData { key :: String, title :: String }
 data AddKeyDataError = AddKeyDataError { global :: Maybe String, key :: Maybe String, title :: Maybe String }
 
+
 derive instance genericKey :: Generic Key
 derive instance genericAddKeyDataError :: Generic AddKeyDataError
+derive instance genericAddKeyData :: Generic AddKeyData
+
 
 title :: LensP AddKeyData String
 title = lens
@@ -40,4 +43,4 @@ instance decodeAddKeyDataError :: DecodeJson AddKeyDataError where
   decodeJson = gDecode
 
 instance encodeAddKeyData :: EncodeJson AddKeyData where
-  encodeJson (AddKeyData ak) = fromObject (insert "title" (fromString ak.title) (singleton "key" (fromString ak.key)))
+  encodeJson = gEncode

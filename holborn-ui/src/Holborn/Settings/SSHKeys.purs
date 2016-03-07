@@ -1,6 +1,7 @@
 -- | Example module for how to do an UI element in our UI.
 
-module Holborn.KeySettings where
+module Holborn.Settings.SSHKeys where
+
 
 import Prelude
 
@@ -10,6 +11,7 @@ import React.DOM.Props as RP
 import Thermite as T
 import Network.HTTP.Affjax as AJ
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff (Eff)
 import Control.Monad.Aff (runAff, Aff)
 import Network.HTTP.Affjax (AJAX)
 import Data.Either (Either(..))
@@ -18,49 +20,45 @@ import Data.Argonaut.Encode (encodeJson)
 import Data.List (List(..), (:), toUnfoldable)
 import Data.Lens (view, set)
 import Data.Maybe (Maybe(..))
+import Web.Cookies as C
 
-import Holborn.ManualEncoding.Keys (Key(..), AddKeyData(..), AddKeyDataError(..), title, key)
+import Holborn.ManualEncoding.SSHKeys (Key(..), AddKeyData(..), AddKeyDataError(..), title, key)
+import Holborn.Auth as HA
+import Holborn.Forms as HF
 import Unsafe.Coerce (unsafeCoerce)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Data.Lens (LensP)
+import Data.List (filter)
 
-import Debug.Trace (traceAnyM)
+import Debug.Trace (traceAnyM, traceAny)
 
 
 -- The full internal state of this component. Components have state
 -- and props. State is internal (e.g. component was loaded) and props
 -- are external (e.g. colour of the button).
 type State =
-  { error :: AddKeyDataError
+  { formErrors :: AddKeyDataError
   , loading :: Boolean
   , keys :: List Key
-  , addKeyData :: AddKeyData
+  , formData :: AddKeyData
   }
 
 -- All possible state-modifying actions for this component.
-data Action = AddKey | UpdateKeyData AddKeyData
+data Action = AddKey | UpdateFormData AddKeyData | RemoveKey Int
 
 emptyAddKeyData = AddKeyData { key: "", title: "" }
-
 emptyAddKeyDataError = AddKeyDataError { global: Nothing, key: Nothing, title: Nothing }
 networkAddKeyDataError msg =  AddKeyDataError { global: Just msg, key: Nothing, title: Nothing }
 
 -- Initial State each time this component is inserted in the DOM.
 initialState :: State
 initialState =
-  { error: emptyAddKeyDataError
+  { formErrors: emptyAddKeyDataError
   , loading: false
   , keys: Nil
-  , addKeyData: emptyAddKeyData
+  , formData: emptyAddKeyData
   }
 
-type Props = {keys :: List Key}
-
-
--- We need to unsafeCoerce event because the purescript-react bindings
--- aren't exposing preventDefault.
-preventDefault :: forall m. React.Event -> m
-preventDefault ev = (unsafeCoerce ev).preventDefault
 
 -- We need unsafeCoerce because purescript-react bindings arent
 -- exposing target.value yet.
@@ -80,63 +78,80 @@ renderGlobalError err = case err of
   Just msg -> R.div [] [R.text msg]
 
 
-spec :: forall eff. T.Spec (ajax :: AJAX | eff) State Props Action
+spec :: forall eff props. T.Spec (ajax :: AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = T.simpleSpec performAction render
   where
     -- render is a react-ism. It renders the DOM fragment below and
     -- insert it efficiently by diffing the document-DOM with the
     -- fragment.
-    render :: T.Render State Props Action
-    render dispatch props ({ addKeyData, error: AddKeyDataError err, loading, keys }) _ =
+    render :: forall props. T.Render State props Action
+    render dispatch props ({ formData, formErrors: AddKeyDataError err, loading, keys }) _ =
       [ R.h1 [] [R.text "Manage SSH keys"]
+      , R.div [] renderKeyArray
+      , R.h2 [] [R.text "Add new key"]
       , renderGlobalError err.global
        , R.form [RP.onSubmit onSubmit]
-        [ labeled "Key name" err.title $ R.input [ RP.value (view title addKeyData)
-                  , RP.className "form-control"
-                  , RP.onChange \ev -> dispatch (UpdateKeyData (fieldUpdater title ev addKeyData))
-                  ] []
-        , labeled "Key" err.key $ R.textarea [ RP.value (view key addKeyData)
-                     , RP.onChange \ev -> dispatch (UpdateKeyData (fieldUpdater key ev addKeyData))
-                     , RP.className "form-control"
-                     ] []
+        [ HF.text "Key name" err.title title (dispatch <<< UpdateFormData) formData
+        , HF.textarea "Key" err.key key (dispatch <<< UpdateFormData) formData
         , R.button [RP.disabled loading, RP.className "btn btn-default"] [R.text if loading then "Adding key ..." else "Add new key"]
         ]
-      , R.div [] keyArray
       ]
       where
         onSubmit ev = do
           (unsafeCoerce ev).preventDefault
           dispatch AddKey
-        keyArray = toUnfoldable (map (\(Key key) -> (R.div [] [R.text key.title])) keys)
+        renderKeyArray = toUnfoldable (map renderOneKey keys)
+        renderOneKey (Key key) =
+          R.div []
+          [ R.text key.title
+          , R.text key.key.fingerprint
+          , if key.read_only
+            then R.span [RP.className "readonly"] [R.text "readonly"]
+            else R.span [RP.className "write"] [R.text "write"]
+          , if key.verified
+            then R.span [RP.className "verified"] [R.text "verified"]
+            else R.span [RP.className "notverified"] [R.text "not verified"]
+          , R.a [RP.onClick \ev -> do
+                    (unsafeCoerce ev).preventDefault
+                    dispatch (RemoveKey key.id)
+                ] [R.text "Remove this key"]
+          ]
 
     -- performAction is a purescript-thermite callback. It takes an
     -- action and modifies the state by calling the callback k and
     -- passing it the modified state.
-    performAction :: forall eff props. T.PerformAction (ajax :: AJAX | eff) State props Action
-    performAction (UpdateKeyData x) props state k = k $ state { addKeyData = x }
+    performAction :: forall eff a. T.PerformAction (ajax :: AJAX, cookie :: C.COOKIE | eff) State props Action
+    performAction (UpdateFormData x) props state k =  k $ \state -> state { formData = x }
+    performAction (RemoveKey keyId) props state k = do
+      k (\state -> state { loading = true })
+      runAff (\_ -> k id) k (removeKey keyId)
+
     performAction AddKey props state k = do
-      k (state { loading = true })
-      runAff (\err -> traceAnyM err >>= \_ -> k $ state { error = networkAddKeyDataError "No network connection. Please try again later"}) k (addKey state)
+      k (\state -> state { loading = true })
+      runAff (\err -> traceAnyM err >>= \_ -> k $ \state -> state { formErrors = networkAddKeyDataError "No network connection. Please try again later"}) k (addKey state)
 
     -- Server fetching can go in many ways and we'll need to reflect
     -- errors in the state and allow users to move on from there
     -- (e.g. re-enable buttons for retry, display actual invalid input
     -- errors etc).
-    addKey :: forall eff. State -> Aff (ajax :: AJAX | eff) State
+    addKey :: forall eff. State -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) (State -> State)
     addKey state = do
-      r <- AJ.post "http://127.0.0.1:8002/v1/user/keys" (encodeJson state.addKeyData)
+      r <- HA.post "http://127.0.0.1:8002/v1/user/keys" (encodeJson state.formData)
       return case r.status of
          StatusCode 201 -> case decodeJson r.response of
-             Left err -> state { loading = false, error = networkAddKeyDataError "Something unexpeced broke." }
-             Right key -> state { loading = false, keys = key : state.keys, addKeyData = emptyAddKeyData}
+             Left err -> \state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpeced broke." }
+             Right key -> \state -> state { loading = false, keys = key : state.keys, formData = emptyAddKeyData, formErrors = emptyAddKeyDataError }
 
          -- Note that by calling `decodeJson` in the 201 branch the
          -- type inference decided that the response must be JSON so
          -- we need to send back valid JSON in the 400 case as well.
          StatusCode 400 -> case decodeJson r.response of
-             Left _ -> state { loading = false, error = networkAddKeyDataError "Something unexpeced broke." }
-             Right errors -> state { loading = false, error = errors }
+             Left _ -> \state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpeced broke." }
+             Right errors -> \state -> state { loading = false, formErrors = errors }
 
-component :: Props -> React.ReactElement
-component props =
-  React.createElement (T.createClass spec (initialState { keys = props.keys })) props []
+    removeKey :: forall eff. Int -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) (State -> State)
+    removeKey keyId = do
+      r <- HA.delete ("http://127.0.0.1:8002/v1/user/keys/" ++ show keyId) :: AJ.Affjax (cookie :: C.COOKIE | eff) Unit
+      return $ case r.status of
+          StatusCode 204 -> \state -> state { keys = filter (\(Key { id }) -> id /= keyId) state.keys, loading = false }
+          _ -> id -- TODO error handling
