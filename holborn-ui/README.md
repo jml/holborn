@@ -20,7 +20,7 @@ The debug build is 1.4M. For production we want a smaller build which
 we can do like so:
 
 ```
-NODE_ENV=production webpack --config webpack.config.js
+rm -rf output && NODE_ENV=production webpack --config webpack.config.js
 closure-compiler bundle.js > bundle.js.min
 closure-compiler vendor.bundle.js > vendor.bundle.js.min
 ```

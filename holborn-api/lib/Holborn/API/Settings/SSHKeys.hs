@@ -13,7 +13,6 @@ module Holborn.API.Settings.SSHKeys
 
 import BasicPrelude
 
-import Control.Monad.Trans.Either (left)
 import Database.PostgreSQL.Simple (Only (..), execute, query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Control.Monad.Trans.Except (ExceptT, throwE)

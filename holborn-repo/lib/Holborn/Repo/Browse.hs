@@ -13,7 +13,7 @@ import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Except (ExceptT, runExceptT)
 import Data.ByteString.Lazy (fromStrict)
-import Servant ((:>), (:<|>)(..), Capture, Get, Proxy(..), QueryParam, ServantErr(..), Server)
+import Servant ((:>), (:<|>)(..), Capture, Get, Proxy(..), QueryParam, ServantErr(..), Server, JSON)
 import Servant.Common.Text (FromText(..))
 import Servant.HTML.Blaze (HTML)
 import Servant.Server (enter, (:~>)(..), err500)
@@ -41,7 +41,7 @@ type Author = Text
 -- 'refs/heads/master'.
 
 type BrowseAPI =
-  Get '[HTML] Tree
+  Get '[JSON, HTML] Tree
   :<|> "blob" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Blob
   :<|> "tree" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Tree
   :<|> "commits" :> Capture "revspec" Revision :> QueryParam "author" Author :> Get '[HTML] [Commit]
@@ -93,5 +93,3 @@ renderCommits = notImplementedYet "render commits"
 
 renderCommit :: Repository -> Revision -> RepoBrowser Commit
 renderCommit = notImplementedYet "render commit"
-
-

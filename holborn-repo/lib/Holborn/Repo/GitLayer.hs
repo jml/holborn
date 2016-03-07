@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-
+{-# LANGUAGE RecordWildCards #-}
 {-|
 The Holborn interface to Git.
 -}
@@ -28,6 +28,7 @@ import qualified Data.Text as Text
 import qualified Git
 import Git.Libgit2 (LgRepo, MonadLg, lgFactory)
 import Text.Blaze (ToMarkup(..))
+import Data.Aeson (ToJSON(..), genericToJSON, Value(..), object)
 
 -- XXX: Putting web stuff here to avoid orphan warnings. Would be nice to have
 -- it completely separate.
@@ -220,6 +221,11 @@ data Tree = Tree { _gitTree :: Git.Tree GitRepo
                  , treePath :: [Text]
                  , treeRepository :: Repository
                  }
+
+-- TODO probably better to transform Tree to an object that can encode
+-- the tree completely than to do manual encoding.
+instance ToJSON Tree where
+    toJSON Tree{..} = object [("sha",  String (show treeRevision))]
 
 
 -- XXX: This is partial. If 'treeEntryOid' is not in the current repo, then it will raise an exce

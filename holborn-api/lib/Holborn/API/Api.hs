@@ -62,7 +62,7 @@ landing = return $(shamletFile "./templates/landing.html")
 
 
 signupPost :: AppConf -> SignupData -> EitherT ServantErr IO (Either SignupError SignupOk)
-signupPost (AppConf conn jwtSecret) SignupData{..} = do
+signupPost (AppConf conn jwtSecret _) SignupData{..} = do
     pwd <- liftIO (newPassword _password)
     result <- liftIO (runExceptT (U.signup conn (newUsername username) (newEmail email) pwd))
     case result of
@@ -80,7 +80,7 @@ signupPost (AppConf conn jwtSecret) SignupData{..} = do
 -- password verified OK (checkPassword). The token is stored as a
 -- cookie in the client.
 signin :: AppConf -> SigninData -> EitherT ServantErr IO SigninOK
-signin (AppConf conn _) SigninData{..} = do
+signin (AppConf conn _ _) SigninData{..} = do
     pwd <- liftIO (newPassword _SigninData_password)
     r <- liftIO $ query conn [sql|
                    select id, password

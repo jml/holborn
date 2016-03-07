@@ -16,6 +16,9 @@ library
                      , Holborn.JSON.User
                      , Holborn.JSON.Response
 
+                     , Holborn.JSON.Browse
+                     , Holborn.API.Browse
+
                      , Holborn.JSON.Settings.SSHKeys
                      , Holborn.API.Settings.SSHKeys
 
@@ -45,6 +48,9 @@ library
                      , transformers
                      , servant-docs >= 0.4 && <0.5
                      , process
+                     , wai
+                     , http-reverse-proxy
+                     , http-client
 
   hs-source-dirs:      lib
 -- Disabled because there are too many warnings atm :(
@@ -86,6 +92,7 @@ executable holborn-api-server
                      , warp >= 3.1
                      , envparse >= 0.2
                      , postgresql-simple
+                     , http-client
                      , holborn-api
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings

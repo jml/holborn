@@ -22,7 +22,7 @@ import qualified Prelude
 import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), object, (.=))
 import Data.Aeson.Types (typeMismatch)
 import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultError(ConversionFailed))
-
+import Network.HTTP.Client (Manager)
 import System.Process (runInteractiveCommand)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
 import Data.ByteString as BS
@@ -37,6 +37,7 @@ newtype Password = Password ByteString deriving (ToField)
 data AppConf = AppConf
   { conn :: Connection
   , jwtSecret :: Text
+  , httpManager :: Manager
   }
 
 

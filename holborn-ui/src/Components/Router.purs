@@ -1,34 +1,31 @@
 module Components.Router where
 
 import Prelude
-import Thermite as T
-import React.DOM as R
-import React.DOM.Props as RP
-import React as React
-import Network.HTTP.Affjax as AJ
-import Control.Monad.Eff.Exception as E
-import Control.Monad.Eff.Console (CONSOLE())
-
-import Holborn.SettingsRoute as SettingsRoute
-import Holborn.Signin as Signin
-import Holborn.Browse as Browse
-
-import Web.Cookies as C
-import Data.Maybe (Maybe(..))
-import Routing (matches)
+import Control.Alt ((<|>))
+import Control.Apply ((*>))
 import Control.Monad.Aff (runAff)
 import Control.Monad.Eff (Eff)
-import Data.Lens(PrismP, prism, over, lens, LensP, view, set)
-import Data.Foldable (fold)
+import Control.Monad.Eff.Console (CONSOLE())
+import Control.Monad.Eff.Exception as E
 import Data.Either (Either(..))
+import Data.Foldable (fold)
 import Data.Functor (($>))
-import Control.Apply ((*>))
-import Control.Alt ((<|>))
+import Data.Lens(PrismP, prism, over, lens, LensP, view, set)
+import Data.Maybe (Maybe(..))
+import Network.HTTP.Affjax as AJ
+import React as React
+import React.DOM as R
+import React.DOM.Props as RP
+import Routing (matches)
 import Routing.Match (Match)
 import Routing.Match.Class (lit)
+import Thermite as T
+import Web.Cookies as C
 
-import Holborn.Signin as Signin
+import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
+import Holborn.SettingsRoute as SettingsRoute
+import Holborn.Signin as Signin
 import Debug.Trace
 
 data State = RouterState { currentRoute :: RootRoutes, username :: String }
@@ -99,16 +96,28 @@ _SettingsState = prism Settings \route ->
     Settings x -> Right x
     _ -> Left route
 
+_SettingsAction :: PrismP Action SettingsRoute.Action
+_SettingsAction = prism SettingsAction \action ->
+  case action of
+    SettingsAction x -> Right x
+    _ -> Left action
+
 _404State :: PrismP RootRoutes Unit
 _404State = prism (const Route404) \route ->
   case route of
     Route404 -> Right unit
     _ -> Left route
 
-_SettingsAction :: PrismP Action SettingsRoute.Action
-_SettingsAction = prism SettingsAction \action ->
+_BrowseState :: PrismP RootRoutes Browse.State
+_BrowseState = prism BrowseRoute \route ->
+  case route of
+    BrowseRoute x -> Right x
+    _ -> Left route
+
+_BrowseAction :: PrismP Action Browse.Action
+_BrowseAction = prism BrowseAction \action ->
   case action of
-    SettingsAction x -> Right x
+    BrowseAction x -> Right x
     _ -> Left action
 
 
@@ -121,6 +130,7 @@ spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie ::
 spec = container $ handleActions $ fold
        [ T.split _SigninState (T.match _SigninAction Signin.spec)
        , T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  SettingsRoute.spec))
+       , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction  Browse.spec))
        , T.focusState routeLens (T.split _404State spec404)
        ]
   where
