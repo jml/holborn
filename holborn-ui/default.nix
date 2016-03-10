@@ -19,7 +19,7 @@ stdenv.mkDerivation {
 
     # Can't symlink because js developers have never heard of such a
     # thing.
-    cp -r ${node_modules}/node_modules .
-    cp -r ${bower_modules}/bower_components .
+    cp -r --no-preserve=all ${node_modules}/node_modules .
+    cp -r --no-preserve=all ${bower_modules}/bower_components .
   '';
 }
