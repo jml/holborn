@@ -32,5 +32,5 @@ After that:
 
 ```
 nix-shell -p "callPackage ./nix/holborn-ssh.nix {}"
-sshd -D -e -f conf/testconf-tom
+$(which sshd) -D -e -f $PWD/conf/testconf-tom
 ```

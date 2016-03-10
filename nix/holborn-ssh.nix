@@ -5,7 +5,7 @@
 let
 holborn-openssh-source = fetchgit {
   url = "https://holbornlondon:DSmiB2AVZJhftk4XRyH1N98XNMYzOmY9@bitbucket.org/holbornlondon/holborn-ssh.git";
-  sha256 = "0n2wvqj311g9hm682ga0khswndj00djhc1xmlq7f4587kvii9vdf";
+  sha256 = "181817nwhal4brmpr8881nqmbi5pmb05r99aqpdy00jp31sq46ba";
 
   # Using HEAD intentionally - if we update the repo this will fail
   # with a hash-mismatch but we probably forgot to pull this along.
