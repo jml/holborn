@@ -2,6 +2,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE QuasiQuotes        #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 
 -- | Internal API for e.g. checking whether a user is authorized to
 -- access a repository.
@@ -23,6 +26,9 @@ import qualified Data.Map.Strict as DMS
 import Control.Monad.Trans.Either (EitherT)
 import qualified Data.Attoparsec.Text as AT
 import qualified Data.Attoparsec.Combinator as AT
+import Database.PostgreSQL.Simple (Only (..), execute, query)
+import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Holborn.API.Types (AppConf(..), parseSSHKey)
 
 import System.IO (stdout, hFlush)
 
@@ -39,26 +45,24 @@ type API =
         :> ReqBody '[JSON] CheckRepoAccessRequest
         :> Post '[JSON] CheckRepoAccessResponse
 
--- | Fake database
-fakeDB :: Map CheckKeyRequest Text
-fakeDB = DMS.fromList
-     [ (CheckKeyRequest
-            { key = "AAAAB3NzaC1yc2EAAAABIwAAAQEAtq8LpgrnFQWpIcK5YdrQNzu22sPrbkHKD83g8v/s7Nu3Omb7h5TLBOZ6DYPSorGMKGjDFqo0witXRagWq95HaA9epFXmhJlO3NTxyTAzIZSzql+oJkqszNpmYY09L00EIplE/YKXPlY2a+sGx3CdJxbglGfTcqf0J2DW4wO2ikZSOXRiLEbztyDwc+TNwYJ3WtzTFWhG/9hbbHGZtpwQl6X5l5d2Mhl2tlKJ/zQYWV1CVXLSyKhkb4cQPkL05enguCQgijuI/WsUE6pqdl4ypziXGjlHAfH+zO06s6EDMQYr50xgYRuCBicF86GF8/fOuDJS5CJ8/FWr16fiWLa2Aw=="
-            , key_type = "RSA"
-            }, "git")
-     , (CheckKeyRequest
-            { key = "AAAAB3NzaC1yc2EAAAADAQABAAACAQC8Wa+xniYeoJQWtpSGIL833jtLqOudcpmSwCzaLMfo/JVF6jwXIVcPQW6GIOGPEA+2B6gqYhISqYGg8zPcP6PLMLxDXFo8MvcyYG8cJD53rmT/ZkNgIJYC7ayBCHGn8DX4Y833Ej6C+2EGEk6btt9XQVaayxFGtI8FrHNzeRDu6SQp/oIOtDvhA3IMjDLjOWMlJlPEJpx6BzGw/v5i5n594DYuq5xDWCsg1KHM5c5z4nGYB4WTM2Ba0zauTCW/VlBxa3gkljqsomU31q9Ylf0Da0/YAt82WwqS2066XO3ea+quR7utkThsTGCEbt00AJZgl5RVr4691W5U4yS8+HRPklFFX30fzcK9FaQvp5da/86MaimdNtGrMVWvOzX26I22SELJvZCL9A4KIHMJS6cc3i6lkxT1L2CKXtvwV+++g1KoPWuoyhlqXazpmXmI5P+Ks5NjT3KkU+oTruiKFIdLNz7ediU06AqAQS4iqOF8o5k6zmB2ojtYLqR+MG4jteWQLO/azbGdxXAO54nGtp1kx3MTEuQTAbaEOkjphQNV5FvJkw2abk2grcEfN2p5oKP3m1en2Liri5GsWHOB/bSnhfvMRkeY5yPIOg2rlu4oiJ7uPThm16XiKPKLEGENmXy/6/sFCNiHXoLN2EakXzcbH7Wl/NEcm9dzvhbP4GO+9w=="
-            , key_type = "RSA"
-            }, "git")
-     ]
-
 -- | Implementation
-checkKey :: CheckKeyRequest -> EitherT ServantErr IO CheckKeyResponse
-checkKey r = do
-    liftIO $ print ("checkKey", r)
+checkKey :: AppConf -> CheckKeyRequest -> EitherT ServantErr IO CheckKeyResponse
+checkKey AppConf{conn} request = do
+    liftIO $ print ("checkKey", request)
     liftIO $ hFlush stdout
-    return $ case DMS.lookup r fakeDB of
-       Just username -> CheckKeyResponse (Just username)
+    let comparison_pubkey = case key_type request of
+            "RSA" -> "ssh-rsa " <> key request
+            "DSA" -> "ssh-dsa " <> key request
+            x -> terror ("Unknown key type: " <> x)
+    rows <- liftIO $ query conn [sql|
+                   select pk.id, pk.verified
+                   from "public_key" as pk  where comparison_pubkey = ?
+               |] (Only comparison_pubkey)
+    liftIO $ print rows
+
+    return $ case rows of
+       [(keyId, True)] -> CheckKeyResponse (Just keyId)
+       [(keyId, False)] -> CheckKeyResponse (Just keyId) -- PUPPY: REMOVE ME key not verified
        _ -> terror "TODO return error for checkKey"
 
 
@@ -95,17 +99,21 @@ parseSSHCommand =
         AT.endOfInput
         return (org, user)
 
-checkRepoAccess :: CheckRepoAccessRequest -> EitherT ServantErr IO CheckRepoAccessResponse
-checkRepoAccess request = do
+checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> EitherT ServantErr IO CheckRepoAccessResponse
+checkRepoAccess AppConf{conn} request = do
     let Right cmd = AT.parseOnly parseSSHCommand (command request)
-    -- TODO - this is where we'd stick actual access controls, rate
-    -- limiting etc.
+    liftIO $ print request
+    rows <- liftIO $ query conn [sql|
+                   select pk.readonly, pk.verified
+                   from "public_key" as pk where id = ?
+               |] (Only (key_id request))
 
     -- OpenSSH runs the command we send in bash, so we can use common
     -- shell muckery to first send the metadata and then do a
     -- bidirectional pipe.
-    return $ case cmd of
-        GitReceivePack org repo ->
+    print (cmd, rows)
+    return $ case (cmd, rows) of
+        (GitReceivePack org repo, [(False, True)]) ->
             CheckRepoAccessResponse (Just (
                 concat ["(echo -n '{\"command\": \"git-receive-pack\", \"org\": \""
                        , org
@@ -113,7 +121,9 @@ checkRepoAccess request = do
                        , repo
                        ,"\"}' && cat) | nc 127.0.0.1 8081"
                        ]))
-        GitUploadPack org repo ->
+        (GitReceivePack org repo, [(True, True)]) ->
+            CheckRepoAccessResponse (Just "This SSH key is readonly")
+        (GitUploadPack org repo, [(_, True)]) ->
             CheckRepoAccessResponse (Just (
                 concat ["(echo -n '{\"command\": \"git-upload-pack\", \"org\": \""
                        , org
@@ -121,7 +131,9 @@ checkRepoAccess request = do
                        , repo
                        ,"\"}' && cat) | nc 127.0.0.1 8081"
                        ]))
-        Invalid _ ->
+        (_, [(False, _)]) ->
+            CheckRepoAccessResponse (Just "SSH key not verified")
+        (Invalid _, [(_, _)]) ->
             CheckRepoAccessResponse (Just (quotes !! 0))
   where
     quotes :: [Text]
@@ -131,9 +143,9 @@ checkRepoAccess request = do
         , "echo 'Look at me. I\'m Dr. Zoidberg, homeowner'"
         ]
 
-server :: Server API
-server = checkKey
-    :<|> checkRepoAccess
+server :: AppConf -> Server API
+server conf = checkKey conf
+    :<|> checkRepoAccess conf
 
 -- Serialization bla bla
 data CheckKeyRequest = CheckKeyRequest
@@ -142,23 +154,23 @@ data CheckKeyRequest = CheckKeyRequest
     } deriving (Show, Generic, Eq, Ord)
 instance FromJSON CheckKeyRequest
 
-type Username = Text
+type KeyId = Int
 
 data CheckKeyResponse = CheckKeyResponse
-    { username_ :: Maybe Username -- TODO might be more useful to return Either with error message?
+    { key_id_ :: Maybe KeyId -- TODO might be more useful to return Either with error message?
     } deriving (Show, Generic)
 
 instance ToJSON CheckKeyResponse where
-    toJSON (CheckKeyResponse (Just username_)) =
+    toJSON (CheckKeyResponse (Just key_id_)) =
         object [ "allowed"  .= True
-               , "username" .= username_
+               , "key_id" .= key_id_
                ]
     toJSON (CheckKeyResponse Nothing) =
         object [ "allowed"  .= False
                ]
 
 data CheckRepoAccessRequest = CheckRepoAccessRequest
-    { username :: Username
+    { key_id :: KeyId
     , command :: Text
     } deriving (Show, Generic)
 instance FromJSON CheckRepoAccessRequest

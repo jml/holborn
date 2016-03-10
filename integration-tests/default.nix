@@ -1,7 +1,10 @@
 # Run like
-# NIX_PATH=${NIX_PATH}:. nix-build default.nix [-A openssh]
+# nix-build --no-out-link default.nix [-A openssh]
 with (import <nixpkgs> {}).pkgs;
+let
+  hp = callPackage ../nix/all-packages.nix {};
+in
 {
-  openssh = callPackage ./holborn-openssh-test.nix {};
-  http = callPackage ./holborn-protocol-test-1.nix {};
+  openssh = callPackage ./holborn-openssh-test.nix { haskellPackages = hp; };
+  http = callPackage ./holborn-protocol-test-1.nix { haskellPackages = hp; };
 }

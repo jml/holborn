@@ -19,8 +19,10 @@ import Data.Proxy (Proxy(..))
 import qualified Holborn.Docs
 import qualified Holborn.API.Api
 import qualified Holborn.API.Internal
+import qualified Holborn.API.Browse
 import qualified Holborn.API.Settings.SSHKeys
 import qualified Holborn.API.Settings.Profile
+import Network.HTTP.Client (newManager, defaultManagerSettings)
 
 
 data Config = Config { _port :: Warp.Port
@@ -50,6 +52,7 @@ type FullAPI =
     :<|> Holborn.API.Internal.API
     :<|> Holborn.API.Settings.SSHKeys.API
     :<|> Holborn.API.Settings.Profile.API
+    :<|> Holborn.API.Browse.API
     :<|> Holborn.Docs.API
 
 
@@ -59,14 +62,16 @@ api = Proxy
 app :: AppConf -> Application
 app conf = serve api $
   Holborn.API.Api.server conf
-   :<|> Holborn.API.Internal.server
+   :<|> Holborn.API.Internal.server conf
    :<|> Holborn.API.Settings.SSHKeys.server conf
    :<|> Holborn.API.Settings.Profile.server conf
+   :<|> Holborn.API.Browse.server conf
    :<|> Holborn.Docs.server
 
 
 main = do
     config <- loadConfig
     conn <- connect (defaultConnectInfo  { connectDatabase = "holborn", connectUser = "tom"})
-    let conf = AppConf conn "test-secret-todo-read-from-env"
+    httpManager <- newManager defaultManagerSettings
+    let conf = AppConf conn "test-secret-todo-read-from-env" httpManager
     Warp.runSettings (warpSettings config) (app conf)

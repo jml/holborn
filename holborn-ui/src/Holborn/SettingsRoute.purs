@@ -3,18 +3,22 @@
 module Holborn.SettingsRoute where
 
 import Prelude
+import Data.Functor (($>))
+import Control.Alt ((<|>))
 import Thermite as T
 import React.DOM as R
 import React.DOM.Props as RP
 import Control.Monad.Eff.Exception as E
 import Network.HTTP.Affjax as AJ
 import Web.Cookies as C
-import Data.Lens(PrismP, prism, over)
+import Data.Lens(PrismP, prism, over, lens, view, LensP, set)
 import Data.Either (Either(..))
 import Holborn.Settings.SSHKeys as SSHKeys
 import Data.Foldable (fold)
 import Data.Argonaut.Decode (decodeJson)
 import Holborn.Fetchable (class Fetchable)
+import Routing.Match (Match)
+import Routing.Match.Class (lit)
 
 import Debug.Trace
 
@@ -37,25 +41,45 @@ data SettingsRoutes =
   | OrganisationSettingsOK
 
 
-type State =
+data State = State
   { route :: SettingsRoutes
   , error :: String
   }
 
+routeLens :: LensP State SettingsRoutes
+routeLens = lens (\(State s) -> s.route) (\(State s) x -> State (s { route = x }))
+
+
+settingsRoutes :: Match State
+settingsRoutes =
+      lit "ssh-keys" $> (startWithRoute SSHKeySettings)
+  <|> lit "profile" $> (startWithRoute Profile)
+  <|> lit "account" $> (startWithRoute AccountSettings)
+  <|> lit "emails" $> (startWithRoute EmailSettings)
+  <|> lit "security" $> (startWithRoute SecuritySettings)
+  <|> lit "repositories" $> (startWithRoute RepositorySettings)
+  <|> lit "organisations" $> (startWithRoute OrganisationSettings)
+
+
 baseURL :: String
 baseURL = "http://127.0.0.1:8002/v1"
 
-instance fetchSettingsRoutes :: Fetchable SettingsRoutes where
-  fetch SSHKeySettings = do
+instance fetchSettingsRoutes :: Fetchable SettingsRoutes State where
+  fetch SSHKeySettings s = do
     r <- AJ.get (baseURL ++ "/users/alice/keys")
     return $ case decodeJson r.response of
-      Left err -> SSHKeySettings
-      Right keys -> SSHKeySettingsOK (SSHKeys.initialState { keys = keys })
-  fetch x = pure x
+      Left err -> set routeLens SSHKeySettings s
+      Right keys -> set routeLens (SSHKeySettingsOK (SSHKeys.initialState { keys = keys })) s
+  fetch a s = pure s
 
 
-initialState =
+initialState = State
   { route: SSHKeySettings
+  , error: "no error"
+  }
+
+startWithRoute r = State
+  { route: r
   , error: "no error"
   }
 
@@ -72,23 +96,23 @@ _SSHKeysAction = prism SSHKeysAction \action ->
     _ -> Left action
 
 
-_SSHKeysState :: PrismP State SSHKeys.State
-_SSHKeysState = prism (\state -> initialState { route = SSHKeySettingsOK state, error = "" }) \state ->
-  case state.route of
+_SSHKeysState :: PrismP SettingsRoutes SSHKeys.State
+_SSHKeysState = prism (\state -> SSHKeySettingsOK state) \state->
+  case state of
     SSHKeySettingsOK s -> Right s
     _ -> Left state
 
 
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = container $ fold
-       [ T.match _SSHKeysAction (T.split _SSHKeysState SSHKeys.spec)
+       [ T.match _SSHKeysAction (T.focusState routeLens (T.split _SSHKeysState SSHKeys.spec))
 --       , T.match _ProfileAction (T.split _ProfileState Profile.spec)
        ]
   where
     container = over T._render \render d p s c ->
       [ R.div [RP.className "container-fluid"]
         [ R.div [RP.className "row"]
-          [ R.div [RP.className "col-md-2"] [R.text s.error, menu s.route]
+          [ R.div [RP.className "col-md-2"] [menu (view routeLens s)]
           , R.div [RP.className "col-md-8"] (render d p s c)
           ]
         ]

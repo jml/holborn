@@ -4,18 +4,13 @@ let
   holborn-repo = haskellPackages.callPackage ../holborn-repo {};
   holborn-api = haskellPackages.callPackage ../holborn-api {};
   test-repos = callPackage ./test-repo.nix {};
-  holborn-openssh-source = fetchgitPrivate {
-    url = "git@bitbucket.org:tehunger/holborn-ssh.git";
-    sha256 = "91e998af03249db570d00262aa5b7b39720b2899b1aa3e86e76bfd10d0299a37";
-    rev = "HEAD";
-  };
-  holborn-ssh = callPackage "${holborn-openssh-source}/nix" {};
+  holborn-ssh = callPackage ../nix/holborn-ssh.nix {};
   hcl = haskell.lib.dontHaddock (haskellPackages.callPackage ../hcl {});
 
   holborn-ssh-testconfig = writeText "testconfig" ''
     UsePrivilegeSeparation=no
-    HostKey=${holborn-ssh}/etc/ssh/ssh_host_rsa_key
-    HostKey=${holborn-ssh}/etc/ssh/ssh_host_dsa_key
+    HostKey=${holborn-ssh}/etc/ssh_host_rsa_key
+    HostKey=${holborn-ssh}/etc/ssh_host_dsa_key
     Port=3333
     PidFile=/dev/null
     HolbornApiEndpoint=http://127.0.0.1:8082

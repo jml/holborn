@@ -82,7 +82,8 @@ create table "pull_request"
 create table "public_key"
     ( id serial primary key
     , name varchar(128)
-    , pubkey text not null
+    , submitted_pubkey varchar(1024) not null -- The original pubkey
+    , comparison_pubkey varchar(1024) not null -- the key we use for comparison
     , owner_id int references "user" (id) not null
     , verified boolean not null
     , readonly boolean not null

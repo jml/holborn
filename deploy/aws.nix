@@ -36,20 +36,14 @@ rec {
 
     web = { resources, pkgs, lib, config, ... }:
     let
-        holborn-openssh-source = pkgs.fetchgitPrivate {
-          url = "git@bitbucket.org:tehunger/holborn-ssh.git";
-          sha256 = "91e998af03249db570d00262aa5b7b39720b2899b1aa3e86e76bfd10d0299a37";
-          rev = "HEAD";
-        };
-        holborn-openssh = pkgs.callPackage "${holborn-openssh-source}/nix" {};
+        holborn-openssh = pkgs.callPackage ../nix/holborn-ssh.nix {};
         holborn-api = pkgs.haskellPackages.callPackage ../holborn-api {};
         holborn-repo = pkgs.haskellPackages.callPackage ../holborn-repo {};
     in
         (common-config // {
         deployment.targetEnv = "ec2";
         deployment.ec2.region = region;
-        deployment.ec2.instanceType = "t1.micro";
-        deployment.ec2.spotInstancePrice = 7;
+        deployment.ec2.instanceType = "t2.nano"; # $5 / month
 
         deployment.ec2.keyPair = resources.ec2KeyPairs.pair;
         deployment.ec2.securityGroups = [ resources.ec2SecurityGroups.http-ssh ];
@@ -60,11 +54,12 @@ rec {
         # after server creation and deployment we need to comment out
         # the following line because SSH will have moved to port
         # `normalSSHPort`:
-        #deployment.targetPort = 22;
+        deployment.targetPort = 22;
 
+        # Our holborn code is unfree:
         nixpkgs.config.allowUnfree = true;
 
-        services.openssh.ports = [normalSSHPort];
+        services.openssh.ports = [ normalSSHPort ];
 
         environment.systemPackages = [ pkgs.git pkgs.vim ];
         require = [
@@ -76,11 +71,10 @@ rec {
         services.holborn-api.package = holborn-api;
         services.holborn-repo.package = holborn-repo;
 
-
         services.postgresql.enable = true;
-        services.postgresql.package = pkgs.postgresql94;
+        services.postgresql.package = pkgs.postgresql95;
         services.postgresql.authentication = ''
-        host all all 127.0.0.1/32 trust
+          host all all 127.0.0.1/32 trust
         '';
     });
 }
