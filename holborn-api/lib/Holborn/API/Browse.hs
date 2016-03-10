@@ -1,4 +1,4 @@
--- | Browse is reponsible for routing traffic to the holborn-repo
+-- | Browse is responsible for routing traffic to the holborn-repo
 -- server that's responsible for a given repository.
 --
 -- This is a prime candidate for moving routing decisions closer to
@@ -19,17 +19,13 @@ module Holborn.API.Browse
 
 import BasicPrelude
 
-import Database.PostgreSQL.Simple (Only (..), execute, query)
-import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Control.Monad.Trans.Except (ExceptT, throwE)
 import Data.Aeson (Value(..), object, (.=))
 import Servant
-import Data.ByteString.Lazy as BSL
 
 import Holborn.API.Types (AppConf(..), Username)
 import Holborn.JSON.Browse as B
 import Holborn.Auth (AuthToken(..), Permission(..), hasPermission, getAuthFromToken)
-import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
+import Holborn.Errors (JSONCodeableError(..))
 import Network.Wai (Application, requestMethod, rawPathInfo)
 import Network.HTTP.ReverseProxy (waiProxyTo, defaultOnExc, WaiProxyResponse(WPRModifiedRequest), ProxyDest(..))
 import Network.HTTP.Client (newManager, defaultManagerSettings)
