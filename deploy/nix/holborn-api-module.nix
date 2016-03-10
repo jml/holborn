@@ -28,7 +28,7 @@ in
       after = [ "postgresql.service" ];
 
       environment = {
-          PORT = "8082";
+          PORT = "8002";
       };
 
       serviceConfig.ExecStart = "${cfg.package}/bin/holborn-api-server";

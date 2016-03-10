@@ -36,9 +36,10 @@ rec {
 
     web = { resources, pkgs, lib, config, ... }:
     let
+        hp = pkgs.callPackage ../nix/all-packages.nix {};
         holborn-openssh = pkgs.callPackage ../nix/holborn-ssh.nix {};
-        holborn-api = pkgs.haskellPackages.callPackage ../holborn-api {};
-        holborn-repo = pkgs.haskellPackages.callPackage ../holborn-repo {};
+        holborn-api = hp.callPackage ../holborn-api {};
+        holborn-repo = hp.callPackage ../holborn-repo {};
     in
         (common-config // {
         deployment.targetEnv = "ec2";
@@ -54,7 +55,7 @@ rec {
         # after server creation and deployment we need to comment out
         # the following line because SSH will have moved to port
         # `normalSSHPort`:
-        deployment.targetPort = 22;
+        # deployment.targetPort = 22;
 
         # Our holborn code is unfree:
         nixpkgs.config.allowUnfree = true;

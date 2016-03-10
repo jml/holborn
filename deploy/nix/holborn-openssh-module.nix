@@ -7,11 +7,13 @@ let
   ssh-config = pkgs.writeText "ssh-config" ''
     UsePrivilegeSeparation=no
     PasswordAuthentication=no
-    HostKey=${cfg.package}/etc/ssh/ssh_host_rsa_key
-    HostKey=${cfg.package}/etc/ssh/ssh_host_dsa_key
+
+    # PUPPY not sure we can use those keys they should be regenerated.
+    HostKey=${cfg.package}/etc/ssh_host_rsa_key
+    HostKey=${cfg.package}/etc/ssh_host_dsa_key
     Port=22
     PidFile=/tmp/holborn-openssh.pid
-    HolbornApiEndpoint=http://127.0.0.1:8082
+    HolbornApiEndpoint=http://127.0.0.1:8002
   '';
 in
 {

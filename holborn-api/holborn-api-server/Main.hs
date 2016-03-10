@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeFamilies  #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Main where
 
@@ -26,25 +27,29 @@ import Network.HTTP.Client (newManager, defaultManagerSettings)
 
 
 data Config = Config { _port :: Warp.Port
+                     , pgDb :: String
+                     , pgUser :: String
                      }
 
 
 loadConfig :: IO Config
 loadConfig =
   Env.parse (Env.header "server") $
-  Config <$> Env.var Env.auto "PORT"       (Env.def 8002 <> Env.help "Port to listen on")
+  Config <$> Env.var Env.auto "PORT" (Env.def 8002 <> Env.help "Port to listen on")
+         <*> Env.var (Env.str Env.<=< Env.nonempty) "HOLBORN_PG_DATABASE" (Env.def "holborn" <> Env.help "pg database name")
+         <*> Env.var (Env.str Env.<=< Env.nonempty) "HOLBORN_PG_USER" (Env.def "holborn" <> Env.help "pg user")
 
 
 -- XXX: Duplicated & modified from Holborn.Repo.Config
 -- | Generate warp settings from config
 --
 -- Serve from a port and print out where we're serving from.
-warpSettings :: Config -> Warp.Settings
-warpSettings config =
+warpSettings :: Warp.Port -> Warp.Settings
+warpSettings port =
   Warp.setBeforeMainLoop printPort (Warp.setPort port' Warp.defaultSettings)
   where
     printPort = putStrLn $ "holborn-api running at http://localhost:" ++ show port' ++ "/"
-    port' = _port config
+    port' = port
 
 
 type FullAPI =
@@ -70,8 +75,8 @@ app conf = serve api $
 
 
 main = do
-    config <- loadConfig
-    conn <- connect (defaultConnectInfo  { connectDatabase = "holborn", connectUser = "tom"})
+    Config{..} <- loadConfig
+    conn <- connect (defaultConnectInfo  { connectDatabase = pgDb, connectUser = pgUser})
     httpManager <- newManager defaultManagerSettings
     let conf = AppConf conn "test-secret-todo-read-from-env" httpManager
-    Warp.runSettings (warpSettings config) (app conf)
+    Warp.runSettings (warpSettings _port) (app conf)
