@@ -15,3 +15,22 @@ main one is `holborn-web`.
 SSL termination can be done with stunnel:
 
 http://serverfault.com/questions/440225/multiple-ssl-certs-with-stunnel
+
+
+# Running sshd
+
+NB you need to make your own `testconf` with absolute paths to the keys
+
+Only once:
+
+```
+ssh-keygen -f ./conf/ssh_host_rsa_key -N '' -t rsa
+ssh-keygen -f ./conf/ssh_host_dsa_key -N '' -t dsa
+```
+
+After that:
+
+```
+nix-shell -p "callPackage ./nix/holborn-ssh.nix {}"
+sshd -D -e -f conf/testconf-tom
+```

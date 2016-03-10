@@ -1,0 +1,6 @@
+UsePrivilegeSeparation=no
+HostKey=/home/tom/devel/holborn/conf/ssh_host_rsa_key
+HostKey=/home/tom/devel/holborn/conf/ssh_host_dsa_key
+Port=3333
+PidFile=/dev/null
+HolbornApiEndpoint=http://127.0.0.1:8002
