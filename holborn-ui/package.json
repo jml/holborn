@@ -7,8 +7,9 @@
     "test": "test"
   },
   "dependencies": {
+    "jshint": "^2.9",
     "bower": "^1.7.7",
-    "pulp": "/home/tom/src/pulp",
+    "pulp": "^8",
     "purescript-psa": "^0.3.4",
     "react": "^0.14.7",
     "touch": "^1.0.0",
