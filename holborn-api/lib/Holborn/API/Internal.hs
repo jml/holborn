@@ -104,7 +104,7 @@ checkRepoAccess AppConf{conn} request = do
     let Right cmd = AT.parseOnly parseSSHCommand (command request)
     liftIO $ print request
     rows <- liftIO $ query conn [sql|
-                   select pk.readonly, pk.verified
+                   select id, pk.readonly, pk.verified
                    from "public_key" as pk where id = ?
                |] (Only (key_id request))
 
@@ -113,7 +113,7 @@ checkRepoAccess AppConf{conn} request = do
     -- bidirectional pipe.
     print (cmd, rows)
     return $ case (cmd, rows) of
-        (GitReceivePack org repo, [(False, True)]) ->
+        (GitReceivePack org repo, [(_, False, True)]) ->
             CheckRepoAccessResponse (Just (
                 concat ["(echo -n '{\"command\": \"git-receive-pack\", \"org\": \""
                        , org
@@ -121,9 +121,9 @@ checkRepoAccess AppConf{conn} request = do
                        , repo
                        ,"\"}' && cat) | nc 127.0.0.1 8081"
                        ]))
-        (GitReceivePack org repo, [(True, True)]) ->
-            CheckRepoAccessResponse (Just "This SSH key is readonly")
-        (GitUploadPack org repo, [(_, True)]) ->
+        (GitReceivePack org repo, [(keyId, True, True)]) ->
+            CheckRepoAccessResponse (reportError ("SSH key with id " <> show (keyId :: Int) <> " is readonly"))
+        (GitUploadPack org repo, [(_, _, True)]) ->
             CheckRepoAccessResponse (Just (
                 concat ["(echo -n '{\"command\": \"git-upload-pack\", \"org\": \""
                        , org
@@ -131,11 +131,12 @@ checkRepoAccess AppConf{conn} request = do
                        , repo
                        ,"\"}' && cat) | nc 127.0.0.1 8081"
                        ]))
-        (_, [(False, _)]) ->
-            CheckRepoAccessResponse (Just "SSH key not verified")
-        (Invalid _, [(_, _)]) ->
+        (_, [(_, False, _)]) ->
+            CheckRepoAccessResponse (reportError "SSH key not verified")
+        (Invalid _, [(_, _, _)]) ->
             CheckRepoAccessResponse (Just (quotes !! 0))
   where
+    reportError err = Just (">&2 echo '" <> err <> "' && exit 1")
     quotes :: [Text]
     quotes =
         [ "echo 'A meal is a meal'"
