@@ -4,10 +4,10 @@
 
 module Main (main) where
 
-import Turtle
+import Turtle (shells, empty)
 
 main = do
-    shell "cabal clean" empty
-    shell "cabal configure -O0 --disable-library-profiling" empty
-    shell "cabal build --ghc-option=-ddump-minimal-imports" empty
-    shell "packunused" empty
+    shells "cabal clean" empty
+    shells "cabal configure -O0 --disable-library-profiling" empty
+    shells "cabal build --ghc-option=-ddump-minimal-imports" empty
+    shells "packunused" empty
