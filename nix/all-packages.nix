@@ -17,7 +17,5 @@ haskellPackages.override {
       unexceptionalio = self.callPackage ./unexceptionalio.nix {};
 
       purescript = haskell.lib.doJailbreak super.purescript;
-
-      purescript-derive-lenses = self.callPackage ./purescript-derive-lenses.nix {};
     };
-  }
+}
