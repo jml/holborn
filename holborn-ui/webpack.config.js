@@ -15,7 +15,7 @@ var modulesDirectories = [
 
 var config = {
   entry: {
-    app: './src/Main.purs',
+    app: './src/entry',
     vendor: ["react", "react-dom"]
   },
   output: { path: __dirname
@@ -25,10 +25,11 @@ var config = {
   module: { loaders: [ { test: /\.purs$/
                          , loader: 'purs-loader'
                        } ] },
-  resolve: { modulesDirectories: modulesDirectories },
-  plugins: [ new PurescriptWebpackPlugin({src: src, ffi: ffi}),
-             new webpack.optimize.CommonsChunkPlugin("vendor", "vendor.bundle.js"),
-           ]
+  resolve: { modulesDirectories: modulesDirectories, extensions: [ '', '.js', '.purs'] },
+  plugins: [
+    new PurescriptWebpackPlugin({src: src, ffi: ffi}),
+    new webpack.optimize.CommonsChunkPlugin("vendor", "vendor.bundle.js"),
+  ]
 };
 
 
