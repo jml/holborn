@@ -7,13 +7,14 @@
     "test": "test"
   },
   "dependencies": {
-    "jshint": "^2.9",
     "bower": "^1.7.7",
+    "jshint": "^2.9",
     "pulp": "^8",
     "purescript-psa": "^0.3.4",
     "react": "^0.14.7",
+    "react-dom": "^0.14.7",
     "touch": "^1.0.0",
-    "react-dom": "^0.14.7"
+    "webpack": "^1.12.14"
   },
   "devDependencies": {
     "purescript-webpack-plugin": "^0.1.1",
