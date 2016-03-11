@@ -36,6 +36,8 @@ in
       description = "Required so we can use git@... (openssh wants a unix account)";
       createHome = false;
       useDefaultShell = true;
+      # User account *must be active*. Do not remove the following:
+      # (nobody knows what the password is I never saw it before hashing)
       hashedPassword = "$6$XmkehFEu$Kpae6/dNLuZclOnV.AEoL/bS4C23YOoV6cYYWBUyLnMyw26mK2bioFecAq6uhlztho/G4ecznhQu78RW89Jux.";
     };
 
