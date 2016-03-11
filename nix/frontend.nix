@@ -10,6 +10,9 @@ stdenv.mkDerivation {
     cp -r ${node_modules}/node_modules .
     cp -r ${bower_modules}/bower_components .
 
+    # We're inheriting ./output (src above needs to be more clever)
+    rm -rf output
+
     # Russian comments in `Web.Cookies/foreign.js` need utf8:
     export LANG="en_US.UTF-8"
 
@@ -31,6 +34,7 @@ stdenv.mkDerivation {
       <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet" type="text/css">
     <body>
       <div id="container" class="container">
+        <script>window.holbornBaseUrl = "https://norf.co";</script>
         <script src="/static/vendor.bundle.$VENDOR_HASH.min.js"></script>
         <script src="/static/bundle.$BUNDLE_HASH.min.js"></script>
       </div>

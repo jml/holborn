@@ -59,7 +59,7 @@ type API =
 
 
 landing :: AppConf -> EitherT ServantErr IO Html
-landing AppConf{staticBaseUrl} = return $(shamletFile "./templates/landing.html")
+landing AppConf{staticBaseUrl, baseUrl} = return $(shamletFile "./templates/landing.html")
 
 
 signupPost :: AppConf -> SignupData -> EitherT ServantErr IO (Either SignupError SignupOk)

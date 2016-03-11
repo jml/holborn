@@ -1,4 +1,4 @@
-{ frontend }:
+{ frontend, proxy_port }:
 let common-config = ''
         listen          443 ssl spdy;
         ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
@@ -53,6 +53,14 @@ http {
             add_header Pragma public;
             add_header Cache-Control "public";
             if_modified_since off;
+        }
+
+        location /v1 {
+            proxy_pass         http://127.0.0.1:${proxy_port};
+            proxy_redirect     off;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Host $host;
         }
     }
 }

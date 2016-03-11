@@ -18,6 +18,7 @@ import Data.List (List(..), (:), toUnfoldable)
 import Data.Lens (view, set)
 import Data.Maybe (Maybe(..))
 import Web.Cookies as C
+import Holborn.Config (makeUrl)
 
 import Holborn.Auth as HA
 import Holborn.ManualEncoding.Signin (SigninData(..), username, password, SigninDataErrors(..), SigninOK(..))
@@ -65,7 +66,7 @@ spec = T.simpleSpec performAction render
 
     --runSignin :: forall eff. State -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) State
     runSignin state = do
-      r <- AJ.post "http://127.0.0.1:8002/v1/signin" (encodeJson state.formData)
+      r <- AJ.post (makeUrl "/v1/signin") (encodeJson state.formData)
       case r.status of
         StatusCode 201 -> case decodeJson r.response of
           Left err -> return (\state -> state { loading = false })

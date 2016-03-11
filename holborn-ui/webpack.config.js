@@ -6,7 +6,9 @@ var PurescriptWebpackPlugin = require('purescript-webpack-plugin');
 
 var src = ['bower_components/purescript-*/src/**/*.purs', 'src/**/*.purs'];
 
-var ffi = ['bower_components/purescript-*/src/**/*.js'];
+// TOOD "pulp server" writes a src/.webpack.js so we need to adjust
+// the ffi files to ignore that.
+var ffi = ['bower_components/purescript-*/src/**/*.js', 'src/**/FFI*.js'];
 
 var modulesDirectories = [
   'node_modules',

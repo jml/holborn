@@ -37,6 +37,7 @@ rec {
     web = { resources, pkgs, lib, config, ... }:
     let
         hp = pkgs.callPackage ../nix/all-packages.nix {};
+        ports = import ./ports.nix;
         holborn-openssh = pkgs.callPackage ../nix/holborn-ssh.nix {};
         holborn-api = hp.callPackage ../holborn-api {};
         holborn-repo = hp.callPackage ../holborn-repo {};
@@ -69,6 +70,8 @@ rec {
         nixpkgs.config.allowUnfree = true;
 
         services.openssh.ports = [ normalSSHPort ];
+        services.holborn-openssh.holbornApiEndpoint = "http://127.0.01:${ports.API}";
+        services.holborn-api.port = ports.API;
 
         environment.systemPackages = [ pkgs.git pkgs.vim frontend ];
         require = [
@@ -93,6 +96,9 @@ rec {
 
         # For SSL:
         services.nginx.enable = true;
-        services.nginx.config = import ./nix/nginx.conf.nix { inherit frontend; };
+        services.nginx.config = import ./nix/nginx.conf.nix {
+          inherit frontend;
+          proxy_port = ports.API;
+        };
     });
 }

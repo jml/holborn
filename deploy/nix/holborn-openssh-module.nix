@@ -13,7 +13,6 @@ let
     HostKey=${cfg.package}/etc/ssh_host_dsa_key
     Port=22
     PidFile=/tmp/holborn-openssh.pid
-    HolbornApiEndpoint=http://127.0.0.1:8002
   '';
 in
 {
@@ -23,6 +22,11 @@ in
         type = types.package;
         default = null;
         description = "the package";
+      };
+      holbornApiEndpoint = mkOption {
+        type = types.str;
+        default = null;
+        description = "holborn-api endpoint e.g. http://127.0.0.1:8002/";
       };
     };
   };
@@ -40,7 +44,7 @@ in
       requires = [ "holborn-api.service" ];
       after = [ "holborn-api.service" ];
 
-      serviceConfig.ExecStart = "${cfg.package}/bin/sshd -D -e -f ${ssh-config}";
+      serviceConfig.ExecStart = "${cfg.package}/bin/sshd -D -e -f ${ssh-config} -o \"HolbornApiEndpoint=${cfg.holbornApiEndpoint}\"";
     };
   };
 }
