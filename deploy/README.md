@@ -1,5 +1,13 @@
 # Deploying
 
 ```
-nixops deploy -s secrets/state.nixops
+nixops deploy
+```
+
+# Preparing the DB
+
+```
+nixops ssh web
+[root@web:~]# createuser holborn
+[root@web:~]# createdb holborn -O holborn
 ```

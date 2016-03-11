@@ -29,6 +29,8 @@ in
 
       environment = {
           PORT = "8002";
+          HOLBORN_PG_DATABASE = "holborn";
+          HOLBORN_PG_USER = "holborn";
       };
 
       serviceConfig.ExecStart = "${cfg.package}/bin/holborn-api-server";
