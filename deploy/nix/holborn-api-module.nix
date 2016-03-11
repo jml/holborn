@@ -31,6 +31,7 @@ in
       wantedBy = [ "multi-user.target" ];
       requires = [ "postgresql.service" ];
       after = [ "postgresql.service" ];
+      path = [ pkgs.openssh ];
 
       environment = {
           PORT = "${cfg.port}";
