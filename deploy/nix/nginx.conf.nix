@@ -45,9 +45,13 @@ http {
             expires -1;
             if_modified_since off;
         }
+        # Static content is content addressed (by hash) so we can
+        # cache forever.
         location /static {
             root ${frontend};
-            expires max; # content hashed
+            expires max;
+            add_header Pragma public;
+            add_header Cache-Control "public";
             if_modified_since off;
         }
     }

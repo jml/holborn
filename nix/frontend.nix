@@ -14,10 +14,10 @@ stdenv.mkDerivation {
     export LANG="en_US.UTF-8"
 
     NODE_ENV=production node_modules/.bin/webpack --config webpack.config.js --bail
-    cat bundle.js > bundle.min.js
-    cat vendor.bundle.js > vendor.bundle.min.js
-    # closure-compiler -O WHITESPACE_ONLY bundle.js > bundle.min.js
-    # closure-compiler -O WHITESPACE_ONLY vendor.bundle.js > vendor.bundle.min.js
+    # cat bundle.js > bundle.min.js
+    # cat vendor.bundle.js > vendor.bundle.min.js
+    closure-compiler --warning_level QUIET bundle.js > bundle.min.js
+    closure-compiler --warning_level QUIET vendor.bundle.js > vendor.bundle.min.js
 
     mkdir static
     export BUNDLE_HASH=$(nix-hash bundle.min.js)
