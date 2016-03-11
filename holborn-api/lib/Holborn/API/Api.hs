@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes        #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 
 module Holborn.API.Api
        ( API
@@ -57,12 +58,12 @@ type API =
     :<|> "v1" :> "signin" :> ReqBody '[JSON] SigninData :> Post '[JSON] SigninOK
 
 
-landing :: EitherT ServantErr IO Html
-landing = return $(shamletFile "./templates/landing.html")
+landing :: AppConf -> EitherT ServantErr IO Html
+landing AppConf{staticBaseUrl} = return $(shamletFile "./templates/landing.html")
 
 
 signupPost :: AppConf -> SignupData -> EitherT ServantErr IO (Either SignupError SignupOk)
-signupPost (AppConf conn jwtSecret _) SignupData{..} = do
+signupPost AppConf{conn, jwtSecret} SignupData{..} = do
     pwd <- liftIO (newPassword _password)
     result <- liftIO (runExceptT (U.signup conn (newUsername username) (newEmail email) pwd))
     case result of
@@ -80,7 +81,7 @@ signupPost (AppConf conn jwtSecret _) SignupData{..} = do
 -- password verified OK (checkPassword). The token is stored as a
 -- cookie in the client.
 signin :: AppConf -> SigninData -> EitherT ServantErr IO SigninOK
-signin (AppConf conn _ _) SigninData{..} = do
+signin AppConf{conn} SigninData{..} = do
     pwd <- liftIO (newPassword _SigninData_password)
     r <- liftIO $ query conn [sql|
                    select id, password
@@ -106,6 +107,6 @@ signin (AppConf conn _ _) SigninData{..} = do
 
 server :: AppConf -> Server API
 server conf =
-    landing
-    :<|> (signupPost conf)
-    :<|> (signin conf)
+    landing conf
+    :<|> signupPost conf
+    :<|> signin conf

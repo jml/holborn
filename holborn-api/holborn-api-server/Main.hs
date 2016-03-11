@@ -29,15 +29,25 @@ import Network.HTTP.Client (newManager, defaultManagerSettings)
 data Config = Config { _port :: Warp.Port
                      , pgDb :: String
                      , pgUser :: String
+                     , baseUrl :: String
+                     , staticBaseUrl :: String
                      }
 
 
 loadConfig :: IO Config
 loadConfig =
   Env.parse (Env.header "server") $
-  Config <$> Env.var Env.auto "PORT" (Env.def 8002 <> Env.help "Port to listen on")
-         <*> Env.var (Env.str Env.<=< Env.nonempty) "HOLBORN_PG_DATABASE" (Env.def "holborn" <> Env.help "pg database name")
-         <*> Env.var (Env.str Env.<=< Env.nonempty) "HOLBORN_PG_USER" (Env.def "holborn" <> Env.help "pg user")
+  Config
+  <$> Env.var Env.auto
+      "PORT" (Env.def 8002 <> Env.help "Port to listen on")
+  <*> Env.var (Env.str Env.<=< Env.nonempty)
+      "HOLBORN_PG_DATABASE" (Env.def "holborn" <> Env.help "pg database name")
+  <*> Env.var (Env.str Env.<=< Env.nonempty)
+      "HOLBORN_PG_USER" (Env.def "holborn" <> Env.help "pg user")
+  <*> Env.var (Env.str Env.<=< Env.nonempty)
+      "HOLBORN_BASE_URL" (Env.def "http://127.0.0.1:8002" <> Env.help "e.g. http://127.0.0.1:8002")
+  <*> Env.var (Env.str Env.<=< Env.nonempty)
+      "HOLBORN_STATIC_BASE_URL" (Env.def "http://127.0.0.1:1337" <> Env.help "e.g. http://127.0.0.1:1337")
 
 
 -- XXX: Duplicated & modified from Holborn.Repo.Config
@@ -78,5 +88,5 @@ main = do
     Config{..} <- loadConfig
     conn <- connect (defaultConnectInfo  { connectDatabase = pgDb, connectUser = pgUser})
     httpManager <- newManager defaultManagerSettings
-    let conf = AppConf conn "test-secret-todo-read-from-env" httpManager
+    let conf = AppConf conn "test-secret-todo-read-from-env" httpManager (fromString baseUrl) (fromString staticBaseUrl)
     Warp.runSettings (warpSettings _port) (app conf)
