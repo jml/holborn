@@ -15,7 +15,7 @@ var modulesDirectories = [
 
 var config = {
   entry: {
-    app: './src/entry',
+    app: './entry',
     vendor: ["react", "react-dom"]
   },
   output: { path: __dirname
