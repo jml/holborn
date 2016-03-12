@@ -13,6 +13,7 @@ stdenv.mkDerivation {
     sassc
     node_modules
     bower_modules
+    sassc
   ];
   shellHook = ''
     rm -rf node_modules bower_components
