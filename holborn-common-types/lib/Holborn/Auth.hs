@@ -29,10 +29,7 @@ import Data.Aeson (ToJSON(..), Value(..))
 import System.Entropy (getEntropy)
 import qualified Data.ByteString.Builder
 import Data.ByteString.Lazy (toStrict)
-import Control.Monad.Trans.Except (ExceptT, throwE)
 import Servant(FromText(..))
-
-import Holborn.API.Types (AppConf(..))
 
 data AuthToken = AuthToken ByteString deriving Show
 

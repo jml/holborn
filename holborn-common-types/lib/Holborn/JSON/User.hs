@@ -9,9 +9,9 @@ module Holborn.JSON.User
 import BasicPrelude
 import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON)
-import Data.Aeson.TH (defaultOptions, fieldLabelModifier, constructorTagModifier)
+import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import GHC.Generics (Generic)
-import Holborn.API.Types (Username, Email)
+import Holborn.API.Types (Username)
 import Holborn.Auth (AuthToken)
 
 data ListUsersRow = ListUsersRow

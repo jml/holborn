@@ -6,11 +6,11 @@ module Holborn.JSON.Response
 
 import BasicPrelude
 import Data.Char (toLower)
-import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 
 import Data.Aeson.TH (deriveJSON, defaultOptions, fieldLabelModifier, constructorTagModifier)
 
-
+-- TODO: We will move the pagination data into http headers to make
+-- trivial API requests easier to decode.
 data PaginatedResponse a = PaginatedResponse
     { _PaginatedResponse_values :: a
     , _PaginatedResponse_next :: Text -- token to identify next page

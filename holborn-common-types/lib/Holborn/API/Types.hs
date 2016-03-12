@@ -65,10 +65,12 @@ instance Prelude.Show Password where
 
 
 instance FromField Username where
-    fromField f (Just bs) = return (Username (decodeUtf8 bs))
+    fromField _ (Just bs) = return (Username (decodeUtf8 bs))
+    fromField _ _ = terror "FromField Username should always decode correctly"
 
 instance FromField Password where
-    fromField f (Just bs) = return (Password bs)
+    fromField _ (Just bs) = return (Password bs)
+    fromField _ _ = terror "FromField Password should always decode correctly"
 
 -- | Sum type of all API errors that we want to handle nicely (where
 -- nicely means something other than throwing a 500 with "something
@@ -100,6 +102,7 @@ instance FromField SSHKey where
     fromField f (Just bs) = case parseSSHKey bs of
         Just x -> return x
         _ -> returnError ConversionFailed f "Could not parse ssh key"
+    fromField _ _ = terror "FromField SSHKey should always decode correctly"
 
 instance ToField SSHKey where
     -- Serialize the parsed key (the one we usually use for comparisons etc.)
@@ -122,10 +125,10 @@ parseSSHKey keyData = do
   where
     -- Using unsafeperformIO because fingerprinting is morally a pure
     -- action but we 're usingn ssh-keygen for now.
-    fingerprint keyData = unsafePerformIO $ do
+    fingerprint keyData' = unsafePerformIO $ do
         -- e.g. ssh-keygen -l -f /dev/stdin <~/.ssh/id_rsa.pub
-        (i, o, e, p) <- runInteractiveCommand "ssh-keygen -l -f /dev/stdin"
-        BS.hPut i keyData
+        (i, o, _, _) <- runInteractiveCommand "ssh-keygen -l -f /dev/stdin"
+        BS.hPut i keyData'
         hClose i
         f <- BS.hGetContents o
         return $ case f of

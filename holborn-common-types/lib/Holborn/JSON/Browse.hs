@@ -10,7 +10,7 @@ module Holborn.JSON.Browse
 
 import BasicPrelude
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON)
-import Data.Aeson.TH (defaultOptions, fieldLabelModifier, constructorTagModifier)
+import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import GHC.Generics (Generic)
 import Data.Time.LocalTime (LocalTime)
 
