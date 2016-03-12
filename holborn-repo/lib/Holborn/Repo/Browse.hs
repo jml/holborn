@@ -42,7 +42,7 @@ type Author = Text
 
 type BrowseAPI =
   -- just the root
-  Get '[JSON, HTML] RepoMeta
+  Get '[JSON] RepoMeta
 
   -- e.g. /v1/repos/src/pulp/blob/master/setup.py
   :<|> "blob" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Blob
@@ -73,13 +73,16 @@ gitBrowserT = Nat (exceptTToEitherT . bimapExceptT gitExceptionToServantErr id)
 codeBrowser :: Repository -> Server BrowseAPI
 codeBrowser repo = enter gitBrowserT $
   -- XXX: What should we do for repos that don't have a master?
-  renderTree repo master []
+  renderMeta repo
   :<|> renderBlob repo
   :<|> renderTree repo
   :<|> renderCommits repo
   :<|> renderCommit repo
-  where
-    master = fromMaybe (terror "Impossible!") (fromText "master")
+
+
+renderMeta :: Repository -> RepoBrowser RepoMeta
+renderMeta repo =
+  pure (RepoMeta 10 11 12) -- Fake data
 
 
 renderBlob :: Repository -> Revision -> [Text] -> RepoBrowser Blob
