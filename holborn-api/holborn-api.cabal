@@ -51,6 +51,7 @@ library
                      , wai
                      , http-reverse-proxy
                      , http-client
+                     , http-types
 
   hs-source-dirs:      lib
 -- Disabled because there are too many warnings atm :(
