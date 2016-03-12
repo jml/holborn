@@ -96,4 +96,3 @@ executable holborn-api-server
                      , holborn-api
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
-  data-files:          templates/*.html
