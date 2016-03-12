@@ -4,7 +4,7 @@
 , pipes, pipes-aeson, pipes-bytestring, pipes-network, pipes-parse
 , pipes-safe, pipes-shell, pipes-zlib, process, servant
 , servant-blaze, servant-server, stdenv, tagged, text, transformers
-, wai, warp
+, wai, warp, holborn-json
 }:
 mkDerivation {
   pname = "holborn-repo";
@@ -18,7 +18,7 @@ mkDerivation {
     holborn-syntax http-types mtl network pipes pipes-aeson
     pipes-bytestring pipes-network pipes-parse pipes-safe pipes-shell
     pipes-zlib process servant servant-blaze servant-server tagged text
-    transformers wai warp
+    transformers wai warp holborn-json
   ];
   license = stdenv.lib.licenses.unfree;
 }

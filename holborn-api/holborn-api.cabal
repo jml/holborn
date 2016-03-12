@@ -6,23 +6,14 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Holborn.API.Types
-                     , Holborn.API.User
+  exposed-modules:     Holborn.API.User
                      , Holborn.API.Api
                      , Holborn.API.Internal
                      , Holborn.Docs
-                     , Holborn.Auth
                      , Holborn.Errors
-                     , Holborn.JSON.User
-                     , Holborn.JSON.Response
-
-                     , Holborn.JSON.Browse
                      , Holborn.API.Browse
-
-                     , Holborn.JSON.Settings.SSHKeys
+                     , Holborn.API.Auth
                      , Holborn.API.Settings.SSHKeys
-
-                     , Holborn.JSON.Settings.Profile
                      , Holborn.API.Settings.Profile
   build-depends:       base >=4.8 && <5
                      , postgresql-simple
@@ -30,7 +21,6 @@ library
                      , bytestring
                      , errors
                      , basic-prelude
-                     , bcrypt
                      , aeson >= 0.10
                      -- It looks like servant 0.5 is going to be
                      -- backwards-incompatible so limit upper version:
@@ -52,6 +42,7 @@ library
                      , http-reverse-proxy
                      , http-client
                      , http-types
+                     , holborn-json
 
   hs-source-dirs:      lib
 -- Disabled because there are too many warnings atm :(
@@ -95,5 +86,7 @@ executable holborn-api-server
                      , postgresql-simple
                      , http-client
                      , holborn-api
+                     , holborn-json
+
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings

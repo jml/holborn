@@ -21,8 +21,9 @@ import Servant
 
 import Holborn.API.Types (AppConf(..), Username, parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
-import Holborn.Auth (AuthToken(..), Permission(..), hasPermission, getAuthFromToken)
+import Holborn.Auth (AuthToken(..), Permission(..), hasPermission)
 import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
+import Holborn.API.Auth (getAuthFromToken)
 
 
 type API =

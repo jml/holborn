@@ -68,6 +68,7 @@ library
                      , servant-blaze
                      , blaze-markup
                      , blaze-html
+                     , holborn-json
 
 executable holborn-repo
   main-is:             Main.hs

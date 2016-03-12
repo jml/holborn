@@ -41,8 +41,12 @@ type Author = Text
 -- 'refs/heads/master'.
 
 type BrowseAPI =
-  Get '[JSON, HTML] Tree
+  -- just the root
+  Get '[JSON, HTML] RepoMeta
+
+  -- e.g. /v1/repos/src/pulp/blob/master/setup.py
   :<|> "blob" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Blob
+  -- e.g. /v1/repos/src/pulp/tree/master/
   :<|> "tree" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Tree
   :<|> "commits" :> Capture "revspec" Revision :> QueryParam "author" Author :> Get '[HTML] [Commit]
   :<|> "commit" :> Capture "revspec" Revision :> Get '[HTML] Commit

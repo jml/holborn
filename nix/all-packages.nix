@@ -1,3 +1,5 @@
+# Override haskell packages to pretend that our own libraries and
+# binaries are part of standard hackage package set.
 { haskellPackages, haskell }:
 haskellPackages.override {
     overrides = self: super: {
@@ -5,6 +7,7 @@ haskellPackages.override {
       holborn-api = self.callPackage ../holborn-api {};
       holborn-repo = self.callPackage ../holborn-repo {};
       holborn-syntax = self.callPackage ../holborn-syntax {};
+      holborn-json = self.callPackage ../holborn-json {};
 
       # Temporary jailbreak until servant has been adjusted to include
       # aeson 0.11:

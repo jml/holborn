@@ -23,7 +23,8 @@ import Data.Aeson (Value(..), object, (.=))
 import Servant
 
 import Holborn.API.Types (AppConf(..), Username)
-import Holborn.Auth (AuthToken(..), Permission(..), hasPermission, getAuthFromToken)
+import Holborn.API.Auth (getAuthFromToken)
+import Holborn.Auth (AuthToken(..), Permission(..), hasPermission)
 import Holborn.Errors (JSONCodeableError(..))
 import Network.Wai (Application, responseLBS)
 import Network.HTTP.ReverseProxy (waiProxyTo, defaultOnExc, WaiProxyResponse(WPRModifiedRequest, WPRResponse), ProxyDest(..))
@@ -56,7 +57,7 @@ browse :: AppConf -> Maybe AuthToken -> Owner -> Repo -> Application
 browse AppConf{conn, httpManager} token owner repo =
     waiProxyTo proxy defaultOnExc httpManager
   where
-    -- pas the raw request through if the user is authorized
+    -- pass the raw request through if the user is authorized
     proxy request = do
         return $ case owner of
             "jml" -> WPRResponse (responseLBS status404 [] "not found")
