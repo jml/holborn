@@ -3,7 +3,7 @@
 , errors, http-reverse-proxy, jwt, postgresql-simple, process
 , QuickCheck, servant, servant-blaze, servant-docs, servant-server
 , shakespeare, stdenv, tasty, tasty-hunit, tasty-quickcheck, text
-, time, transformers, wai, warp, holborn-json
+, time, transformers, wai, warp, holborn-common-types
 }:
 mkDerivation {
   pname = "holborn-api";
@@ -16,7 +16,7 @@ mkDerivation {
     containers either entropy errors http-reverse-proxy jwt
     postgresql-simple process servant servant-blaze servant-docs
     servant-server shakespeare text time transformers wai
-    holborn-json
+    holborn-common-types
   ];
   executableHaskellDepends = [
     base basic-prelude blaze-html bytestring envparse postgresql-simple

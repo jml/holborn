@@ -3,7 +3,7 @@
 , servant, servant-server, stdenv, time, transformers
 }:
 mkDerivation {
-  pname = "holborn-json";
+  pname = "holborn-common-types";
   version = "0.1.0.0";
   src = ./.;
   libraryHaskellDepends = [
