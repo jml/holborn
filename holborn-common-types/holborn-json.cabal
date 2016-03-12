@@ -17,6 +17,7 @@ library
                      , Holborn.JSON.Browse
                      , Holborn.JSON.Settings.SSHKeys
                      , Holborn.JSON.Settings.Profile
+                     , Holborn.JSON.RepoMeta
                      , Holborn.API.Types
                      , Holborn.Auth
 

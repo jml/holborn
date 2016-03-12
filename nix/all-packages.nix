@@ -7,7 +7,7 @@ haskellPackages.override {
       holborn-api = self.callPackage ../holborn-api {};
       holborn-repo = self.callPackage ../holborn-repo {};
       holborn-syntax = self.callPackage ../holborn-syntax {};
-      holborn-common-types = self.callPackage ../holborn-json {};
+      holborn-common-types = self.callPackage ../holborn-common-types {};
 
       # Temporary jailbreak until servant has been adjusted to include
       # aeson 0.11:
