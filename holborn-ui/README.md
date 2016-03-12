@@ -14,15 +14,24 @@ $ pulp server  # --host 0.0.0.0 if running from inside Vagrant
 Check e.g. 127.0.0.1/#server/keys
 
 
-# Making the build smaller
+# Sass
 
-The debug build is 1.4M. For production we want a smaller build which
-we can do like so:
+We're using http://sass-lang.com/ to compile scss files to css files. Invoke like this:
 
 ```
-rm -rf output && NODE_ENV=production webpack --config webpack.config.js
-closure-compiler bundle.js > bundle.js.min
-closure-compiler vendor.bundle.js > vendor.bundle.js.min
+sassc scss/holborn-ui.scss static/holborn-ui.css
 ```
 
-Eventually this will go into a nix build of course.
+If developing a lot it'll be easier to run with a filesystem watcher, e.g.:
+
+```
+while inotifywait -e close_write,moved_from -r scss/; do sassc scss/holborn-ui.scss static/holborn-ui.css; done
+```
+
+
+# Notes
+
+## Making the build smaller
+
+See ./nix/frontend.nix for the exact invocations needed to make the
+build smaller.
