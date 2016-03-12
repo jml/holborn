@@ -7,11 +7,12 @@ let
   ssh-config = pkgs.writeText "ssh-config" ''
     UsePrivilegeSeparation=no
     PasswordAuthentication=no
-    HostKey=${cfg.package}/etc/ssh/ssh_host_rsa_key
-    HostKey=${cfg.package}/etc/ssh/ssh_host_dsa_key
+
+    # PUPPY not sure we can use those keys they should be regenerated.
+    HostKey=${cfg.package}/etc/ssh_host_rsa_key
+    HostKey=${cfg.package}/etc/ssh_host_dsa_key
     Port=22
     PidFile=/tmp/holborn-openssh.pid
-    HolbornApiEndpoint=http://127.0.0.1:8082
   '';
 in
 {
@@ -22,6 +23,11 @@ in
         default = null;
         description = "the package";
       };
+      holbornApiEndpoint = mkOption {
+        type = types.str;
+        default = null;
+        description = "holborn-api endpoint e.g. http://127.0.0.1:8002/";
+      };
     };
   };
 
@@ -30,6 +36,8 @@ in
       description = "Required so we can use git@... (openssh wants a unix account)";
       createHome = false;
       useDefaultShell = true;
+      # User account *must be active*. Do not remove the following:
+      # (nobody knows what the password is I never saw it before hashing)
       hashedPassword = "$6$XmkehFEu$Kpae6/dNLuZclOnV.AEoL/bS4C23YOoV6cYYWBUyLnMyw26mK2bioFecAq6uhlztho/G4ecznhQu78RW89Jux.";
     };
 
@@ -38,7 +46,7 @@ in
       requires = [ "holborn-api.service" ];
       after = [ "holborn-api.service" ];
 
-      serviceConfig.ExecStart = "${cfg.package}/bin/sshd -D -e -f ${ssh-config}";
+      serviceConfig.ExecStart = "${cfg.package}/bin/sshd -D -e -f ${ssh-config} -o \"HolbornApiEndpoint=${cfg.holbornApiEndpoint}\"";
     };
   };
 }

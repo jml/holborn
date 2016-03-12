@@ -20,6 +20,7 @@ import Holborn.Fetchable (class Fetchable)
 import Routing.Match (Match)
 import Routing.Match.Class (lit)
 
+import Holborn.Config (makeUrl)
 import Debug.Trace
 
 -- We have one route to select where we want to go, and an "OK" route
@@ -61,12 +62,9 @@ settingsRoutes =
   <|> lit "organisations" $> (startWithRoute OrganisationSettings)
 
 
-baseURL :: String
-baseURL = "http://127.0.0.1:8002/v1"
-
 instance fetchSettingsRoutes :: Fetchable SettingsRoutes State where
   fetch SSHKeySettings s = do
-    r <- AJ.get (baseURL ++ "/users/alice/keys")
+    r <- AJ.get (makeUrl "/v1//users/alice/keys")
     return $ case decodeJson r.response of
       Left err -> set routeLens SSHKeySettings s
       Right keys -> set routeLens (SSHKeySettingsOK (SSHKeys.initialState { keys = keys })) s

@@ -29,6 +29,7 @@ import Unsafe.Coerce (unsafeCoerce)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Data.Lens (LensP)
 import Data.List (filter)
+import Holborn.Config (makeUrl)
 
 import Debug.Trace (traceAnyM, traceAny)
 
@@ -136,7 +137,7 @@ spec = T.simpleSpec performAction render
     -- errors etc).
     addKey :: forall eff. State -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) (State -> State)
     addKey state = do
-      r <- HA.post "http://127.0.0.1:8002/v1/user/keys" (encodeJson state.formData)
+      r <- HA.post (makeUrl "/v1/user/keys") (encodeJson state.formData)
       return case r.status of
          StatusCode 201 -> case decodeJson r.response of
              Left err -> \state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpeced broke." }
@@ -151,7 +152,7 @@ spec = T.simpleSpec performAction render
 
     removeKey :: forall eff. Int -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) (State -> State)
     removeKey keyId = do
-      r <- HA.delete ("http://127.0.0.1:8002/v1/user/keys/" ++ show keyId) :: AJ.Affjax (cookie :: C.COOKIE | eff) Unit
+      r <- HA.delete ((makeUrl "/v1/user/keys/") ++ show keyId) :: AJ.Affjax (cookie :: C.COOKIE | eff) Unit
       return $ case r.status of
           StatusCode 204 -> \state -> state { keys = filter (\(Key { id }) -> id /= keyId) state.keys, loading = false }
           _ -> id -- TODO error handling

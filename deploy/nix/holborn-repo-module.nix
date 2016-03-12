@@ -30,6 +30,7 @@ in
 
       environment = {
           REPO_ROOT = "/tmp";
+          PORT = "8080";
       };
 
       serviceConfig.DevicePolicy = "closed";

@@ -36,9 +36,19 @@ rec {
 
     web = { resources, pkgs, lib, config, ... }:
     let
+        hp = pkgs.callPackage ../nix/all-packages.nix {};
+        ports = import ./ports.nix;
         holborn-openssh = pkgs.callPackage ../nix/holborn-ssh.nix {};
-        holborn-api = pkgs.haskellPackages.callPackage ../holborn-api {};
-        holborn-repo = pkgs.haskellPackages.callPackage ../holborn-repo {};
+        holborn-api = hp.callPackage ../holborn-api {};
+        holborn-repo = hp.callPackage ../holborn-repo {};
+
+        # TODO - the following three should live holborn-ui:
+        node_modules = pkgs.callPackage ../nix/node_modules.nix {};
+        bower_modules = pkgs.callPackage ../nix/bower_modules.nix { inherit node_modules; };
+        frontend = pkgs.callPackage ../nix/frontend.nix {
+          inherit node_modules bower_modules;
+          haskellPackages = hp;
+        };
     in
         (common-config // {
         deployment.targetEnv = "ec2";
@@ -54,14 +64,16 @@ rec {
         # after server creation and deployment we need to comment out
         # the following line because SSH will have moved to port
         # `normalSSHPort`:
-        deployment.targetPort = 22;
+        # deployment.targetPort = 22;
 
         # Our holborn code is unfree:
         nixpkgs.config.allowUnfree = true;
 
         services.openssh.ports = [ normalSSHPort ];
+        services.holborn-openssh.holbornApiEndpoint = "http://127.0.01:${ports.API}";
+        services.holborn-api.port = ports.API;
 
-        environment.systemPackages = [ pkgs.git pkgs.vim ];
+        environment.systemPackages = [ pkgs.git pkgs.vim frontend ];
         require = [
           ./nix/holborn-openssh-module.nix
           ./nix/holborn-api-module.nix
@@ -76,5 +88,17 @@ rec {
         services.postgresql.authentication = ''
           host all all 127.0.0.1/32 trust
         '';
+
+        security.acme.certs."norf.co" = {
+          webroot = "/var/www/challenges";
+          email = "tehunger@gmail.com";
+        };
+
+        # For SSL:
+        services.nginx.enable = true;
+        services.nginx.config = import ./nix/nginx.conf.nix {
+          inherit frontend;
+          proxy_port = ports.API;
+        };
     });
 }

@@ -38,6 +38,8 @@ data AppConf = AppConf
   { conn :: Connection
   , jwtSecret :: Text
   , httpManager :: Manager
+  , baseUrl :: Text -- e.g. https://holborn-example.com/
+  , staticBaseUrl :: Text -- e.g. https://holborn-example.com/
   }
 
 

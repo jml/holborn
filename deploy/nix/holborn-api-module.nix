@@ -12,6 +12,11 @@ in
         default = null;
         description = "the package";
       };
+      port = mkOption {
+        type = types.str;
+        default = null;
+        description = "port to run on";
+      };
     };
   };
 
@@ -26,9 +31,13 @@ in
       wantedBy = [ "multi-user.target" ];
       requires = [ "postgresql.service" ];
       after = [ "postgresql.service" ];
+      path = [ pkgs.openssh ];
 
       environment = {
-          PORT = "8082";
+          PORT = "${cfg.port}";
+          HOLBORN_PG_DATABASE = "holborn";
+          HOLBORN_PG_USER = "holborn";
+          HOLBORN_BASE_URL = "https://norf.co";
       };
 
       serviceConfig.ExecStart = "${cfg.package}/bin/holborn-api-server";

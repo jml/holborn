@@ -37,7 +37,6 @@ import DOM.Node.ParentNode (querySelector) as DOM
 main :: forall eff. Eff (dom :: DOM.DOM, console :: CONSOLE | eff) Unit
 main = void do
   let reactElement = (R.createFactory Router.component {})
-
   document <- DOM.window >>= DOM.document
   container <- fromJust <<< toMaybe <$> DOM.querySelector "#container" (DOM.htmlDocumentToParentNode document)
   RD.render reactElement container

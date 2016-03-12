@@ -6,7 +6,9 @@ var PurescriptWebpackPlugin = require('purescript-webpack-plugin');
 
 var src = ['bower_components/purescript-*/src/**/*.purs', 'src/**/*.purs'];
 
-var ffi = ['bower_components/purescript-*/src/**/*.js'];
+// TOOD "pulp server" writes a src/.webpack.js so we need to adjust
+// the ffi files to ignore that.
+var ffi = ['bower_components/purescript-*/src/**/*.js', 'src/**/FFI*.js'];
 
 var modulesDirectories = [
   'node_modules',
@@ -15,7 +17,7 @@ var modulesDirectories = [
 
 var config = {
   entry: {
-    app: './src/Main.purs',
+    app: './entry',
     vendor: ["react", "react-dom"]
   },
   output: { path: __dirname
@@ -25,10 +27,11 @@ var config = {
   module: { loaders: [ { test: /\.purs$/
                          , loader: 'purs-loader'
                        } ] },
-  resolve: { modulesDirectories: modulesDirectories },
-  plugins: [ new PurescriptWebpackPlugin({src: src, ffi: ffi}),
-             new webpack.optimize.CommonsChunkPlugin("vendor", "vendor.bundle.js"),
-           ]
+  resolve: { modulesDirectories: modulesDirectories, extensions: [ '', '.js', '.purs'] },
+  plugins: [
+    new PurescriptWebpackPlugin({src: src, ffi: ffi}),
+    new webpack.optimize.CommonsChunkPlugin("vendor", "vendor.bundle.js"),
+  ]
 };
 
 
