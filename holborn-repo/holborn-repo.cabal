@@ -84,3 +84,4 @@ executable holborn-repo
                      , wai
                      , warp
                      , envparse >=0.2
+                     , holborn-common-types
