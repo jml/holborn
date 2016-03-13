@@ -7,7 +7,7 @@ let
 
 in
 stdenv.mkDerivation {
-  name = "integration-tests";
+  name = "integration-protocol-test-1";
   buildDepends = [ holborn-repo git ];
   srcs = ./.;
   phases = "unpackPhase buildPhase";
@@ -27,7 +27,7 @@ stdenv.mkDerivation {
       # Clone the test repository
       mkdir $out
       pushd $out
-      git clone --verbose http://127.0.0.1:8080/org/hello >> $out/integration-test-log
+      git clone --verbose http://127.0.0.1:8080/v1/repos/org/hello >> $out/integration-test-log
       popd
 
       # The same content?
