@@ -7,10 +7,12 @@ module Holborn.JSON.User
        ) where
 
 import BasicPrelude
+
 import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import GHC.Generics (Generic)
+
 import Holborn.API.Types (Username)
 import Holborn.Auth (AuthToken)
 

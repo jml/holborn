@@ -12,10 +12,13 @@ import GHC.Generics (Generic)
 
 
 data RepoMeta = RepoMeta
-    { _RepoMeta_number_commits :: Int -- git rev-list --count master
+    { _RepoMeta_owner :: Text
+    , _RepoMeta_repo :: Text
+    , _RepoMeta_number_commits :: Int -- git rev-list --count master
     , _RepoMeta_number_objects :: Int -- git count-objects
     , _RepoMeta_size :: Int -- git count-objects
-    -- TODO newest commit etc.
+    -- TODO newest commit
+    -- TODO branches, tags, ..., everything needed to render the landing page
     } deriving (Show, Generic)
 
 

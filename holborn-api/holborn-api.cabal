@@ -64,6 +64,7 @@ Test-Suite holborn-api-tests
                      , QuickCheck
                      , postgresql-simple
                      , errors
+                     , holborn-common-types
 
   hs-source-dirs:      tests
   default-language:    Haskell2010

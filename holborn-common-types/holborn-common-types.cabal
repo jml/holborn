@@ -15,14 +15,12 @@ library
   exposed-modules:     Holborn.JSON.User
                      , Holborn.JSON.Response
                      , Holborn.JSON.Browse
+                     , Holborn.JSON.RepoMeta
                      , Holborn.JSON.Settings.SSHKeys
                      , Holborn.JSON.Settings.Profile
-                     , Holborn.JSON.RepoMeta
                      , Holborn.API.Types
                      , Holborn.Auth
 
-  -- other-modules:
-  -- other-extensions:
   build-depends:       base >=4.8 && <5.0
                      , aeson >= 0.10
                      , basic-prelude >= 0.3.13 && <0.6

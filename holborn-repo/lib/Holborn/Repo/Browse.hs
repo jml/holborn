@@ -28,6 +28,7 @@ import Holborn.Repo.GitLayer ( Blob
                              , getTree
                              , notImplementedYet
                              , withRepository
+                             , fillRepoMeta
                              )
 import Holborn.ServantExtensions (CaptureAll)
 import Holborn.JSON.RepoMeta (RepoMeta(..))
@@ -42,7 +43,7 @@ type Author = Text
 
 type BrowseAPI =
   -- just the root
-  Get '[JSON] RepoMeta
+  Get '[HTML, JSON] RepoMeta
 
   -- e.g. /v1/repos/src/pulp/blob/master/setup.py
   :<|> "blob" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Blob
@@ -81,8 +82,9 @@ codeBrowser repo = enter gitBrowserT $
 
 
 renderMeta :: Repository -> RepoBrowser RepoMeta
-renderMeta repo =
-  pure (RepoMeta 10 11 12) -- Fake data
+renderMeta repo = do
+  x <- withRepository repo fillRepoMeta
+  pure x
 
 
 renderBlob :: Repository -> Revision -> [Text] -> RepoBrowser Blob
