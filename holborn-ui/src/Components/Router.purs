@@ -66,6 +66,11 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
   fetch (Settings s) state = do
     sr <- fetch (view SettingsRoute.routeLens s) s -- of type SettingsRoute
     pure (set routeLens (Settings sr) state)
+
+  fetch (BrowseRoute s) state = do
+    sr <- fetch (view Browse.routeLens s) s
+    pure (set routeLens (BrowseRoute sr) state)
+
   fetch rt s = do
     pure (set routeLens rt s)
 

@@ -15,6 +15,7 @@ data SigninData = SigninData { username :: String, password :: String }
 data SigninDataErrors = SigninDataErrors { username :: Maybe String, password :: Maybe String }
 data SigninOK = SigninOK { token :: String }
 
+
 derive instance genericSigninData :: Generic SigninData
 derive instance genericSigninDataErrors :: Generic SigninDataErrors
 derive instance genericSigninOK :: Generic SigninOK
