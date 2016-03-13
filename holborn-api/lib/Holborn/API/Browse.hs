@@ -46,13 +46,29 @@ type Owner = Text
 type Repo = Text
 
 type API =
-    "v1"
-    :> "repos"
-    :> Header "Authorization" AuthToken
-    :> Capture "owner" Owner
-    :> Capture "repo" Repo
-    :> Get '[JSON] BrowseMetaResponse
-
+    "v1" :> "repos"
+         :> Header "Authorization" AuthToken
+         :> Capture "owner" Owner
+         :> Capture "repo" Repo
+         :> Get '[JSON] BrowseMetaResponse
+    :<|> "v1" :> "repos"
+         :> Header "Authorization" AuthToken
+         :> Capture "owner" Owner
+         :> Capture "repo" Repo
+         :> "git" :> "trees"
+         :> Raw
+    :<|> "v1" :> "repos"
+         :> Header "Authorization" AuthToken
+         :> Capture "owner" Owner
+         :> Capture "repo" Repo
+         :> "git" :> "blobs"
+         :> Raw
+    :<|> "v1" :> "repos"
+         :> Header "Authorization" AuthToken
+         :> Capture "owner" Owner
+         :> Capture "repo" Repo
+         :> "git" :> "commits"
+         :> Raw
 
 data BrowseError = NotFound
 
@@ -61,8 +77,11 @@ instance JSONCodeableError BrowseError where
 
 
 server :: AppConf -> Server API
-server conf = enter jsonErrorHandler $
-  browse conf
+server conf =
+  enter jsonErrorHandler (browse conf)
+  :<|> treeCommitBlob conf
+  :<|> treeCommitBlob conf
+  :<|> treeCommitBlob conf
 
 
 -- | We're calling repo to get a JSON fragment which we then
@@ -88,3 +107,15 @@ browse AppConf{conn, httpManager} token owner repo = do
       , _BrowseMetaResponse_description = "fake description"
       , _BrowseMetaResponse_created_at = Time.LocalTime (Time.ModifiedJulianDay 2000) (Time.TimeOfDay 1 1 1)
       }
+
+-- Tree, commit & blob are passed straight through if they meet the
+-- authentication requirements.
+treeCommitBlob :: AppConf -> Maybe AuthToken -> Owner -> Repo -> Application
+treeCommitBlob AppConf{conn, httpManager} token owner repo =
+    waiProxyTo proxy defaultOnExc httpManager
+  where
+    -- pass the raw request through if the user is authorized
+    proxy request = do
+        return $ case owner of
+            "jml" -> WPRResponse (responseLBS status404 [] "not found")
+            _  -> WPRModifiedRequest request (ProxyDest "127.0.0.1" 8080)

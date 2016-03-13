@@ -35,9 +35,17 @@ data Action = NOP
 instance browseFetchable :: Fetchable BrowseRoutes State where
   fetch (Home owner repo) state = do
     r <- AJ.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo))
-    case spy (decodeJson r.response) of
+    newState <- case spy (decodeJson r.response) of
       Left err -> pure (set routeLens (HomeLoaded owner repo) state)
       Right browseMetaResponse ->
+        let state' = (set routeLens (HomeLoaded owner repo) state)
+        in pure (set meta (Just browseMetaResponse) state')
+
+    -- TODO tree and metadata can be fetched in parallel (see Aff Par monad)
+    rTree <- AJ.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/tree/master"))
+    case spy (decodeJson rTree.response) of
+      Left err -> pure (set routeLens (HomeLoaded owner repo) state)
+      Right tree ->
         let state' = (set routeLens (HomeLoaded owner repo) state)
         in pure (set meta (Just browseMetaResponse) state')
 
