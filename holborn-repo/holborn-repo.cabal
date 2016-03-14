@@ -68,6 +68,7 @@ library
                      , servant-blaze
                      , blaze-markup
                      , blaze-html
+                     , holborn-common-types
 
 executable holborn-repo
   main-is:             Main.hs
@@ -83,3 +84,4 @@ executable holborn-repo
                      , wai
                      , warp
                      , envparse >=0.2
+                     , holborn-common-types

@@ -1,0 +1,43 @@
+name:                holborn-common-types
+version:             0.1.0.0
+-- synopsis:
+-- description:
+license:             AllRightsReserved
+author:              teh, jml
+maintainer:          tehunger@gmail.com
+-- copyright:
+-- category:
+build-type:          Simple
+-- extra-source-files:
+cabal-version:       >=1.10
+
+library
+  exposed-modules:     Holborn.JSON.User
+                     , Holborn.JSON.Response
+                     , Holborn.JSON.Browse
+                     , Holborn.JSON.RepoMeta
+                     , Holborn.JSON.Settings.SSHKeys
+                     , Holborn.JSON.Settings.Profile
+                     , Holborn.API.Types
+                     , Holborn.Auth
+
+  build-depends:       base >=4.8 && <5.0
+                     , aeson >= 0.10
+                     , basic-prelude >= 0.3.13 && <0.6
+                     , bcrypt
+                     , process
+                     , http-client
+                     , bytestring
+                     , time
+                     , postgresql-simple
+                     , entropy
+                     , containers
+                     , transformers
+                     , servant >=0.4 && <0.5
+                     , servant-server >=0.4 && <0.5
+
+  hs-source-dirs:      lib
+  ghc-options:         -Wall
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings

@@ -22,7 +22,8 @@ import Servant
 
 import Holborn.API.Types (AppConf(..), Username)
 import Holborn.JSON.Settings.Profile (ProfileData(..))
-import Holborn.Auth (AuthToken(..), Permission(..), hasPermission, getAuthFromToken)
+import Holborn.Auth (AuthToken(..), Permission(..), hasPermission)
+import Holborn.API.Auth (getAuthFromToken)
 import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
 
 

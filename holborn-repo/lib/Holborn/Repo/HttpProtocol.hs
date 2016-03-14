@@ -38,9 +38,11 @@ import Holborn.Repo.GitLayer (makeRepository)
 -- | The git pull & push repository API. The URL schema is borrowed
 -- from github, i.e. `/user/repo` or `/org/repo`.
 type RepoAPI =
-    Capture "userOrOrg" Text
-        :> Capture "repo" Text
-        :> (BrowseAPI :<|> GitProtocolAPI)
+    "v1"
+    :> "repos"
+    :> Capture "owner" Text
+    :> Capture "repo" Text
+    :> (BrowseAPI :<|> GitProtocolAPI)
 
 
 repoAPI :: Proxy RepoAPI
@@ -48,11 +50,11 @@ repoAPI = Proxy
 
 
 repoServer :: Config -> Server RepoAPI
-repoServer config userOrOrg repoName =
+repoServer config owner repoName =
     codeBrowser repo :<|> gitProtocolAPI repoPath
     where
-      repo = makeRepository userOrOrg repoName repoPath
-      repoPath = buildRepoPath config userOrOrg repoName
+      repo = makeRepository owner repoName repoPath
+      repoPath = buildRepoPath config owner repoName
 
 
 -- | The core git protocol for a single repository.

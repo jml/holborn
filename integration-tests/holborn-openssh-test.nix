@@ -18,7 +18,7 @@ let
 
 in
 stdenv.mkDerivation {
-  name = "integration-tests";
+  name = "holborn-openssh-test";
   buildDepends = [ git holborn-ssh ];
   srcs = ./.;
   phases = "unpackPhase buildPhase";

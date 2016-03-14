@@ -16,7 +16,6 @@ module Holborn.Auth
        , hasPermission
        , webPermissions
        , createAuthToken
-       , getAuthFromToken
        ) where
 
 import BasicPrelude
@@ -30,11 +29,7 @@ import Data.Aeson (ToJSON(..), Value(..))
 import System.Entropy (getEntropy)
 import qualified Data.ByteString.Builder
 import Data.ByteString.Lazy (toStrict)
-import Control.Monad.Trans.Except (ExceptT, throwE)
 import Servant(FromText(..))
-
-import Holborn.Errors (APIError(..))
-import Holborn.API.Types (AppConf(..))
 
 data AuthToken = AuthToken ByteString deriving Show
 
@@ -101,19 +96,6 @@ createAuthToken = fmap tok (getEntropy 12)
 
 instance ToJSON AuthToken where
     toJSON (AuthToken x) = String (decodeUtf8 x)
-
-
--- ExceptT trying to auth the user
-getAuthFromToken :: AppConf -> Maybe AuthToken -> ExceptT (APIError a) IO (Int, Permissions)
-getAuthFromToken AppConf{conn=conn} token = do
-    authToken <- case token of
-        Nothing -> throwE MissingAuthToken
-        Just x -> return x
-
-    maybeUser <- liftIO $ userFromToken conn authToken
-    case maybeUser of
-        Just (userId, permissions) -> return (userId, permissions)
-        Nothing -> throwE InvalidAuthToken
 
 
 instance FromText AuthToken where

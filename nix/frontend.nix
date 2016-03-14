@@ -1,8 +1,15 @@
-{ pkgs, stdenv, nodejs-4_x, closurecompiler, nix, node_modules, bower_modules, haskellPackages, glibcLocales }:
+{ pkgs, stdenv, nodejs-4_x, closurecompiler, nix, node_modules, bower_modules,
+  haskellPackages, glibcLocales, zopfli }:
 stdenv.mkDerivation {
   name = "holborn-frontend";
   phases = "unpackPhase buildPhase installPhase";
-  buildInputs = [ nodejs-4_x nix closurecompiler haskellPackages.purescript glibcLocales ];
+  buildInputs = [
+    nodejs-4_x nix
+    closurecompiler
+    haskellPackages.purescript
+    glibcLocales
+    zopfli
+  ];
   src = ../holborn-ui;
 
   buildPhase = ''
@@ -22,11 +29,17 @@ stdenv.mkDerivation {
     closure-compiler --warning_level QUIET bundle.js > bundle.min.js
     closure-compiler --warning_level QUIET vendor.bundle.js > vendor.bundle.min.js
 
-    mkdir static
+    # TODO ./static already exists in our source but relying on this
+    # implicit contract is probably not a good idea.
+    # mkdir static
     export BUNDLE_HASH=$(nix-hash bundle.min.js)
     export VENDOR_HASH=$(nix-hash vendor.bundle.min.js)
     mv bundle.min.js static/bundle.$BUNDLE_HASH.min.js
     mv vendor.bundle.min.js static/vendor.bundle.$VENDOR_HASH.min.js
+
+    # Note that zopfli keeps the uncompressed file around. We need
+    # that for clients that don't send accept-encoding: gzip
+    zopfli -i1000 static/*.min.js
 
     cat >index.html <<HEREDOC
     <head>

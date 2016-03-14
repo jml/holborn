@@ -28,9 +28,10 @@ import Holborn.Repo.GitLayer ( Blob
                              , getTree
                              , notImplementedYet
                              , withRepository
+                             , fillRepoMeta
                              )
 import Holborn.ServantExtensions (CaptureAll)
-
+import Holborn.JSON.RepoMeta (RepoMeta(..))
 
 -- | The author of a commit
 type Author = Text
@@ -41,11 +42,15 @@ type Author = Text
 -- 'refs/heads/master'.
 
 type BrowseAPI =
-  Get '[JSON, HTML] Tree
-  :<|> "blob" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Blob
-  :<|> "tree" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Tree
+  -- just the root
+  Get '[HTML, JSON] RepoMeta
+
+  -- e.g. /v1/repos/src/pulp/blob/master/setup.py
+  :<|> "git" :> "blobs" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Blob
+  -- e.g. /v1/repos/src/pulp/tree/master/
+  :<|> "git" :> "trees" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML, JSON] Tree
   :<|> "commits" :> Capture "revspec" Revision :> QueryParam "author" Author :> Get '[HTML] [Commit]
-  :<|> "commit" :> Capture "revspec" Revision :> Get '[HTML] Commit
+  :<|> "git" :> "commits" :> Capture "revspec" Revision :> Get '[HTML] Commit
 
 
 browseAPI :: Proxy BrowseAPI
@@ -69,13 +74,17 @@ gitBrowserT = Nat (exceptTToEitherT . bimapExceptT gitExceptionToServantErr id)
 codeBrowser :: Repository -> Server BrowseAPI
 codeBrowser repo = enter gitBrowserT $
   -- XXX: What should we do for repos that don't have a master?
-  renderTree repo master []
+  renderMeta repo
   :<|> renderBlob repo
   :<|> renderTree repo
   :<|> renderCommits repo
   :<|> renderCommit repo
-  where
-    master = fromMaybe (terror "Impossible!") (fromText "master")
+
+
+renderMeta :: Repository -> RepoBrowser RepoMeta
+renderMeta repo = do
+  x <- withRepository repo fillRepoMeta
+  pure x
 
 
 renderBlob :: Repository -> Revision -> [Text] -> RepoBrowser Blob

@@ -17,6 +17,7 @@ module Holborn.Repo.GitLayer
        , makeRepository
        , notImplementedYet
        , withRepository
+       , fillRepoMeta
        ) where
 
 import BasicPrelude
@@ -40,6 +41,7 @@ import qualified Text.Blaze.Html5.Attributes as A
 -- XXX: Get the instances. Need to move all HTML formatting stuff to a
 -- separate module, and leave this just about using Git.
 import Holborn.Repo.HtmlFormatTokens ()
+import Holborn.JSON.RepoMeta (RepoMeta(..))
 import Holborn.Syntax (annotateCode)
 
 -- | A git repository
@@ -222,10 +224,27 @@ data Tree = Tree { _gitTree :: Git.Tree GitRepo
                  , treeRepository :: Repository
                  }
 
--- TODO probably better to transform Tree to an object that can encode
--- the tree completely than to do manual encoding.
+-- TODO - Gitlib doesn't seem to give us all the information we need
+-- like mode, last commit etc. for an entry. Needs work.
+treeEntryToList entry@(Git.BlobEntry oid kind) =
+    [ ("type", "blob")
+    ]
+treeEntryToList entry@(Git.TreeEntry oid) =
+    [ ("type", "tree")
+    ]
+treeEntryToList entry@(Git.CommitEntry oid) =
+    [ ("type",  "commit")
+    ]
+
+-- Not sure this encoder should be here.
+-- https://developer.github.com/v3/git/trees/
 instance ToJSON Tree where
-    toJSON Tree{..} = object [("sha",  String (show treeRevision))]
+    toJSON Tree{..} = object
+      [ ("sha",  String (show treeRevision))
+        -- TODO add mode, type, sha, size
+      , ("tree", toJSON (map (\(path, entry) -> object [("path", toJSON (decodeUtf8 path))]) gitEntries) )
+      , ("path", toJSON treePath)
+      ]
 
 
 -- XXX: This is partial. If 'treeEntryOid' is not in the current repo, then it will raise an exce
@@ -269,9 +288,25 @@ instance ToMarkup Tree where
       renderEntry treeEntry = H.li $ makeLink (urlWithinTree tree treeEntry) (decodeUtf8 (fst treeEntry))
 
       currentPath = intercalate "/" (treePath tree)
-      makeLink url path = H.a ! A.href (H.toValue url) $ toMarkup path
+      makeLink url path = H.a ! A.href (H.toValue ("/v1/repos/" <> url)) $ toMarkup path
 
 
 -- XXX: Move this to some more common library
 notImplementedYet :: Text -> a
 notImplementedYet feature = terror $ "Not implemented yet: " ++ feature
+
+
+-- | Fill in information about the repository we want to render or
+-- show. E.g. languages, number of commits, public URL, ssh URL, etc.
+--
+-- For now it has access to the repository itself to run git commands
+-- but it'll likely be more efficient to cache the metadata on push
+-- (which is much rarer than reading).
+fillRepoMeta :: Repository -> GitM IO RepoMeta
+fillRepoMeta Repo{..} =
+  return $ RepoMeta _repoOwner _repoName 10 11 12 -- Fake data 10 11 12
+
+instance ToMarkup RepoMeta where
+  toMarkup RepoMeta{..} = do
+    H.h1 $ "debug rendering for root metadata"
+    H.a ! A.href (H.toValue ("/v1/repos/" <> _RepoMeta_owner <> "/" <> _RepoMeta_repo <> "/tree/master")) $ "tree-root"

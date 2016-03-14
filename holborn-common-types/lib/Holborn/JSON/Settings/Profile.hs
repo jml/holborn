@@ -5,7 +5,6 @@ module Holborn.JSON.Settings.Profile
        ) where
 
 import BasicPrelude
-import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions)
 import Data.Aeson.Types (Options(fieldLabelModifier))
 import Data.Time.LocalTime (LocalTime)
