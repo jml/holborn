@@ -22,7 +22,9 @@ stdenv.mkDerivation {
     closure-compiler --warning_level QUIET bundle.js > bundle.min.js
     closure-compiler --warning_level QUIET vendor.bundle.js > vendor.bundle.min.js
 
-    mkdir static
+    # TODO ./static already exists in our source but relying on this
+    # implicit contract is probably not a good idea.
+    # mkdir static
     export BUNDLE_HASH=$(nix-hash bundle.min.js)
     export VENDOR_HASH=$(nix-hash vendor.bundle.min.js)
     mv bundle.min.js static/bundle.$BUNDLE_HASH.min.js
