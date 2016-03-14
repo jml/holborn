@@ -227,7 +227,11 @@ data Tree = Tree { _gitTree :: Git.Tree GitRepo
 -- TODO probably better to transform Tree to an object that can encode
 -- the tree completely than to do manual encoding.
 instance ToJSON Tree where
-    toJSON Tree{..} = object [("sha",  String (show treeRevision))]
+    toJSON Tree{..} = object
+      [ ("sha",  String (show treeRevision))
+      , ("paths", toJSON (map (decodeUtf8 . fst) gitEntries))
+      , ("path", toJSON treePath)
+      ]
 
 
 -- XXX: This is partial. If 'treeEntryOid' is not in the current repo, then it will raise an exce

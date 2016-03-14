@@ -19,6 +19,7 @@ import Data.Maybe (Maybe(..))
 import Holborn.Fetchable (class Fetchable, fetch)
 import Holborn.Config (makeUrl)
 import Holborn.ManualEncoding.Browse (BrowseMetaResponse(..), description)
+import Holborn.Auth as Auth
 
 import Debug.Trace
 
@@ -34,20 +35,17 @@ data Action = NOP
 
 instance browseFetchable :: Fetchable BrowseRoutes State where
   fetch (Home owner repo) state = do
-    r <- AJ.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo))
-    newState <- case spy (decodeJson r.response) of
+    r <- Auth.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo))
+    newState <- case decodeJson r.response of
       Left err -> pure (set routeLens (HomeLoaded owner repo) state)
       Right browseMetaResponse ->
         let state' = (set routeLens (HomeLoaded owner repo) state)
         in pure (set meta (Just browseMetaResponse) state')
 
     -- TODO tree and metadata can be fetched in parallel (see Aff Par monad)
-    rTree <- AJ.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/tree/master"))
-    case spy (decodeJson rTree.response) of
-      Left err -> pure (set routeLens (HomeLoaded owner repo) state)
-      Right tree ->
-        let state' = (set routeLens (HomeLoaded owner repo) state)
-        in pure (set meta (Just browseMetaResponse) state')
+    rTree <- Auth.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/trees/master"))
+    traceAnyM ( rTree.response :: String)
+    pure newState
 
 
 routeLens :: LensP State BrowseRoutes
