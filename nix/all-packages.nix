@@ -8,8 +8,8 @@ haskellPackages.override {
       # unfortunately includes everything in that directory including
       # ./dist which can lead to errors like "_o_split_User not
       # found". The best solution would be to filter the source
-      # accordingly with builtins.filterSource but I could quite make
-      # that work and still keep the "cabal2nix . > default.nix"
+      # accordingly with builtins.filterSource but Tom could not quite
+      # make that work and still keep the "cabal2nix . > default.nix"
       # workflow. 2nd best solution is to delete ./dist before
       # compiling.
       mkDerivation = { pname, ... }@args:

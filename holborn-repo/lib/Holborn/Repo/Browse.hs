@@ -98,7 +98,7 @@ renderMeta repo = do
 
 renderBlob :: Repository -> Revision -> [Text] -> RepoBrowser Blob
 renderBlob repo revision segments =
-  fromMaybe (terror "no blob found") <$> withRepository repo (getBlob revision segments)
+  fromMaybe (terror ("no blob found for " <> (show segments))) <$> withRepository repo (getBlob revision segments)
 
 
 renderTree :: Repository -> Revision -> [Text] -> RepoBrowser Tree
