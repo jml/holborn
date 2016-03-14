@@ -224,10 +224,27 @@ data Tree = Tree { _gitTree :: Git.Tree GitRepo
                  , treeRepository :: Repository
                  }
 
--- TODO probably better to transform Tree to an object that can encode
--- the tree completely than to do manual encoding.
+-- TODO - Gitlib doesn't seem to give us all the information we need
+-- like mode, last commit etc. for an entry. Needs work.
+treeEntryToList entry@(Git.BlobEntry oid kind) =
+    [ ("type", "blob")
+    ]
+treeEntryToList entry@(Git.TreeEntry oid) =
+    [ ("type", "tree")
+    ]
+treeEntryToList entry@(Git.CommitEntry oid) =
+    [ ("type",  "commit")
+    ]
+
+-- Not sure this encoder should be here.
+-- https://developer.github.com/v3/git/trees/
 instance ToJSON Tree where
-    toJSON Tree{..} = object [("sha",  String (show treeRevision))]
+    toJSON Tree{..} = object
+      [ ("sha",  String (show treeRevision))
+        -- TODO add mode, type, sha, size
+      , ("tree", toJSON (map (\(path, entry) -> object [("path", toJSON (decodeUtf8 path))]) gitEntries) )
+      , ("path", toJSON treePath)
+      ]
 
 
 -- XXX: This is partial. If 'treeEntryOid' is not in the current repo, then it will raise an exce

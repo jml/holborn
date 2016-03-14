@@ -46,11 +46,11 @@ type BrowseAPI =
   Get '[HTML, JSON] RepoMeta
 
   -- e.g. /v1/repos/src/pulp/blob/master/setup.py
-  :<|> "blob" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Blob
+  :<|> "git" :> "blobs" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Blob
   -- e.g. /v1/repos/src/pulp/tree/master/
-  :<|> "tree" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Tree
+  :<|> "git" :> "trees" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML, JSON] Tree
   :<|> "commits" :> Capture "revspec" Revision :> QueryParam "author" Author :> Get '[HTML] [Commit]
-  :<|> "commit" :> Capture "revspec" Revision :> Get '[HTML] Commit
+  :<|> "git" :> "commits" :> Capture "revspec" Revision :> Get '[HTML] Commit
 
 
 browseAPI :: Proxy BrowseAPI

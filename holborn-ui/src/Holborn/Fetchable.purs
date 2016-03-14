@@ -3,6 +3,8 @@ module Holborn.Fetchable where
 import Prelude
 import Control.Monad.Aff (Aff)
 import Network.HTTP.Affjax as AJ
+import Web.Cookies as C
+
 
 -- | Route changes generally imply the need to fetch fresh data from
 -- the server (e.g. account data) but we don't know what routes and
@@ -13,4 +15,4 @@ import Network.HTTP.Affjax as AJ
 -- TODO fetching can always fail so the return value should be an Either
 -- so that downstream can deal with the error.
 class Fetchable action state where
-  fetch :: forall eff. action -> state -> Aff (ajax :: AJ.AJAX | eff) state
+  fetch :: forall eff. action -> state -> Aff (ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) state

@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Holborn.JSON.Browse
-       ( BrowseRequest(..)
-       , BrowseCommitResponse(..)
+       ( BrowseCommitResponse(..)
+       , BrowseMetaResponse(..)
        , BrowseTreeResponse(..)
        , AuthorInfo(..)
        , TreeObject(..)
@@ -13,17 +13,19 @@ import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import GHC.Generics (Generic)
 import Data.Time.LocalTime (LocalTime)
+import Holborn.JSON.RepoMeta (RepoMeta)
 
-
-data BrowseRequest = BrowseRequest
-    { _BrowseRequest_repo :: Text -- Repo is an org or user / reponame e.g. "jml/holborn"
-    , _BrowseRequest_path :: Text -- e.g. ""
+data BrowseMetaResponse = BrowseMetaResponse
+    { _BrowseMetaResponse_repo_meta :: RepoMeta
+    , _BrowseMetaResponse_description :: Text
+    , _BrowseMetaResponse_created_at :: LocalTime
+    -- TODO so many missing fields
     } deriving (Show, Generic)
 
 
-instance FromJSON BrowseRequest where
-  parseJSON = genericParseJSON defaultOptions
-    { fieldLabelModifier = drop (length ("_BrowseRequest_" :: String)) }
+instance ToJSON BrowseMetaResponse where
+  toJSON = genericToJSON defaultOptions
+    { fieldLabelModifier = drop (length ("_BrowseMetaResponse_" :: String)) }
 
 
 data AuthorInfo = AuthorInfo

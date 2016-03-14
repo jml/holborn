@@ -54,8 +54,11 @@ data Action =
   | BrowseAction Browse.Action
 
 
+-- TODO: As jml observed fetching (and our entire app) is essentially
+-- a state monad but it's a bit unclear how to fit that observation
+-- into real code.
 instance fetchRootRoutes :: Fetchable RootRoutes State where
-  fetch route@(Settings s) state@(RouterState { username = "anonymous" }) = do
+  fetch route state@(RouterState { username = "anonymous" }) = do
     traceAnyM "not logged in do a pretend login as alice"
     -- if the user fetch failed (e.g. cookie expired we'd redirect to the signing route:)
     --pure (set routeLens (SigninRoute Signin.initialState) state)
@@ -63,6 +66,11 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
   fetch (Settings s) state = do
     sr <- fetch (view SettingsRoute.routeLens s) s -- of type SettingsRoute
     pure (set routeLens (Settings sr) state)
+
+  fetch (BrowseRoute s) state = do
+    sr <- fetch (view Browse.routeLens s) s
+    pure (set routeLens (BrowseRoute sr) state)
+
   fetch rt s = do
     pure (set routeLens rt s)
 

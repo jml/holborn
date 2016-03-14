@@ -4,10 +4,8 @@ import Prelude
 
 import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Encode (class EncodeJson)
-import Data.Argonaut.Core (fromString, fromObject, toString, toObject)
 
 import Data.Maybe (Maybe(..))
-import Data.StrMap (lookup, insert, singleton)
 import Data.Either (Either(..))
 import Data.Lens (LensP, lens)
 import Data.Generic (class Generic)

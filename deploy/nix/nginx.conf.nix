@@ -7,6 +7,7 @@ let common-config = ''
         ssl_trusted_certificate /etc/ssl/certs/ca-bundle.crt;
         ssl_prefer_server_ciphers on;
         ssl_ciphers "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH E !aNULL !eNULL !LOW !3DES !MD5 !EXP !PSK !SRP !DSS";
+
         gzip            on;
         gzip_min_length 1000;
         gzip_proxied    expired no-cache no-store private auth;
@@ -48,6 +49,8 @@ http {
         # Static content is content addressed (by hash) so we can
         # cache forever.
         location /static {
+            # We're compressing with zopfli, so enable gzip_static
+            gzip_static on;
             root ${frontend};
             expires max;
             add_header Pragma public;

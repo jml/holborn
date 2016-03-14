@@ -29,7 +29,7 @@ post u c = do
     { method = POST
     , url = u
     , content = Just c
-    , headers = [RequestHeader "Authorization" t ]
+    , headers = [RequestHeader "Authorization" t, RequestHeader "Accept" "application/json"]
     }
 
 -- | Custom get that sends the correct auth header derived from the
@@ -42,7 +42,7 @@ get u = do
     Just x -> return x
   affjax $ defaultRequest
     { url = u
-    , headers = [RequestHeader "Authorization" t]
+    , headers = [RequestHeader "Authorization" t, RequestHeader "Accept" "application/json"]
     }
 
 delete :: forall e b. (Respondable b) => URL -> Affjax (cookie :: C.COOKIE | e)  b
@@ -54,5 +54,5 @@ delete u = do
   affjax $ defaultRequest
     { method = DELETE
     , url = u
-    , headers = [RequestHeader "Authorization" t ]
+    , headers = [RequestHeader "Authorization" t, RequestHeader "Accept" "application/json"]
     }
