@@ -12,3 +12,6 @@
 
 * How Rust infrastructure can be your infrastructure
   http://huonw.github.io/blog/2015/03/rust-infrastructure-can-be-your-infrastructure/
+
+* GH devs commenting on what they are planning for code review:
+  https://news.ycombinator.com/item?id=11291714
