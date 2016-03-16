@@ -41,6 +41,7 @@ http {
 
         location / {
             root ${frontend};
+            rewrite ^(.*) /index.html break;
             # never cache index.html: It's tiny and contains pointers
             # to files that can be cached.
             expires -1;
