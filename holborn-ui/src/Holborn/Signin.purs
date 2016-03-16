@@ -71,7 +71,7 @@ spec = T.simpleSpec performAction render
         StatusCode 201 -> case decodeJson r.response of
           Left err -> return (\state -> state { loading = false })
           Right (SigninOK { token }) -> do
-            liftEff $ C.setCookie "auth-token" token {}
+            liftEff $ C.setCookie "auth-token" token {path: "/"}
             return (\state -> state { loading = false })
         StatusCode 400 -> case decodeJson r.response of
           Left _ -> return (\state -> state { loading = false }) -- TODO error hanldinf

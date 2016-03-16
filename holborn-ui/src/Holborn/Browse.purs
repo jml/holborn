@@ -3,11 +3,12 @@ module Holborn.Browse where
 import Prelude
 import Thermite as T
 import Control.Monad.Eff.Exception as E
-import Control.Apply ((*>))
+import Control.Apply ((*>), (<*))
 import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
-import Routing.Match (Match)
-import Routing.Match.Class (lit, str, fail)
+import Text.Parsing.Simple (Parser, string, alphanum, fromCharList)
+import Text.Parsing.Combinators (many1)
+
 import Web.Cookies as C
 import React.DOM as R
 import React.DOM.Props as RP
@@ -35,7 +36,7 @@ data State = State
     }
 
 startRoute :: BrowseRoutes -> State
-startRoute s = State { route: s, _meta: Nothing, _tree: Nothing }
+startRoute s = State { route: spy s, _meta: Nothing, _tree: Nothing }
 
 data Action = NOP
 
@@ -81,9 +82,12 @@ data BrowseRoutes =
   | HomeLoaded String String
 
 
-browseRoutes :: Match State
+parseOwner = fromCharList <$> many1 alphanum
+parseRepo = fromCharList <$> many1 alphanum
+
+browseRoutes :: Parser State
 browseRoutes =
-  map startRoute (Home <$> str <*> str)
+  map startRoute (Home <$> parseOwner <* string "/" <*> parseRepo)
 
 
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action

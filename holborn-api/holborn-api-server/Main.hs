@@ -63,12 +63,12 @@ warpSettings port =
 
 
 type FullAPI =
-    Holborn.API.Api.API
-    :<|> Holborn.API.Internal.API
+         Holborn.API.Internal.API
     :<|> Holborn.API.Settings.SSHKeys.API
     :<|> Holborn.API.Settings.Profile.API
     :<|> Holborn.API.Browse.API
     :<|> Holborn.Docs.API
+    :<|> Holborn.API.Api.API
 
 
 api :: Proxy FullAPI
@@ -76,12 +76,17 @@ api = Proxy
 
 app :: AppConf -> Application
 app conf = serve api $
-  Holborn.API.Api.server conf
-   :<|> Holborn.API.Internal.server conf
+        Holborn.API.Internal.server conf
    :<|> Holborn.API.Settings.SSHKeys.server conf
    :<|> Holborn.API.Settings.Profile.server conf
    :<|> Holborn.API.Browse.server conf
    :<|> Holborn.Docs.server
+
+   -- NB that Api.server has a catch-all at the end so we can catch
+   -- routes like /settings/ssh-keys that only have a meaning client
+   -- side for now. As a consequence `Holborn.API.Api.server` MUST BE
+   -- LAST in the :<|> combinator.
+   :<|> Holborn.API.Api.server conf
 
 
 main = do
