@@ -21,10 +21,11 @@ import Data.Monoid.Endo (Endo)
 import Data.Lens.Types (Fold())
 import Data.List (toUnfoldable, List)
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
+import Data.Foldable (intercalate)
 
 import Holborn.Fetchable (class Fetchable)
 import Holborn.Config (makeUrl)
-import Holborn.ManualEncoding.Browse (BrowseMetaResponse(..), GitTree(..))
+import Holborn.ManualEncoding.Browse (BrowseMetaResponse(..), GitTree(..), GitTreeEntry(..))
 import Holborn.ManualEncoding.Browse as MB
 import Holborn.Auth as Auth
 
@@ -101,12 +102,17 @@ spec = T.simpleSpec T.defaultPerformAction render
     render dispatch _ (State { route = HomeLoaded org repo, _meta = Just meta, _tree = Just tree }) _ =
       [ R.h1 [] [R.text "browse"]
       , R.h2 [] [R.text (view MB.description meta)]
-      , R.ul [] (renderTree tree)
+      , R.ul [] (renderTree org repo tree)
       ]
     render dispatch _ _ _ =
       [ R.text "browse"
       ]
 
-    renderTree tree =
-      let paths = MB.tree <<< traversed <<< MB.path
-      in map (\path -> R.li [] [R.text path])  (toArrayOf paths tree)
+    renderTree org repo tree =
+      let paths = MB.tree <<< traversed
+      in map (renderGitEntry org repo) (toArrayOf paths tree)
+
+    renderGitEntry org repo (GitTreeEntry entry) =
+      R.li []
+      [ R.a [RP.href (intercalate "/" ["", org, repo, entry.path])] [R.text entry.path]
+      ]

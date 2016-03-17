@@ -16,9 +16,10 @@ import Network.HTTP.Affjax as AJ
 import React as React
 import React.DOM as R
 import React.DOM.Props as RP
+import Unsafe.Coerce (unsafeCoerce)
 
 import Text.Parsing.Simple (Parser, string)
-import Standalone.Router.Dispatch (matches)
+import Standalone.Router.Dispatch (matches, navigate)
 import Thermite as T
 import Web.Cookies as C
 
@@ -145,9 +146,20 @@ spec = container $ handleActions $ fold
        ]
   where
     container = over T._render \render d p s c ->
-      [ R.div [RP.className "container-fluid"] [R.text (view usernameLens s)]
-      , R.div [RP.className "container-fluid"] (render d p s c)
+      [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.text (view usernameLens s)]
+      , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
       ]
+
+    -- Override link navigation to use pushState instead of the
+    -- browser following the link.
+    -- TODO: add escape-hatch, e.g. `data-external=true` attribute or
+    -- where the path is non-local
+    handleLinks ev = do
+      case (unsafeCoerce ev).target.nodeName of
+        "A" -> do
+          (unsafeCoerce ev).preventDefault
+          navigate ((unsafeCoerce ev).target.pathname)
+        _ -> pure unit
 
     handleActions = over T._performAction \nestedPerformAction a p s k -> do
       nestedPerformAction a p s k
