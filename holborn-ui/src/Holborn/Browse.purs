@@ -20,6 +20,7 @@ import Data.Maybe (Maybe(..))
 import Data.Monoid.Endo (Endo)
 import Data.Lens.Types (Fold())
 import Data.List (toUnfoldable, List)
+import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 import Holborn.Fetchable (class Fetchable)
 import Holborn.Config (makeUrl)
@@ -52,7 +53,7 @@ instance browseFetchable :: Fetchable BrowseRoutes State where
   fetch (Home owner repo) state = do
     r <- Auth.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo))
     newState <- case decodeJson r.response of
-      Left err -> pure (set routeLens (HomeLoaded owner repo) state)
+      Left err -> unsafeThrow "could not decode main"
       Right browseMetaResponse ->
         let state' = (set routeLens (HomeLoaded owner repo) state)
         in pure (set meta (Just browseMetaResponse) state')
@@ -60,7 +61,7 @@ instance browseFetchable :: Fetchable BrowseRoutes State where
     -- TODO tree and metadata can be fetched in parallel (see Aff Par monad)
     rTree <- Auth.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/trees/master"))
     case decodeJson rTree.response of
-      Left _ -> pure newState
+      Left err -> unsafeThrow err
       Right treeResponse -> do
         pure (set tree (Just treeResponse) newState)
 

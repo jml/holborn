@@ -33,7 +33,7 @@ import Git.Types (IsOid(renderObjOid, renderOid))
 import Git.Libgit2 (LgRepo, MonadLg, lgFactory)
 import Text.Blaze (ToMarkup(..))
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, defaultOptions, object)
-import Data.Aeson.Types (Options(fieldLabelModifier))
+import Data.Aeson.Types (Options(fieldLabelModifier, omitNothingFields))
 import GHC.Generics (Generic)
 
 -- XXX: Putting web stuff here to avoid orphan warnings. Would be nice to have
@@ -227,14 +227,14 @@ instance ToHttpApiData Revision where
 data TreeEntryMeta = TreeEntryMeta
     { _TreeEntryMeta_path :: Text
     , _TreeEntryMeta_mode :: Text
-    , _TreeEntryMeta_type :: Text -- TODO better types + ToJSON instances
+    , _TreeEntryMeta_type_ :: Text -- TODO better types + ToJSON instances
     , _TreeEntryMeta_size :: Maybe Int -- doesn't apply to e.g. directories ATM
     , _TreeEntryMeta_sha :: Text
     } deriving (Show, Generic)
 
 instance ToJSON TreeEntryMeta where
   toJSON = genericToJSON defaultOptions
-    { fieldLabelModifier = drop (length ("_TreeEntryMeta_" :: String)) }
+    { fieldLabelModifier = drop (length ("_TreeEntryMeta_" :: String)), omitNothingFields = True }
 
 -- XXX: Do we want to parameterize this by GitRepo?
 data Tree = Tree { _gitTree :: Git.Tree GitRepo
@@ -262,8 +262,7 @@ treeEntryToList entry@(Git.CommitEntry oid) =
 instance ToJSON Tree where
     toJSON Tree{..} = object
       [ ("sha", toJSON (toText treeRevision))
-        -- TODO path (fst gitEntries) is ByteString might be better of as Text:
-      , ("tree", toJSON (zip (map (decodeUtf8 . fst) gitEntries) (map snd gitEntries)))
+      , ("tree", toJSON (map snd gitEntries))
       , ("path", toJSON treePath)
       ]
 
@@ -290,7 +289,7 @@ loadTree revision segments repo tree entry = do
         pure $ (path, TreeEntryMeta
           { _TreeEntryMeta_path = decodeUtf8 path
           , _TreeEntryMeta_mode = mode
-          , _TreeEntryMeta_type = "blob"
+          , _TreeEntryMeta_type_ = "blob"
           , _TreeEntryMeta_size = Just 100 -- TODO replace fake data
           , _TreeEntryMeta_sha = sha
           })
@@ -300,7 +299,7 @@ loadTree revision segments repo tree entry = do
         pure $ (path, TreeEntryMeta
           { _TreeEntryMeta_path = decodeUtf8 path
           , _TreeEntryMeta_mode = "040000"
-          , _TreeEntryMeta_type = "tree"
+          , _TreeEntryMeta_type_ = "tree"
           , _TreeEntryMeta_size = Nothing
           , _TreeEntryMeta_sha = sha
           })
@@ -314,7 +313,7 @@ urlWithinTree Tree{treeRepository = Repo{_repoName, _repoOwner}, treeRevision} b
   intercalate "/"
     [ _repoOwner
     , _repoName
-    , case _TreeEntryMeta_type of
+    , case _TreeEntryMeta_type_ of
           "tree" -> "git/trees"
           "blob" -> "git/blobs"
           "commit" -> "git/commits"

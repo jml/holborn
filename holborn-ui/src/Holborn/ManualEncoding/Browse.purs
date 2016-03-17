@@ -15,9 +15,9 @@ import Data.Lens (lens, LensP)
 data RepoMeta = RepoMeta
     { owner :: String
     , repo :: String
-    , number_commits :: Int
-    , number_objects :: Int
-    , size :: Int
+--    , number_commits :: Int TODO
+--    , number_objects :: Int
+--    , size :: Int
     }
 
 
@@ -41,7 +41,13 @@ instance decodeBrowseMetaResponse :: DecodeJson BrowseMetaResponse where
   decodeJson = gDecode
 
 
-data GitTreeEntry = GitTreeEntry { path :: String }
+data GitTreeEntry = GitTreeEntry
+  { path :: String
+  , sha :: String
+  , size :: Maybe Int
+  , mode :: String
+  , type_ :: String
+  }
 
 path :: LensP GitTreeEntry String
 path = lens (\(GitTreeEntry s) -> s.path) (\(GitTreeEntry s) x -> GitTreeEntry (s { path = x }))
@@ -57,6 +63,7 @@ instance decodeGitTreeEntry :: DecodeJson GitTreeEntry where
 data GitTree = GitTree
   { sha :: String
   , tree :: Array GitTreeEntry
+  , path :: Array String
   }
 
 derive instance genericGitTree :: Generic GitTree
