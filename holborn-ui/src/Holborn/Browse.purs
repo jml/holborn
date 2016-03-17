@@ -6,7 +6,7 @@ import Control.Monad.Eff.Exception as E
 import Control.Apply ((*>), (<*))
 import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
-import Text.Parsing.Simple (Parser, string, alphanum, fromCharList)
+import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, eof, word)
 import Text.Parsing.Combinators (many1)
 
 import Web.Cookies as C
@@ -16,7 +16,7 @@ import Data.Lens (lens, LensP, set, view, toListOf)
 import Data.Lens.Traversal (traversed)
 import Data.Argonaut.Decode (decodeJson)
 import Data.Either (Either(..))
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid.Endo (Endo)
 import Data.Lens.Types (Fold())
 import Data.List (toUnfoldable, List)
@@ -51,16 +51,17 @@ toArrayOf p s = toUnfoldable (toListOf p s)
 
 
 instance browseFetchable :: Fetchable BrowseRoutes State where
-  fetch (Home owner repo) state = do
+  fetch (Home owner repo path) state = do
     r <- Auth.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo))
     newState <- case decodeJson r.response of
       Left err -> unsafeThrow "could not decode main"
       Right browseMetaResponse ->
-        let state' = (set routeLens (HomeLoaded owner repo) state)
+        let state' = set routeLens (HomeLoaded owner repo path) state
         in pure (set meta (Just browseMetaResponse) state')
 
     -- TODO tree and metadata can be fetched in parallel (see Aff Par monad)
-    rTree <- Auth.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/trees/master"))
+    let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/trees/master" ++ (maybe "" id path))
+    rTree <- Auth.get url
     case decodeJson rTree.response of
       Left err -> unsafeThrow err
       Right treeResponse -> do
@@ -78,28 +79,37 @@ meta = lens (\(State s) -> s._meta) (\(State s) x -> State (s { _meta = x }))
 tree :: LensP State (Maybe GitTree)
 tree = lens (\(State s) -> s._tree) (\(State s) x -> State (s { _tree = x }))
 
+type Repo = String
+type Owner = String
+type RepoPath = String
 
 data BrowseRoutes =
-  Home String String
-  | HomeLoaded String String
-
+  Home Owner Repo (Maybe RepoPath)
+  | HomeLoaded Owner Repo (Maybe RepoPath)
 
 parseOwner = fromCharList <$> many1 alphanum
-parseRepo = fromCharList <$> many1 alphanum
+parseRepo =
+  fromCharList <$> many1 alphanum <* ((string "/" <* eof) <|> string ".git" <|> string "")
+
+-- TODO: parsePath needs some sophistication
+parsePath = word
 
 browseRoutes :: Parser State
 browseRoutes =
-  map startRoute (Home <$> parseOwner <* string "/" <*> parseRepo)
+  map startRoute
+    ( Home <$> parseOwner <* string "/" <*> parseRepo <*> map Just parsePath
+      <|> Home <$> parseOwner <* string "/" <*> parseRepo <*> pure Nothing
+    )
 
 
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = T.simpleSpec T.defaultPerformAction render
   where
-    render dispatch _ (State { route = Home org repo }) _ =
+    render dispatch _ (State { route = Home org repo path}) _ =
       [ R.h1 [] [R.text "browse ... (loading)"]
       , R.text $ org ++ repo
       ]
-    render dispatch _ (State { route = HomeLoaded org repo, _meta = Just meta, _tree = Just tree }) _ =
+    render dispatch _ (State { route = HomeLoaded org repo path, _meta = Just meta, _tree = Just tree }) _ =
       [ R.h1 [] [R.text "browse"]
       , R.h2 [] [R.text (view MB.description meta)]
       , R.ul [] (renderTree org repo tree)

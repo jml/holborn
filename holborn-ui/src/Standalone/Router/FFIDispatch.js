@@ -11,13 +11,17 @@ exports.routeChanged = function(cb_) {
   }
 }
 
-// Ensure callback is called after document load.
-window.onload = function() {
-
+function handleChangeEvent() {
   newUrl = document.location.pathname + document.location.search;
   cb(null)(newUrl)();
   oldUrl = newUrl;
 }
+
+// Ensure callback is called after document load.
+window.onload = handleChangeEvent;
+// And on history back:
+window.onpopstate = handleChangeEvent;
+
 
 exports.pushState = function(newUrl) {
   return function() { // Eff
