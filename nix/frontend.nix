@@ -43,7 +43,7 @@ stdenv.mkDerivation {
 
     cat >index.html <<HEREDOC
     <head>
-      <title>shortlog</title>
+      <title>norf</title>
       <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet" type="text/css">
     <body>
       <div id="container" class="container">
