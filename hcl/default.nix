@@ -6,7 +6,6 @@ mkDerivation {
   src = ./.;
   isLibrary = false;
   isExecutable = true;
-  libraryHaskellDepends = [ base ];
   executableHaskellDepends = [
     base basic-prelude network-simple turtle
   ];
