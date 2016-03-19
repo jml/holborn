@@ -5,7 +5,7 @@ let
 in
 pkgs.stdenv.lib.overrideDerivation p.env (oldAttrs: {
   buildInputs = oldAttrs.buildInputs ++ [
-    pkgs.pythonPackages.sqlalchemy_1_0
+    pkgs.pythonPackages.sqlalchemy
     pkgs.pythonPackages.networkx
     pkgs.pythonPackages.psycopg2
     pkgs.pythonPackages.pydot

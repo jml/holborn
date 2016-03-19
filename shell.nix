@@ -10,6 +10,7 @@ in
   isExecutable = true;
   buildDepends = [
     hp.hcl
+    hp.holborn-api
     hp.holborn-repo
     hp.holborn-syntax
   ];
