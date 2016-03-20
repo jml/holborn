@@ -4,8 +4,9 @@ let
   p = (hp.callPackage ./. {});
 in
 pkgs.stdenv.lib.overrideDerivation p.env (oldAttrs: {
-  buildInputs = oldAttrs.buildInputs ++ [
-    pkgs.pythonPackages.sqlalchemy_1_0
+  # Graph stuff isn't strictly necessary and a bit of a pain to build on Darwin.
+  buildInputs = if stdenv.isDarwin then oldAttrs.buildInputs else oldAttrs.buildInputs ++ [
+    pkgs.pythonPackages.sqlalchemy
     pkgs.pythonPackages.networkx
     pkgs.pythonPackages.psycopg2
     pkgs.pythonPackages.pydot
