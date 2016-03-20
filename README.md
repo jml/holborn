@@ -68,5 +68,4 @@ nix-shell --command "pulp server"
 ```
 
 Once all these steps are done, go to http://localhost:8002 in the web browser.
-You should see a (XXX - not sure what to see, because currently getting React
-errors).
+You should see a login screen.
