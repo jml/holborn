@@ -28,7 +28,7 @@ Then create the database:
 ```
 initdb ${PGDATA}
 postgres -D ${PGDATA} &
-createuser tom
+createuser holborn
 createdb holborn
 ```
 
