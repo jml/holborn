@@ -6,11 +6,11 @@ mkDerivation {
   pname = "holborn-syntax";
   version = "0.3.0.0";
   src = ./.;
-  buildDepends = [
+  libraryHaskellDepends = [
     base basic-prelude bytestring containers errors highlighter2
     language-python mtl pretty-error text
   ];
-  testDepends = [
+  testHaskellDepends = [
     base basic-prelude tasty tasty-hunit tasty-quickcheck
   ];
   homepage = "https://bitbucket.com/mumak/holborn";
