@@ -18,12 +18,12 @@
     "purescript-argonaut-codecs": "~0.5.1",
     "purescript-debug": "~0.1.3",
     "purescript-cookies": "~0.1.5",
-    "purescript-routing": "~0.3.0",
     "react": "~0.14.7",
     "purescript-react": "^0.6.0",
     "purescript-react-dom": "~0.1.0",
     "purescript-test-unit": "~4.1.0",
-    "purescript-profunctor-lenses": "^0.5"
+    "purescript-profunctor-lenses": "^0.5",
+    "purescript-simple-parser": "~3.0.0"
   },
   "resolutions": {
     "purescript-aff": "^0.14.1"

@@ -17,8 +17,8 @@ import Holborn.Settings.SSHKeys as SSHKeys
 import Data.Foldable (fold)
 import Data.Argonaut.Decode (decodeJson)
 import Holborn.Fetchable (class Fetchable)
-import Routing.Match (Match)
-import Routing.Match.Class (lit)
+import Text.Parsing.Simple (Parser, string)
+import Standalone.Router.Dispatch (navigate)
 
 import Holborn.Config (makeUrl)
 import Debug.Trace
@@ -51,20 +51,20 @@ routeLens :: LensP State SettingsRoutes
 routeLens = lens (\(State s) -> s.route) (\(State s) x -> State (s { route = x }))
 
 
-settingsRoutes :: Match State
+settingsRoutes :: Parser State
 settingsRoutes =
-      lit "ssh-keys" $> (startWithRoute SSHKeySettings)
-  <|> lit "profile" $> (startWithRoute Profile)
-  <|> lit "account" $> (startWithRoute AccountSettings)
-  <|> lit "emails" $> (startWithRoute EmailSettings)
-  <|> lit "security" $> (startWithRoute SecuritySettings)
-  <|> lit "repositories" $> (startWithRoute RepositorySettings)
-  <|> lit "organisations" $> (startWithRoute OrganisationSettings)
+      string "ssh-keys" $> (startWithRoute SSHKeySettings)
+  <|> string "profile" $> (startWithRoute Profile)
+  <|> string "account" $> (startWithRoute AccountSettings)
+  <|> string "emails" $> (startWithRoute EmailSettings)
+  <|> string "security" $> (startWithRoute SecuritySettings)
+  <|> string "repositories" $> (startWithRoute RepositorySettings)
+  <|> string "organisations" $> (startWithRoute OrganisationSettings)
 
 
 instance fetchSettingsRoutes :: Fetchable SettingsRoutes State where
   fetch SSHKeySettings s = do
-    r <- AJ.get (makeUrl "/v1//users/alice/keys")
+    r <- AJ.get (makeUrl "/v1/users/alice/keys")
     return $ case decodeJson r.response of
       Left err -> set routeLens SSHKeySettings s
       Right keys -> set routeLens (SSHKeySettingsOK (SSHKeys.initialState { keys = keys })) s
@@ -117,53 +117,53 @@ spec = container $ fold
       ]
 
     -- just a link
-    lgi label link = R.a [RP.href link, RP.className "list-group-item"] [R.text label]
+    lgi label link = R.a [RP.onClick \_ -> (navigate link), RP.className "list-group-item"] [R.text label]
     -- active
-    lgia label link = R.a [RP.href link, RP.className "list-group-item active"] [R.text label]
+    lgia label link = R.a [RP.onClick \_ -> (navigate link), RP.className "list-group-item active"] [R.text label]
     -- disabled
-    lgid label link = R.a [RP.href link, RP.className "list-group-item disabled"] [R.text label]
+    lgid label link = R.a [RP.onClick \_ -> (navigate link), RP.className "list-group-item disabled"] [R.text label]
 
     menu :: SettingsRoutes -> React.ReactElement
     menu route =
       R.div [RP.className "list-group"]
       [ let label = "Profile"
-            link = "/#settings/profile"
+            link = "/settings/profile"
         in case route of
            ProfileOK -> lgia label link
            _ -> lgi label link
 
       , let label = "SSH Keys"
-            link = "/#settings/ssh-keys"
+            link = "/settings/ssh-keys"
         in case route of
            SSHKeySettingsOK _ -> lgia label link
            _ -> lgi label link
 
       , let label = "Account"
-            link = "/#settings/account"
+            link = "/settings/account"
         in case route of
            AccountSettingsOK -> lgia label link
            _ -> lgid label link
 
       , let label = "Emails"
-            link = "/#settings/emails"
+            link = "/settings/emails"
         in case route of
            EmailSettingsOK -> lgia label link
            _ -> lgid label link
 
       , let label = "Security"
-            link = "/#settings/security"
+            link = "/settings/security"
         in case route of
            SecuritySettingsOK -> lgia label link
            _ -> lgid label link
 
       , let label = "Repositories"
-            link = "/#settings/repositories"
+            link = "/settings/repositories"
         in case route of
            RepositorySettingsOK -> lgia label link
            _ -> lgid label link
 
       , let label = "Oranisations"
-            link = "/#settings/organisations"
+            link = "/settings/organisations"
         in case route of
            OrganisationSettingsOK -> lgia label link
            _ -> lgid label link

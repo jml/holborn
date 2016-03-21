@@ -16,9 +16,9 @@ import Network.HTTP.Affjax as AJ
 import React as React
 import React.DOM as R
 import React.DOM.Props as RP
-import Routing (matches)
-import Routing.Match (Match)
-import Routing.Match.Class (lit)
+
+import Text.Parsing.Simple (Parser, string)
+import Standalone.Router.Dispatch (matches)
 import Thermite as T
 import Web.Cookies as C
 
@@ -40,11 +40,13 @@ data RootRoutes =
 
 -- TODO tom: Routes should really be "invertible" so I can create a
 -- KeySettings route string from the value.
-rootRoutes :: Match RootRoutes
+rootRoutes :: Parser RootRoutes
 rootRoutes =
-  lit "settings" *> (map Settings SettingsRoute.settingsRoutes)
-  <|> (map BrowseRoute Browse.browseRoutes)
-  <|> pure Route404
+  string "/" *>
+    ( string "settings/" *> (map Settings SettingsRoute.settingsRoutes)
+      <|> map BrowseRoute Browse.browseRoutes
+      <|> pure Route404
+    )
 
 
 data Action =
@@ -166,14 +168,15 @@ componentDidMount :: forall props eff. (React.ReactThis props State -> Action ->
 componentDidMount dispatch this = do
     matches rootRoutes callback
   where
-    callback :: forall eff2 refs. Maybe RootRoutes -> RootRoutes
+    callback :: forall eff2 refs. RootRoutes
                 -> Eff ( props :: React.ReactProps
                        , state :: React.ReactState React.ReadWrite
                        , refs :: React.ReactRefs refs
                        , ajax :: AJ.AJAX
                        , cookie :: C.COOKIE | eff2) Unit
-    callback _ rt = do
+    callback rt = do
       maybeToken <- C.getCookie "auth-token" -- TODO this should go into the user fetching (which needs to check the token anyway)
+
       case maybeToken of
         -- force sign-in
         Nothing -> dispatch this (UpdateRoute (SigninRoute Signin.initialState))

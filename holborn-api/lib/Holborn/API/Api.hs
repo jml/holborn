@@ -33,6 +33,10 @@ import Holborn.JSON.User (SigninData(..), SigninOK(..))
 import qualified Holborn.API.User as U
 import qualified Holborn.JSON.User as U
 import Holborn.Auth (webPermissions, createAuthToken)
+import Network.Wai (Application, responseLBS)
+import Network.HTTP.Types.Status (status200)
+import Text.Blaze.Html.Renderer.Text (renderHtml)
+import qualified Data.Text.Lazy.Encoding as E
 
 data SignupData = SignupData
     { username :: Text
@@ -52,14 +56,14 @@ instance FromText Username where
 
 
 type API =
-    Get '[HTML] Html
-    -- Special POST for signing up / in etc
-    :<|> "users" :> "signup" :> ReqBody '[JSON] SignupData :> Post '[JSON] (Either SignupError SignupOk)
+    "users" :> "signup" :> ReqBody '[JSON] SignupData :> Post '[JSON] (Either SignupError SignupOk)
     :<|> "v1" :> "signin" :> ReqBody '[JSON] SigninData :> Post '[JSON] SigninOK
+    :<|> Raw
+    -- Special POST for signing up / in etc
 
-
-landing :: AppConf -> EitherT ServantErr IO Html
-landing AppConf{staticBaseUrl, baseUrl} = return $(shamletFile "./templates/landing.html")
+landing :: AppConf -> Application
+landing AppConf{staticBaseUrl, baseUrl} = \request respond ->
+  respond (responseLBS status200 [] (E.encodeUtf8 (renderHtml $(shamletFile "./templates/landing.html"))))
 
 
 signupPost :: AppConf -> SignupData -> EitherT ServantErr IO (Either SignupError SignupOk)
@@ -107,6 +111,6 @@ signin AppConf{conn} SigninData{..} = do
 
 server :: AppConf -> Server API
 server conf =
-    landing conf
-    :<|> signupPost conf
+    signupPost conf
     :<|> signin conf
+    :<|> landing conf
