@@ -27,9 +27,9 @@ import           Pipes.Core (Consumer, Producer, Pipe)
 import           Pipes.GZip (decompress)
 import           Pipes.Safe (SafeT)
 import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
-import           Servant ((:>), (:<|>)(..), Get, Capture, QueryParam, Proxy(..), ServantErr, Server, Raw)
-import           Servant.Common.Text (FromText(..), ToText(..))
+import           Servant ((:>), (:<|>)(..), Capture, QueryParam, Proxy(..), Server, Raw)
 import           Text.Printf (printf)
+import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 
 import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
 import Holborn.Repo.Config (Config, buildRepoPath)
@@ -72,13 +72,13 @@ stringyService serviceType = case serviceType of
   GitUploadPack -> "git-upload-pack"
   GitReceivePack -> "git-receive-pack"
 
-instance ToText GitService where
-    toText = stringyService
+instance ToHttpApiData GitService where
+    toUrlPiece = stringyService
 
-instance FromText GitService where
-    fromText "git-upload-pack" = Just GitUploadPack
-    fromText "git-receive-pack" = Just GitReceivePack
-    fromText _ = Nothing
+instance FromHttpApiData GitService where
+    parseUrlPiece "git-upload-pack" = pure GitUploadPack
+    parseUrlPiece "git-receive-pack" = pure GitReceivePack
+    parseUrlPiece _ = Left "Invalid git service"
 
 
 data GitResponse = Service | Advertisement

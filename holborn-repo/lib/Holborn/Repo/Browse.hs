@@ -10,11 +10,9 @@ module Holborn.Repo.Browse (BrowseAPI, browseAPI, codeBrowser) where
 import BasicPrelude
 
 import Control.Error (bimapExceptT)
-import Control.Monad.Trans.Either (EitherT(..))
-import Control.Monad.Trans.Except (ExceptT, runExceptT)
+import Control.Monad.Trans.Except (ExceptT)
 import Data.ByteString.Lazy (fromStrict)
 import Servant ((:>), (:<|>)(..), Capture, Get, Proxy(..), QueryParam, ServantErr(..), Server, JSON)
-import Servant.Common.Text (FromText(..))
 import Servant.HTML.Blaze (HTML)
 import Servant.Server (enter, (:~>)(..), err500)
 
@@ -30,7 +28,6 @@ import Holborn.Repo.GitLayer ( Blob
                              , withRepository
                              , fillRepoMeta
                              )
-import Holborn.ServantExtensions (CaptureAll)
 import Holborn.JSON.RepoMeta (RepoMeta(..))
 
 -- | The author of a commit
@@ -46,9 +43,10 @@ type BrowseAPI =
   Get '[HTML, JSON] RepoMeta
 
   -- e.g. /v1/repos/src/pulp/blob/master/setup.py
-  :<|> "git" :> "blobs" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Blob
+  -- XXX: blob & tree can only accept one segment now due to servant 0.4 -> 0.5 upgrade
+  :<|> "git" :> "blobs" :> Capture "revspec" Revision :> Capture "pathspec" Text :> Get '[HTML] Blob
   -- e.g. /v1/repos/src/pulp/tree/master/
-  :<|> "git" :> "trees" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML, JSON] Tree
+  :<|> "git" :> "trees" :> Capture "revspec" Revision :> Capture "pathspec" Text :> Get '[HTML, JSON] Tree
   :<|> "commits" :> Capture "revspec" Revision :> QueryParam "author" Author :> Get '[HTML] [Commit]
   :<|> "git" :> "commits" :> Capture "revspec" Revision :> Get '[HTML] Commit
 
@@ -63,11 +61,9 @@ type RepoBrowser = ExceptT GitException IO
 -- | Translate from RepoBrowser to the standard Servant monad
 --
 -- See http://haskell-servant.github.io/tutorial/server.html#using-another-monad-for-your-handlers
-gitBrowserT :: ExceptT GitException IO :~> EitherT ServantErr IO
-gitBrowserT = Nat (exceptTToEitherT . bimapExceptT gitExceptionToServantErr id)
+gitBrowserT :: ExceptT GitException IO :~> ExceptT ServantErr IO
+gitBrowserT = Nat (bimapExceptT gitExceptionToServantErr id)
   where
-    exceptTToEitherT = EitherT . runExceptT
-
     gitExceptionToServantErr e = err500 { errBody = fromStrict (encodeUtf8 (show e)) }
 
 
@@ -87,14 +83,14 @@ renderMeta repo = do
   pure x
 
 
-renderBlob :: Repository -> Revision -> [Text] -> RepoBrowser Blob
+renderBlob :: Repository -> Revision -> Text -> RepoBrowser Blob
 renderBlob repo revision segments =
-  fromMaybe (terror "no blob found") <$> withRepository repo (getBlob revision segments)
+  fromMaybe (terror "no blob found") <$> withRepository repo (getBlob revision [segments])
 
 
-renderTree :: Repository -> Revision -> [Text] -> RepoBrowser Tree
+renderTree :: Repository -> Revision -> Text -> RepoBrowser Tree
 renderTree repo revision segments =
-  fromMaybe (terror "no tree found") <$> withRepository repo (getTree revision segments)
+  fromMaybe (terror "no tree found") <$> withRepository repo (getTree revision [segments])
 
 
 renderCommits :: Repository -> Revision -> Maybe Author -> RepoBrowser [Commit]

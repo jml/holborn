@@ -33,10 +33,10 @@ import Data.Aeson (ToJSON(..), genericToJSON, Value(..), object)
 
 -- XXX: Putting web stuff here to avoid orphan warnings. Would be nice to have
 -- it completely separate.
-import Servant.Common.Text (FromText(..), ToText(..))
 import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
+import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 
 -- XXX: Get the instances. Need to move all HTML formatting stuff to a
 -- separate module, and leave this just about using Git.
@@ -200,11 +200,11 @@ data Revision = Revision { revisionReference :: Text } deriving (Eq, Show)
 -- XXX: This is *hideously* wrong. More or less what we want to do is
 -- implement the rules in "git rev-parse", preserving the thing asked for as
 -- well as the "canonical" result.
-instance FromText Revision where
-  fromText revspec = Just (Revision $ "refs/heads/" ++ revspec)
+instance FromHttpApiData Revision where
+  parseUrlPiece revspec = pure (Revision $ "refs/heads/" ++ revspec)
 
-instance ToText Revision where
-  toText (Revision revision) =
+instance ToHttpApiData Revision where
+  toUrlPiece (Revision revision) =
     fromMaybe revision (Text.stripPrefix "refs/heads/" revision)
 
 
@@ -266,7 +266,7 @@ treeURL tree kind = intercalate "/" (["", owner, name, kind, revspec] ++ treePat
     owner = _repoOwner repo
     name = _repoName repo
     repo = treeRepository tree
-    revspec = toText (treeRevision tree)
+    revspec = toUrlPiece (treeRevision tree)
 
 
 urlWithinTree :: Tree -> (Git.TreeFilePath, Git.TreeEntry r) -> Text

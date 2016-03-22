@@ -21,9 +21,11 @@ haskellPackages.override {
       holborn-syntax = self.callPackage ../holborn-syntax {};
       holborn-common-types = self.callPackage ../holborn-common-types {};
 
-      # Temporary jailbreak until servant has been adjusted to include
-      # aeson 0.11:
-      servant-server = haskell.lib.doJailbreak super.servant-server;
+      # Switch to servant-0.5
+      servant = super.servant_0_5;
+      servant-blaze = super.servant-blaze_0_5;
+      servant-docs = super.servant-docs_0_5;
+      servant-server = super.servant-server_0_5;
 
       aeson = haskell.lib.dontCheck (self.callPackage ./aeson.nix {});
       language-python = self.callPackage ./language-python.nix {};

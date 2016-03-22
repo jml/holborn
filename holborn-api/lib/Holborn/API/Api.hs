@@ -15,8 +15,7 @@ module Holborn.API.Api
 
 import BasicPrelude
 
-import Control.Error (runExceptT)
-import Control.Monad.Trans.Either (EitherT, left)
+import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import Data.Text (unpack)
@@ -37,6 +36,8 @@ import Network.Wai (Application, responseLBS)
 import Network.HTTP.Types.Status (status200)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import qualified Data.Text.Lazy.Encoding as E
+import Web.HttpApiData (FromHttpApiData(..))
+
 
 data SignupData = SignupData
     { username :: Text
@@ -51,8 +52,8 @@ instance FromJSON SignupData
 instance ToJSON SignupError
 instance ToJSON SignupOk
 
-instance FromText Username where
-    fromText x = Just (newUsername x)
+instance FromHttpApiData Username where
+    parseUrlPiece x = pure (newUsername x)
 
 
 type API =
@@ -66,15 +67,15 @@ landing AppConf{staticBaseUrl, baseUrl} = \request respond ->
   respond (responseLBS status200 [] (E.encodeUtf8 (renderHtml $(shamletFile "./templates/landing.html"))))
 
 
-signupPost :: AppConf -> SignupData -> EitherT ServantErr IO (Either SignupError SignupOk)
+signupPost :: AppConf -> SignupData -> ExceptT ServantErr IO (Either SignupError SignupOk)
 signupPost AppConf{conn, jwtSecret} SignupData{..} = do
     pwd <- liftIO (newPassword _password)
     result <- liftIO (runExceptT (U.signup conn (newUsername username) (newEmail email) pwd))
     case result of
         Left (UserAlreadyExists _) -> return $ Left (EUserExists "user already exists")
         Left err@(UnexpectedConstraintViolation _) -> do
-            left err400
-        Left _ -> left err400
+            throwE err400
+        Left _ -> throwE err400
         Right _ -> do
             let jwt = JWT.def { JWT.sub = (JWT.stringOrURI username) }
             let encodedJwt = JWT.encodeSigned JWT.HS256 (JWT.secret jwtSecret) jwt
@@ -84,7 +85,7 @@ signupPost AppConf{conn, jwtSecret} SignupData{..} = do
 -- | Signin creates a oauth token for the "Web Login" realm if the
 -- password verified OK (checkPassword). The token is stored as a
 -- cookie in the client.
-signin :: AppConf -> SigninData -> EitherT ServantErr IO SigninOK
+signin :: AppConf -> SigninData -> ExceptT ServantErr IO SigninOK
 signin AppConf{conn} SigninData{..} = do
     pwd <- liftIO (newPassword _SigninData_password)
     r <- liftIO $ query conn [sql|
@@ -95,9 +96,9 @@ signin AppConf{conn} SigninData{..} = do
 
     (ownerId, password) <- case r of
       [(id_ :: Int, pwd :: Password)] -> return (id_, pwd)
-      _ -> left err400 -- TODO encode errors
+      _ -> throwE err400 -- TODO encode errors
 
-    unless (checkPassword password (encodeUtf8 _SigninData_password)) (left err400)
+    unless (checkPassword password (encodeUtf8 _SigninData_password)) (throwE err400)
 
     token <- liftIO createAuthToken
 

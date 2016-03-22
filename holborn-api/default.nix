@@ -1,10 +1,10 @@
 { mkDerivation, aeson, attoparsec, base, basic-prelude, blaze-html
 , bytestring, containers, either, entropy, envparse, errors
-, holborn-common-types, http-client, http-reverse-proxy, http-types
-, jwt, postgresql-simple, process, QuickCheck, servant
-, servant-blaze, servant-docs, servant-server, shakespeare, stdenv
-, tasty, tasty-hunit, tasty-quickcheck, text, time, transformers
-, wai, warp
+, holborn-common-types, http-api-data, http-client
+, http-reverse-proxy, http-types, jwt, postgresql-simple, process
+, QuickCheck, servant, servant-blaze, servant-docs, servant-server
+, shakespeare, stdenv, tasty, tasty-hunit, tasty-quickcheck, text
+, time, transformers, wai, warp
 }:
 mkDerivation {
   pname = "holborn-api";
@@ -14,10 +14,10 @@ mkDerivation {
   isExecutable = true;
   libraryHaskellDepends = [
     aeson attoparsec base basic-prelude blaze-html bytestring
-    containers either entropy errors holborn-common-types http-client
-    http-reverse-proxy http-types jwt postgresql-simple process servant
-    servant-blaze servant-docs servant-server shakespeare text time
-    transformers wai
+    containers either entropy errors holborn-common-types http-api-data
+    http-client http-reverse-proxy http-types jwt postgresql-simple
+    process servant servant-blaze servant-docs servant-server
+    shakespeare text time transformers wai
   ];
   executableHaskellDepends = [
     base basic-prelude blaze-html bytestring envparse

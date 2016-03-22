@@ -1,6 +1,6 @@
 { mkDerivation, aeson, base, basic-prelude, bcrypt, bytestring
-, containers, entropy, http-client, postgresql-simple, process
-, servant, servant-server, stdenv, time, transformers
+, containers, entropy, http-api-data, http-client
+, postgresql-simple, process, stdenv, time, transformers
 }:
 mkDerivation {
   pname = "holborn-common-types";
@@ -8,7 +8,7 @@ mkDerivation {
   src = ./.;
   libraryHaskellDepends = [
     aeson base basic-prelude bcrypt bytestring containers entropy
-    http-client postgresql-simple process servant servant-server time
+    http-api-data http-client postgresql-simple process time
     transformers
   ];
   license = stdenv.lib.licenses.unfree;

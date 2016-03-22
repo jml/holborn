@@ -16,10 +16,9 @@ module Holborn.Errors
 
 import BasicPrelude
 import Control.Error (bimapExceptT)
-import Servant (enter, ServantErr(..), (:~>)(Nat))
-import Control.Monad.Trans.Except (ExceptT, runExceptT)
+import Servant (ServantErr(..), (:~>)(Nat))
+import Control.Monad.Trans.Except (ExceptT)
 import Data.Aeson (Value(..), object, encode)
-import Control.Monad.Trans.Either (EitherT(..))
 
 
 type HTTPCode = Int
@@ -41,10 +40,9 @@ instance (JSONCodeableError a) => JSONCodeableError (APIError a) where
     toJSON (SubAPIError x) = toJSON x
 
 
-jsonErrorHandler :: JSONCodeableError err => ExceptT err IO :~> EitherT ServantErr IO
-jsonErrorHandler = Nat (exceptTToEitherT . bimapExceptT handleError id)
+jsonErrorHandler :: JSONCodeableError err => ExceptT err IO :~> ExceptT ServantErr IO
+jsonErrorHandler = Nat (bimapExceptT handleError id)
   where
-    exceptTToEitherT = EitherT . runExceptT
     handleError err = let (code, json) = toJSON err in ServantErr
       { errHTTPCode = code
       , errReasonPhrase = "error"
