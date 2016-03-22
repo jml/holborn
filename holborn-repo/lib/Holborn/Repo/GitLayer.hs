@@ -223,10 +223,12 @@ instance ToHttpApiData Revision where
 -- * path within repository
 -- * realized _thing_
 
+data TreeEntryMetaMode = SymlinkMode | BlobMode | ExecutableBlobMode | TreeMode deriving (Show)
+
 -- TODO probably better off in common types
 data TreeEntryMeta = TreeEntryMeta
     { _TreeEntryMeta_path :: Text
-    , _TreeEntryMeta_mode :: Text
+    , _TreeEntryMeta_mode :: TreeEntryMetaMode
     , _TreeEntryMeta_type_ :: Text -- TODO better types + ToJSON instances
     , _TreeEntryMeta_size :: Maybe Int -- doesn't apply to e.g. directories ATM
     , _TreeEntryMeta_sha :: Text
@@ -235,6 +237,13 @@ data TreeEntryMeta = TreeEntryMeta
 instance ToJSON TreeEntryMeta where
   toJSON = genericToJSON defaultOptions
     { fieldLabelModifier = drop (length ("_TreeEntryMeta_" :: String)), omitNothingFields = True }
+
+instance ToJSON TreeEntryMetaMode where
+    toJSON SymlinkMode = toJSON ("120000" :: Text)
+    toJSON TreeMode = toJSON ("040000" :: Text)
+    toJSON ExecutableBlobMode = toJSON ("100755" :: Text)
+    toJSON BlobMode = toJSON ("100644" :: Text)
+
 
 -- XXX: Do we want to parameterize this by GitRepo?
 data Tree = Tree { _gitTree :: Git.Tree GitRepo
@@ -282,9 +291,9 @@ loadTree revision segments repo tree entry = do
     blobMeta path _blobEntryOid _blobEntryKind = do
         blob <- Git.lookupBlob _blobEntryOid
         let mode = case _blobEntryKind of
-                Git.PlainBlob -> "100644"
-                Git.ExecutableBlob -> "100755"
-                Git.SymlinkBlob -> "120000"
+                Git.PlainBlob -> BlobMode
+                Git.ExecutableBlob -> ExecutableBlobMode
+                Git.SymlinkBlob -> SymlinkMode
         let sha = renderObjOid _blobEntryOid
         pure $ (path, TreeEntryMeta
           { _TreeEntryMeta_path = decodeUtf8 path
@@ -298,7 +307,7 @@ loadTree revision segments repo tree entry = do
         let sha = renderObjOid _treeOid
         pure $ (path, TreeEntryMeta
           { _TreeEntryMeta_path = decodeUtf8 path
-          , _TreeEntryMeta_mode = "040000"
+          , _TreeEntryMeta_mode = TreeMode
           , _TreeEntryMeta_type_ = "tree"
           , _TreeEntryMeta_size = Nothing
           , _TreeEntryMeta_sha = sha
