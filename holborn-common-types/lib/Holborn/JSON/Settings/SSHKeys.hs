@@ -34,6 +34,9 @@ data AddKeyData = AddKeyData
     , _AddKeyData_title :: Text
     } deriving (Show, Generic)
 
+instance ToJSON AddKeyData where
+  toJSON = genericToJSON defaultOptions
+    { fieldLabelModifier = drop (length ("_AddKeyData_" :: String)) }
 
 instance FromJSON AddKeyData where
   parseJSON = genericParseJSON defaultOptions

@@ -43,6 +43,7 @@ data AppConf = AppConf
   }
 
 
+-- TODO: Validate username
 newUsername :: Text -> Username
 newUsername = Username
 

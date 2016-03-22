@@ -22,11 +22,9 @@ library
                      , errors
                      , basic-prelude
                      , aeson >= 0.10
-                     -- It looks like servant 0.5 is going to be
-                     -- backwards-incompatible so limit upper version:
-                     , servant >=0.4 && <0.5
-                     , servant-blaze >=0.4 && <0.5
-                     , servant-server >=0.4 && <0.5
+                     , servant >=0.5
+                     , servant-blaze >=0.5
+                     , servant-server >=0.5
                      , blaze-html
                      , shakespeare
                      , either
@@ -36,13 +34,14 @@ library
                      , time
                      , entropy
                      , transformers
-                     , servant-docs >= 0.4 && <0.5
+                     , servant-docs >= 0.5
                      , process
                      , wai
                      , http-reverse-proxy
                      , http-client
                      , http-types
-                     , holborn-common-types >= 0.1.2
+                     , http-api-data
+                     , holborn-common-types >= 0.1.3
 
   hs-source-dirs:      lib
 -- Disabled because there are too many warnings atm :(
@@ -80,7 +79,7 @@ executable holborn-api-server
                      , basic-prelude >= 0.3.13 && <0.6
                      , blaze-html >= 0.8 && <0.9
                      , bytestring >= 0.10.0
-                     , servant-server >= 0.4 && <0.5
+                     , servant-server >= 0.5
                      , wai >= 3.0
                      , warp >= 3.1
                      , envparse >= 0.2

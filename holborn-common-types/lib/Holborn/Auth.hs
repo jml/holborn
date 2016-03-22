@@ -29,7 +29,7 @@ import Data.Aeson (ToJSON(..), Value(..))
 import System.Entropy (getEntropy)
 import qualified Data.ByteString.Builder
 import Data.ByteString.Lazy (toStrict)
-import Servant(FromText(..))
+import Web.HttpApiData (FromHttpApiData(..))
 
 data AuthToken = AuthToken ByteString deriving Show
 
@@ -98,5 +98,5 @@ instance ToJSON AuthToken where
     toJSON (AuthToken x) = String (decodeUtf8 x)
 
 
-instance FromText AuthToken where
-    fromText token = Just (AuthToken (encodeUtf8 token))
+instance FromHttpApiData AuthToken where
+    parseUrlPiece token = pure (AuthToken (encodeUtf8 token))

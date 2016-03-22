@@ -20,9 +20,9 @@ import BasicPrelude
 
 import GHC.Generics (Generic)
 import Control.Error (rightZ)
+import Control.Monad.Trans.Except (ExceptT)
 import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, withText)
 import Servant ((:>), (:<|>)(..), Post, ReqBody, JSON, ServantErr, Server)
-import Control.Monad.Trans.Either (EitherT)
 import qualified Data.Attoparsec.Text as AT
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
@@ -42,7 +42,7 @@ type API =
 
 
 -- | Implementation
-checkKey :: AppConf -> CheckKeyRequest -> EitherT ServantErr IO CheckKeyResponse
+checkKey :: AppConf -> CheckKeyRequest -> ExceptT ServantErr IO CheckKeyResponse
 checkKey AppConf{conn} request = do
     liftIO $ print ("checkKey" :: Text, request)
     liftIO $ hFlush stdout
@@ -121,7 +121,7 @@ instance FromJSON SSHCommandLine where
   parseJSON = withText "SSH command must be text" (rightZ . AT.parseOnly parseSSHCommand)
 
 
-checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> EitherT ServantErr IO CheckRepoAccessResponse
+checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> ExceptT ServantErr IO CheckRepoAccessResponse
 checkRepoAccess AppConf{conn} request = do
     liftIO $ print request
     rows <- liftIO $ query conn [sql|

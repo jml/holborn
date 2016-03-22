@@ -10,7 +10,7 @@ module Holborn.Docs
 
 import BasicPrelude
 
-import Servant.Docs (docsWithIntros, markdown, ToSample(..), ToCapture(..), DocCapture(..))
+import Servant.Docs (docsWithIntros, markdown, noSamples, ToSample(..), ToCapture(..), DocCapture(..))
 import qualified Servant.Docs
 import Servant
 
@@ -32,20 +32,12 @@ server :: Server API
 server = return (pack (markdown docsKeys))
 
 
-instance ToSample [Holborn.JSON.Settings.SSHKeys.ListKeysRow] Text where
-    toSample _ = Just "many"
+instance ToSample Holborn.JSON.Settings.SSHKeys.ListKeysRow where
+    toSamples _ = noSamples
 
 
-instance ToSample Holborn.JSON.Settings.SSHKeys.ListKeysRow Text where
-    toSample _ = Just "Hello, haskeller!"
-
-
-instance ToSample () Text where
-    toSample _ = Just "unit!"
-
-
-instance ToSample Holborn.JSON.Settings.SSHKeys.AddKeyData Text where
-    toSample _ = Just "unit!"
+instance ToSample Holborn.JSON.Settings.SSHKeys.AddKeyData where
+    toSamples _ = noSamples
 
 
 instance ToCapture (Capture "id" Int) where

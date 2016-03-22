@@ -10,11 +10,9 @@ module Holborn.Repo.Browse (BrowseAPI, browseAPI, codeBrowser) where
 import BasicPrelude
 
 import Control.Error (bimapExceptT)
-import Control.Monad.Trans.Either (EitherT(..))
-import Control.Monad.Trans.Except (ExceptT, runExceptT)
+import Control.Monad.Trans.Except (ExceptT)
 import Data.ByteString.Lazy (fromStrict)
 import Servant ((:>), (:<|>)(..), Capture, Get, Proxy(..), QueryParam, ServantErr(..), Server, JSON)
-import Servant.Common.Text (FromText(..))
 import Servant.HTML.Blaze (HTML)
 import Servant.Server (enter, (:~>)(..), err500)
 
@@ -30,7 +28,6 @@ import Holborn.Repo.GitLayer ( Blob
                              , withRepository
                              , fillRepoMeta
                              )
-import Holborn.ServantExtensions (CaptureAll)
 import Holborn.JSON.RepoMeta (RepoMeta(..))
 
 -- | The author of a commit
@@ -46,9 +43,21 @@ type BrowseAPI =
   Get '[HTML, JSON] RepoMeta
 
   -- e.g. /v1/repos/src/pulp/blob/master/setup.py
-  :<|> "git" :> "blobs" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML] Blob
+  -- XXX: blob & tree have this hacky thing because Servant 0.5 broke our CaptureAll combinator.
+  -- https://github.com/haskell-servant/servant/issues/257 tracks fixing this.
+  :<|> "git" :> "blobs" :> Capture "revspec" Revision :>
+    ((Capture "pathspec" Text :> Get '[HTML] Blob)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob))
   -- e.g. /v1/repos/src/pulp/tree/master/
-  :<|> "git" :> "trees" :> Capture "revspec" Revision :> CaptureAll "pathspec" :> Get '[HTML, JSON] Tree
+  :<|> "git" :> "trees" :> Capture "revspec" Revision :>
+    ((Capture "pathspec" Text :> Get '[HTML, JSON] Tree)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Tree)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Tree)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Tree)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Tree))
   :<|> "commits" :> Capture "revspec" Revision :> QueryParam "author" Author :> Get '[HTML] [Commit]
   :<|> "git" :> "commits" :> Capture "revspec" Revision :> Get '[HTML] Commit
 
@@ -63,11 +72,9 @@ type RepoBrowser = ExceptT GitException IO
 -- | Translate from RepoBrowser to the standard Servant monad
 --
 -- See http://haskell-servant.github.io/tutorial/server.html#using-another-monad-for-your-handlers
-gitBrowserT :: ExceptT GitException IO :~> EitherT ServantErr IO
-gitBrowserT = Nat (exceptTToEitherT . bimapExceptT gitExceptionToServantErr id)
+gitBrowserT :: ExceptT GitException IO :~> ExceptT ServantErr IO
+gitBrowserT = Nat (bimapExceptT gitExceptionToServantErr id)
   where
-    exceptTToEitherT = EitherT . runExceptT
-
     gitExceptionToServantErr e = err500 { errBody = fromStrict (encodeUtf8 (show e)) }
 
 
@@ -75,10 +82,12 @@ codeBrowser :: Repository -> Server BrowseAPI
 codeBrowser repo = enter gitBrowserT $
   -- XXX: What should we do for repos that don't have a master?
   renderMeta repo
-  :<|> renderBlob repo
-  :<|> renderTree repo
+  :<|> (handlePaths . renderBlob repo)
+  :<|> (handlePaths . renderTree repo)
   :<|> renderCommits repo
   :<|> renderCommit repo
+
+  where handlePaths f = (\a -> f [a]) :<|> (\a b -> f [a, b]) :<|> (\a b c -> f [a, b, c]) :<|> (\a b c d -> f [a, b, c, d]) :<|> (\a b c d e -> f [a, b, c, d, e])
 
 
 renderMeta :: Repository -> RepoBrowser RepoMeta
