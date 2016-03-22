@@ -56,7 +56,7 @@ getRepoParser :: MonadIO m => PP.Parser ByteString m (Maybe RepoCall)
 getRepoParser = do
     repoCall <- decode
     return $ case repoCall of
-      Just (Right x) -> (Just x)
+      Just (Right x) -> Just x
       _ -> Nothing
 
 -- | Accept connection, parse the exact repository, then dispatch to
