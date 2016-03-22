@@ -7,6 +7,7 @@ module Holborn.Repo.Config
 import BasicPrelude
 import Data.Text (unpack)
 import Network.Wai.Handler.Warp (Port, Settings, setPort, defaultSettings, setBeforeMainLoop)
+import qualified Holborn.Logging as Log
 
 
 data Config = Config
@@ -38,5 +39,5 @@ warpSettings :: Config -> Settings
 warpSettings config =
   setBeforeMainLoop printPort (setPort port' defaultSettings)
   where
-    printPort = putStrLn $ "holborn-repo running at http://localhost:" ++ show port' ++ "/"
+    printPort = Log.info $ "holborn-repo running at http://localhost:" ++ show port' ++ "/"
     port' = port config
