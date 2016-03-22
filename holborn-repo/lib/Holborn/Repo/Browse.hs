@@ -103,7 +103,7 @@ renderBlob repo revision segments =
 
 renderTree :: Repository -> Revision -> [Text] -> RepoBrowser Tree
 renderTree repo revision segments =
-  fromMaybe (terror "no tree found") <$> withRepository repo (getTree revision segments)
+    fromMaybe (terror ("no tree found for" <> (show segments))) <$> withRepository repo (getTree revision segments)
 
 
 renderCommits :: Repository -> Revision -> Maybe Author -> RepoBrowser [Commit]

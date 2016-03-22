@@ -120,11 +120,17 @@ spec = T.simpleSpec T.defaultPerformAction render
       [ R.text "browse"
       ]
 
+    -- TODO tom: rendering with the parsed path is extremely
+    -- fragile. Probably best to extract the path handling into a set
+    -- of separate functions with tests.
+    renderTree :: forall a. String -> String -> GitTree -> Array React.ReactElement
     renderTree org repo tree =
       let paths = MB.tree <<< traversed
-      in map (renderGitEntry org repo) (toArrayOf paths tree)
+          treePath = view MB.treePath tree
+          entries = map (renderGitEntry org repo treePath) (toArrayOf paths tree)
+      in entries
 
-    renderGitEntry org repo (GitTreeEntry entry) =
+    renderGitEntry org repo treePath (GitTreeEntry entry) =
       R.li []
-      [ R.a [RP.href (intercalate "/" ["", org, repo, entry.path])] [R.text entry.path]
+      [ R.a [RP.href (intercalate "/" (["", org, repo] <> treePath <> [entry.path]))] [R.text entry.path]
       ]

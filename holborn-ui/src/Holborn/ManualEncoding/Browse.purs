@@ -71,5 +71,9 @@ derive instance genericGitTree :: Generic GitTree
 tree :: LensP GitTree (Array GitTreeEntry)
 tree = lens (\(GitTree s) -> s.tree) (\(GitTree s) x -> GitTree (s { tree = x }))
 
+treePath :: LensP GitTree (Array String)
+treePath = lens (\(GitTree s) -> s.path) (\(GitTree s) x -> GitTree (s { path = x }))
+
+
 instance decodeGitTree :: DecodeJson GitTree where
   decodeJson = gDecode
