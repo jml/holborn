@@ -57,7 +57,11 @@ checkKey AppConf{conn} request = do
 
     return $ case rows of
        [(keyId, True)] -> CheckKeyResponse (Just keyId)
-       [(keyId, False)] -> CheckKeyResponse (Just keyId) -- PUPPY: REMOVE ME key not verified
+       -- PUPPY: We currently don't have any support for verifying SSH keys.
+       -- To help us test our server in the mean-time, just pretend that every
+       -- key is verified. In the future, non-verified keys will not be
+       -- allowed to access the system.
+       [(keyId, False)] -> CheckKeyResponse (Just keyId)
        _ -> terror "TODO return error for checkKey"
 
 
