@@ -334,7 +334,6 @@ urlWithinTree Tree{treeRepository = Repo{_repoName, _repoOwner}, treeRevision} b
 
 instance ToMarkup Tree where
   toMarkup tree@Tree{gitEntries, treePath} = do
---    H.h1 $ makeLink (urlWithinTree tree currentPath gitTreeEntry tree)) currentPath
     H.ul $ mapM_ renderEntry gitEntries
 
     where

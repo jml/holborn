@@ -43,6 +43,8 @@ startRoute s = State { route: s, _meta: Nothing, _tree: Nothing }
 data Action = NOP
 
 
+buggyServer = unsafeThrow
+
 -- TODO: I think toArrayOf has a bad runtime and can probably be
 -- rewritten via FFI to append to mutable Array because of the
 -- guarantees given by Traversable.
@@ -54,7 +56,7 @@ instance browseFetchable :: Fetchable BrowseRoutes State where
   fetch rt@(Home owner repo path) state@(State { _meta = Nothing }) = do
     r <- Auth.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo))
     newState <- case decodeJson r.response of
-      Left err -> unsafeThrow "could not decode main"
+      Left err -> buggyServer err
       Right browseMetaResponse ->
         pure (set meta (Just browseMetaResponse) state)
 
@@ -64,7 +66,7 @@ instance browseFetchable :: Fetchable BrowseRoutes State where
     let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/trees/master" ++ (maybe "" id path))
     rTree <- Auth.get url
     case decodeJson rTree.response of
-      Left err -> unsafeThrow err
+      Left err -> buggyServer err
       Right treeResponse ->
         let state' = set routeLens (HomeLoaded owner repo path) state
         in pure (set tree (Just treeResponse) state')
