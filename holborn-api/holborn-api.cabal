@@ -42,7 +42,7 @@ library
                      , http-reverse-proxy
                      , http-client
                      , http-types
-                     , holborn-common-types
+                     , holborn-common-types >= 0.1.2
 
   hs-source-dirs:      lib
 -- Disabled because there are too many warnings atm :(

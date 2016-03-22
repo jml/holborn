@@ -2,9 +2,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE QuasiQuotes        #-}
-{-# LANGUAGE RecordWildCards    #-}
-{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 -- | Internal API for e.g. checking whether a user is authorized to
 -- access a repository.
@@ -20,40 +19,36 @@ module Holborn.API.Internal
 import BasicPrelude
 
 import GHC.Generics (Generic)
-import Data.Aeson (FromJSON, ToJSON(..), (.=), object)
+import Control.Error (rightZ)
+import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, withText)
 import Servant ((:>), (:<|>)(..), Post, ReqBody, JSON, ServantErr, Server)
-import qualified Data.Map.Strict as DMS
 import Control.Monad.Trans.Either (EitherT)
 import qualified Data.Attoparsec.Text as AT
-import qualified Data.Attoparsec.Combinator as AT
-import Database.PostgreSQL.Simple (Only (..), execute, query)
+import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Holborn.API.Types (AppConf(..), parseSSHKey)
+import Holborn.API.Types (AppConf(..), KeyType(..))
 
 import System.IO (stdout, hFlush)
 
 -- | Main internal API (only used by our openssh version ATM).
 type API =
-    "internal"
-        :> "ssh"
-        :> "check-key"
-        :> ReqBody '[JSON] CheckKeyRequest
-        :> Post '[JSON] CheckKeyResponse
-    :<|> "internal"
-        :> "ssh"
-        :> "check-repo-access"
-        :> ReqBody '[JSON] CheckRepoAccessRequest
-        :> Post '[JSON] CheckRepoAccessResponse
+    "internal" :> "ssh" :> (
+       "check-key"
+       :> ReqBody '[JSON] CheckKeyRequest
+       :> Post '[JSON] CheckKeyResponse
+       :<|> "check-repo-access"
+       :> ReqBody '[JSON] CheckRepoAccessRequest
+       :> Post '[JSON] CheckRepoAccessResponse)
+
 
 -- | Implementation
 checkKey :: AppConf -> CheckKeyRequest -> EitherT ServantErr IO CheckKeyResponse
 checkKey AppConf{conn} request = do
-    liftIO $ print ("checkKey", request)
+    liftIO $ print ("checkKey" :: Text, request)
     liftIO $ hFlush stdout
     let comparison_pubkey = case key_type request of
-            "RSA" -> "ssh-rsa " <> key request
-            "DSA" -> "ssh-dsa " <> key request
-            x -> terror ("Unknown key type: " <> x)
+            RSA -> "ssh-rsa " <> key request
+            DSA -> "ssh-dsa " <> key request
     rows <- liftIO $ query conn [sql|
                    select pk.id, pk.verified
                    from "public_key" as pk  where comparison_pubkey = ?
@@ -69,8 +64,26 @@ checkKey AppConf{conn} request = do
 data SSHCommandLine =
       GitReceivePack { orgOrUser :: Text, repo :: Text }
     | GitUploadPack { orgOrUser :: Text, repo :: Text }
-    | Invalid Text
     deriving Show
+
+
+-- | Emit the Holborn side of the SSH command
+accessGranted :: SSHCommandLine -> Text
+accessGranted (GitReceivePack org repo) =
+  concat ["(echo -n '{\"command\": \"git-receive-pack\", \"org\": \""
+         , org
+         , "\", \"repo\": \""
+         , repo
+         ,"\"}' && cat) | nc 127.0.0.1 8081"
+         ]
+accessGranted (GitUploadPack org repo) =
+  concat ["(echo -n '{\"command\": \"git-upload-pack\", \"org\": \""
+         , org
+         , "\", \"repo\": \""
+         , repo
+         ,"\"}' && cat) | nc 127.0.0.1 8081"
+         ]
+
 
 -- There are two acceptable commands:
 --   "git-upload-pack '/org/hello'"
@@ -82,7 +95,7 @@ data SSHCommandLine =
 -- quickchecking!
 parseSSHCommand :: AT.Parser SSHCommandLine
 parseSSHCommand =
-    upload <|> receive <|> (fmap Invalid AT.takeText)
+    upload <|> receive
   where
     upload = do
         void $ AT.string "git-upload-pack '"
@@ -99,9 +112,13 @@ parseSSHCommand =
         AT.endOfInput
         return (org, user)
 
+
+instance FromJSON SSHCommandLine where
+  parseJSON = withText "SSH command must be text" (rightZ . AT.parseOnly parseSSHCommand)
+
+
 checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> EitherT ServantErr IO CheckRepoAccessResponse
 checkRepoAccess AppConf{conn} request = do
-    let Right cmd = AT.parseOnly parseSSHCommand (command request)
     liftIO $ print request
     rows <- liftIO $ query conn [sql|
                    select id, pk.readonly, pk.verified
@@ -111,51 +128,38 @@ checkRepoAccess AppConf{conn} request = do
     -- OpenSSH runs the command we send in bash, so we can use common
     -- shell muckery to first send the metadata and then do a
     -- bidirectional pipe.
+    let cmd = command request
     print (cmd, rows)
-    return $ case (cmd, rows) of
-        (GitReceivePack org repo, [(_, False, True)]) ->
-            CheckRepoAccessResponse (Just (
-                concat ["(echo -n '{\"command\": \"git-receive-pack\", \"org\": \""
-                       , org
-                       , "\", \"repo\": \""
-                       , repo
-                       ,"\"}' && cat) | nc 127.0.0.1 8081"
-                       ]))
-        (GitReceivePack org repo, [(keyId, True, True)]) ->
-            CheckRepoAccessResponse (reportError ("SSH key with id " <> show (keyId :: Int) <> " is readonly"))
-        (GitUploadPack org repo, [(_, _, True)]) ->
-            CheckRepoAccessResponse (Just (
-                concat ["(echo -n '{\"command\": \"git-upload-pack\", \"org\": \""
-                       , org
-                       , "\", \"repo\": \""
-                       , repo
-                       ,"\"}' && cat) | nc 127.0.0.1 8081"
-                       ]))
-        (_, [(_, False, _)]) ->
-            CheckRepoAccessResponse (reportError "SSH key not verified")
-        (Invalid _, [(_, _, _)]) ->
-            CheckRepoAccessResponse (Just (quotes !! 0))
+    return . CheckRepoAccessResponse . Just $ determineAccess cmd rows
   where
-    reportError err = Just (">&2 echo '" <> err <> "' && exit 1")
-    quotes :: [Text]
-    quotes =
-        [ "echo 'A meal is a meal'"
-        , "echo 'I\'m swelling with patriotic mucus'"
-        , "echo 'Look at me. I\'m Dr. Zoidberg, homeowner'"
-        ]
+    reportError err = ">&2 echo '" <> err <> "' && exit 1"
+
+    determineAccess cmd rows =
+      case (cmd, rows) of
+        (_, []) -> reportError "No SSH key"
+        (_, _:_:_) -> reportError "Multiple SSH keys"
+        (GitReceivePack _ _, [(_, False, True)]) -> accessGranted cmd
+        (GitReceivePack _ _, [(keyId, True, True)]) ->
+            reportError ("SSH key with id " <> show (keyId :: Int) <> " is readonly")
+        (GitUploadPack _ _, [(_, _, True)]) -> accessGranted cmd
+        (_, [(_, _, False)]) -> reportError "SSH key not verified"
+
 
 server :: AppConf -> Server API
 server conf = checkKey conf
     :<|> checkRepoAccess conf
 
+
 -- Serialization bla bla
 data CheckKeyRequest = CheckKeyRequest
     { key :: Text
-    , key_type :: Text
+    , key_type :: KeyType
     } deriving (Show, Generic, Eq, Ord)
 instance FromJSON CheckKeyRequest
 
+
 type KeyId = Int
+
 
 data CheckKeyResponse = CheckKeyResponse
     { key_id_ :: Maybe KeyId -- TODO might be more useful to return Either with error message?
@@ -170,14 +174,17 @@ instance ToJSON CheckKeyResponse where
         object [ "allowed"  .= False
                ]
 
+
 data CheckRepoAccessRequest = CheckRepoAccessRequest
     { key_id :: KeyId
-    , command :: Text
+    , command :: SSHCommandLine
     } deriving (Show, Generic)
 instance FromJSON CheckRepoAccessRequest
 
+
 data CheckRepoAccessResponse = CheckRepoAccessResponse
-    { target :: Maybe Text -- E.g. "nc 127.0.0.1:8080"
+    { -- | 'Nothing' means no access allowed. Otherwise, the command that the SSH server should run in a shell.
+      target :: Maybe Text -- E.g. "nc 127.0.0.1:8080"
     } deriving (Show)
 
 instance ToJSON CheckRepoAccessResponse where

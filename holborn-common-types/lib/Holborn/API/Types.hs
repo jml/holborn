@@ -109,7 +109,12 @@ instance ToField SSHKey where
     toField (SSHKey RSA key _) = Escape ("ssh-rsa " <> key)
     toField (SSHKey DSA key _) = Escape ("ssh-dsa " <> key)
 
-data KeyType = RSA | DSA deriving Show
+data KeyType = RSA | DSA deriving (Show, Eq, Ord)
+
+instance FromJSON KeyType where
+    parseJSON "RSA" = pure RSA
+    parseJSON "DSA" = pure DSA
+    parseJSON _ = mzero
 
 data SSHKey = SSHKey KeyType ByteString ByteString deriving Show
 
@@ -124,7 +129,7 @@ parseSSHKey keyData = do
         _ -> Nothing
   where
     -- Using unsafeperformIO because fingerprinting is morally a pure
-    -- action but we 're usingn ssh-keygen for now.
+    -- action but we 're using ssh-keygen for now.
     fingerprint keyData' = unsafePerformIO $ do
         -- e.g. ssh-keygen -l -f /dev/stdin <~/.ssh/id_rsa.pub
         (i, o, _, _) <- runInteractiveCommand "ssh-keygen -l -f /dev/stdin"
