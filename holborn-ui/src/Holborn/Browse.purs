@@ -23,7 +23,7 @@ import Data.List (toUnfoldable, List)
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 import Data.Foldable (intercalate)
 
-import Holborn.Fetchable (class Fetchable)
+import Holborn.Fetchable (class Fetchable, fetch)
 import Holborn.Config (makeUrl)
 import Holborn.ManualEncoding.Browse (BrowseMetaResponse(..), GitTree(..), GitTreeEntry(..))
 import Holborn.ManualEncoding.Browse as MB
@@ -38,7 +38,7 @@ data State = State
     }
 
 startRoute :: BrowseRoutes -> State
-startRoute s = State { route: spy s, _meta: Nothing, _tree: Nothing }
+startRoute s = State { route: s, _meta: Nothing, _tree: Nothing }
 
 data Action = NOP
 
@@ -51,21 +51,23 @@ toArrayOf p s = toUnfoldable (toListOf p s)
 
 
 instance browseFetchable :: Fetchable BrowseRoutes State where
-  fetch (Home owner repo path) state = do
+  fetch rt@(Home owner repo path) state@(State { _meta = Nothing }) = do
     r <- Auth.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo))
     newState <- case decodeJson r.response of
       Left err -> unsafeThrow "could not decode main"
       Right browseMetaResponse ->
-        let state' = set routeLens (HomeLoaded owner repo path) state
-        in pure (set meta (Just browseMetaResponse) state')
+        pure (set meta (Just browseMetaResponse) state)
 
-    -- TODO tree and metadata can be fetched in parallel (see Aff Par monad)
+    fetch rt newState
+
+  fetch (Home owner repo path) state = do
     let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/trees/master" ++ (maybe "" id path))
     rTree <- Auth.get url
     case decodeJson rTree.response of
       Left err -> unsafeThrow err
-      Right treeResponse -> do
-        pure (set tree (Just treeResponse) newState)
+      Right treeResponse ->
+        let state' = set routeLens (HomeLoaded owner repo path) state
+        in pure (set tree (Just treeResponse) state')
 
   fetch _ state = pure state
 
