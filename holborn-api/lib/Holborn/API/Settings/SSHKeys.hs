@@ -24,6 +24,7 @@ import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
 import Holborn.Auth (AuthToken(..), Permission(..), hasPermission)
 import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
 import Holborn.API.Auth (getAuthFromToken)
+import qualified Holborn.Logging as Log
 
 
 type API =
@@ -73,7 +74,7 @@ deleteKey appconf@AppConf{conn=conn} token keyId = do
     count <- liftIO $ execute conn [sql|
             delete from "public_key" where id = ? and owner_id = ?
             |] (keyId, userId)
-    liftIO $ print count
+    Log.debug count
     return ()
 
 

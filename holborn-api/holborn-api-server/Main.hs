@@ -10,11 +10,10 @@ import BasicPrelude
 import qualified Env
 import Network.Wai (Application)
 import qualified Network.Wai.Handler.Warp as Warp
-import Servant (serve)
 import Database.PostgreSQL.Simple (connect, ConnectInfo(..), defaultConnectInfo)
 
 import Holborn.API.Types (AppConf(..))
-import Servant ((:<|>)(..))
+import Servant (serve, (:<|>)(..))
 import Data.Proxy (Proxy(..))
 
 import qualified Holborn.Docs
@@ -23,6 +22,7 @@ import qualified Holborn.API.Internal
 import qualified Holborn.API.Browse
 import qualified Holborn.API.Settings.SSHKeys
 import qualified Holborn.API.Settings.Profile
+import qualified Holborn.Logging as Log
 import Network.HTTP.Client (newManager, defaultManagerSettings)
 
 
@@ -58,7 +58,7 @@ warpSettings :: Warp.Port -> Warp.Settings
 warpSettings port =
   Warp.setBeforeMainLoop printPort (Warp.setPort port' Warp.defaultSettings)
   where
-    printPort = putStrLn $ "holborn-api running at http://localhost:" ++ show port' ++ "/"
+    printPort = Log.info $ "holborn-api running at http://localhost:" ++ show port' ++ "/"
     port' = port
 
 

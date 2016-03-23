@@ -27,6 +27,7 @@ import qualified Data.Attoparsec.Text as AT
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Types (AppConf(..), KeyType(..))
+import qualified Holborn.Logging as Log
 
 import System.IO (stdout, hFlush)
 
@@ -44,8 +45,7 @@ type API =
 -- | Implementation
 checkKey :: AppConf -> CheckKeyRequest -> ExceptT ServantErr IO CheckKeyResponse
 checkKey AppConf{conn} request = do
-    liftIO $ print ("checkKey" :: Text, request)
-    liftIO $ hFlush stdout
+    Log.debug ("checkKey" :: Text, request)
     let comparison_pubkey = case key_type request of
             RSA -> "ssh-rsa " <> key request
             DSA -> "ssh-dsa " <> key request
@@ -53,7 +53,7 @@ checkKey AppConf{conn} request = do
                    select pk.id, pk.verified
                    from "public_key" as pk  where comparison_pubkey = ?
                |] (Only comparison_pubkey)
-    liftIO $ print rows
+    Log.debug rows
 
     return $ case rows of
        [(keyId, True)] -> CheckKeyResponse (Just keyId)
@@ -123,7 +123,7 @@ instance FromJSON SSHCommandLine where
 
 checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> ExceptT ServantErr IO CheckRepoAccessResponse
 checkRepoAccess AppConf{conn} request = do
-    liftIO $ print request
+    Log.debug request
     rows <- liftIO $ query conn [sql|
                    select id, pk.readonly, pk.verified
                    from "public_key" as pk where id = ?
@@ -133,7 +133,7 @@ checkRepoAccess AppConf{conn} request = do
     -- shell muckery to first send the metadata and then do a
     -- bidirectional pipe.
     let cmd = command request
-    print (cmd, rows)
+    Log.debug (cmd, rows)
     return . CheckRepoAccessResponse . Just $ determineAccess cmd rows
   where
     reportError err = ">&2 echo '" <> err <> "' && exit 1"

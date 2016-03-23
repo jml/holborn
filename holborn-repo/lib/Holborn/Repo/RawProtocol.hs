@@ -27,6 +27,7 @@ import           Pipes.Safe (runSafeT)
 
 import           Holborn.Repo.Config (Config, buildRepoPath)
 import           Holborn.Repo.Process (streamIO, proc)
+import qualified Holborn.Logging as Log
 
 
 gitPack :: String -> Config -> Text -> Text -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
@@ -55,7 +56,7 @@ getRepoParser :: MonadIO m => PP.Parser ByteString m (Maybe RepoCall)
 getRepoParser = do
     repoCall <- decode
     return $ case repoCall of
-      Just (Right x) -> (Just x)
+      Just (Right x) -> Just x
       _ -> Nothing
 
 -- | Accept connection, parse the exact repository, then dispatch to
@@ -65,7 +66,7 @@ accept config (sock, _) = do
     let from = fromSocket sock 4096
     let to = toSocket sock
     (header, fromRest) <- runStateT getRepoParser from
-    liftIO $ print header
+    Log.debug header
     void $ case header of
         Just (RepoCall "git-upload-pack" org repo) ->
             gitUploadPack config org repo fromRest to
