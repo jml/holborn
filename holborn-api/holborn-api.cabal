@@ -88,5 +88,6 @@ executable holborn-api-server
                      , holborn-api
                      , holborn-common-types
 
+  ghc-options:         -eventlog
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
