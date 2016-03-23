@@ -46,18 +46,20 @@ type BrowseAPI =
   -- XXX: blob & tree have this hacky thing because Servant 0.5 broke our CaptureAll combinator.
   -- https://github.com/haskell-servant/servant/issues/257 tracks fixing this.
   :<|> "git" :> "blobs" :> Capture "revspec" Revision :>
-    ((Capture "pathspec" Text :> Get '[HTML] Blob)
+    ((Get '[HTML] Blob)
+     :<|> (Capture "pathspec" Text :> Get '[HTML] Blob)
      :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob)
      :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob)
      :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob)
      :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob))
   -- e.g. /v1/repos/src/pulp/tree/master/
   :<|> "git" :> "trees" :> Capture "revspec" Revision :>
-    ((Capture "pathspec" Text :> Get '[HTML, JSON] Tree)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Tree)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Tree)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Tree)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Tree))
+    ((Get '[HTML, JSON] Tree)
+     :<|> (Capture "pathspec" Text :> Get '[HTML, JSON] Tree)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Tree)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Tree)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Tree)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Tree))
   :<|> "commits" :> Capture "revspec" Revision :> QueryParam "author" Author :> Get '[HTML] [Commit]
   :<|> "git" :> "commits" :> Capture "revspec" Revision :> Get '[HTML] Commit
 
@@ -87,7 +89,7 @@ codeBrowser repo = enter gitBrowserT $
   :<|> renderCommits repo
   :<|> renderCommit repo
 
-  where handlePaths f = (\a -> f [a]) :<|> (\a b -> f [a, b]) :<|> (\a b c -> f [a, b, c]) :<|> (\a b c d -> f [a, b, c, d]) :<|> (\a b c d e -> f [a, b, c, d, e])
+  where handlePaths f = (f []) :<|> (\a -> f [a]) :<|> (\a b -> f [a, b]) :<|> (\a b c -> f [a, b, c]) :<|> (\a b c d -> f [a, b, c, d]) :<|> (\a b c d e -> f [a, b, c, d, e])
 
 
 renderMeta :: Repository -> RepoBrowser RepoMeta
@@ -98,12 +100,12 @@ renderMeta repo = do
 
 renderBlob :: Repository -> Revision -> [Text] -> RepoBrowser Blob
 renderBlob repo revision segments =
-  fromMaybe (terror "no blob found") <$> withRepository repo (getBlob revision segments)
+  fromMaybe (terror ("no blob found for " <> (show segments))) <$> withRepository repo (getBlob revision segments)
 
 
 renderTree :: Repository -> Revision -> [Text] -> RepoBrowser Tree
 renderTree repo revision segments =
-  fromMaybe (terror "no tree found") <$> withRepository repo (getTree revision segments)
+    fromMaybe (terror ("no tree found for" <> (show segments))) <$> withRepository repo (getTree revision segments)
 
 
 renderCommits :: Repository -> Revision -> Maybe Author -> RepoBrowser [Commit]

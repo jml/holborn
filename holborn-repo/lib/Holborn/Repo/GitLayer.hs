@@ -2,6 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 {-|
 The Holborn interface to Git.
 -}
@@ -27,9 +29,12 @@ import Control.Monad.Trans.Except (ExceptT)
 import Data.Tagged (Tagged(..))
 import qualified Data.Text as Text
 import qualified Git
+import Git.Types (IsOid(renderObjOid, renderOid))
 import Git.Libgit2 (LgRepo, MonadLg, lgFactory)
 import Text.Blaze (ToMarkup(..))
-import Data.Aeson (ToJSON(..), genericToJSON, Value(..), object)
+import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, defaultOptions, object)
+import Data.Aeson.Types (Options(fieldLabelModifier, omitNothingFields))
+import GHC.Generics (Generic)
 
 -- XXX: Putting web stuff here to avoid orphan warnings. Would be nice to have
 -- it completely separate.
@@ -109,7 +114,7 @@ getTree revision segments repo = do
                   subtree <- Git.lookupTree treeEntryOid
                   tree' <- loadTree revision segments repo subtree entry'
                   return $ Just tree'
-                Git.BlobEntry _blobEntryOid _blobEntryKind -> notImplementedYet "redirect to blob"
+                Git.BlobEntry _blobEntryOid _blobEntryKind -> notImplementedYet "redirect to blob?"
                 Git.CommitEntry _ -> notImplementedYet "what's a commit within tree?"
 
   where
@@ -154,6 +159,7 @@ instance ToMarkup Blob where
 getBlob :: (MonadLg io) => Revision -> [Text] -> Repository -> GitM io (Maybe Blob)
 getBlob revision segments repo = do
   oid <- resolveReference revision
+  liftIO $ print oid
   case oid of
     Nothing -> return Nothing
     Just oid' -> do
@@ -165,6 +171,7 @@ getBlob revision segments repo = do
         [] -> notImplementedYet "Not sure what to do for blob root"
         _ -> do
           entry <- Git.treeEntry tree (segmentsToPath segments)
+          liftIO $ print ("sef", segmentsToPath segments, oid', isJust entry)
           case entry of
             Nothing -> return Nothing
             Just entry' ->
@@ -173,6 +180,8 @@ getBlob revision segments repo = do
                 Git.BlobEntry blobEntryOid blobEntryKind -> do
                   blob <- Git.lookupBlob blobEntryOid
                   -- XXX: Loads the entire blob into memory.
+                  -- Comment tom: limit to e.g. 10MB for API here, and do the rest with a
+                  -- different "raw" server like github.
                   contents <- Git.blobToByteString blob
                   return $ Just $ Blob blobEntryOid contents revision segments repo
                 Git.CommitEntry _ -> notImplementedYet "what's a commit within tree?"
@@ -214,11 +223,32 @@ instance ToHttpApiData Revision where
 -- * path within repository
 -- * realized _thing_
 
+data TreeEntryMetaMode = SymlinkMode | BlobMode | ExecutableBlobMode | TreeMode deriving (Show)
+
+-- TODO probably better off in common types
+data TreeEntryMeta = TreeEntryMeta
+    { _TreeEntryMeta_path :: Text
+    , _TreeEntryMeta_mode :: TreeEntryMetaMode
+    , _TreeEntryMeta_type_ :: Text -- TODO better types + ToJSON instances
+    , _TreeEntryMeta_size :: Maybe Int -- doesn't apply to e.g. directories ATM
+    , _TreeEntryMeta_sha :: Text
+    } deriving (Show, Generic)
+
+instance ToJSON TreeEntryMeta where
+  toJSON = genericToJSON defaultOptions
+    { fieldLabelModifier = drop (length ("_TreeEntryMeta_" :: String)), omitNothingFields = True }
+
+instance ToJSON TreeEntryMetaMode where
+    toJSON SymlinkMode = toJSON ("120000" :: Text)
+    toJSON TreeMode = toJSON ("040000" :: Text)
+    toJSON ExecutableBlobMode = toJSON ("100755" :: Text)
+    toJSON BlobMode = toJSON ("100644" :: Text)
+
 
 -- XXX: Do we want to parameterize this by GitRepo?
 data Tree = Tree { _gitTree :: Git.Tree GitRepo
                  , gitTreeEntry :: Git.TreeEntry GitRepo
-                 , gitEntries :: [(Git.TreeFilePath, Git.TreeEntry GitRepo)]
+                 , gitEntries :: [(Git.TreeFilePath, TreeEntryMeta)]
                  , treeRevision :: Revision
                  , treePath :: [Text]
                  , treeRepository :: Repository
@@ -240,54 +270,77 @@ treeEntryToList entry@(Git.CommitEntry oid) =
 -- https://developer.github.com/v3/git/trees/
 instance ToJSON Tree where
     toJSON Tree{..} = object
-      [ ("sha",  String (show treeRevision))
-        -- TODO add mode, type, sha, size
-      , ("tree", toJSON (map (\(path, entry) -> object [("path", toJSON (decodeUtf8 path))]) gitEntries) )
+      [ ("sha", toJSON (toUrlPiece treeRevision))
+      , ("tree", toJSON (map snd gitEntries))
       , ("path", toJSON treePath)
       ]
-
 
 -- XXX: This is partial. If 'treeEntryOid' is not in the current repo, then it will raise an exce
 loadTree :: Git.MonadGit GitRepo m => Revision -> [Text] -> Repository -> Git.Tree GitRepo -> Git.TreeEntry GitRepo -> m Tree
 loadTree revision segments repo tree entry = do
-  entries <- Git.listTreeEntries tree
-  return $ Tree tree entry entries revision segments repo
+    entries <- Git.listTreeEntries tree
+    entriesMeta <- mapM toTreeEntryMeta entries
+    return $ Tree tree entry entriesMeta revision segments repo
+  where
+    toTreeEntryMeta (path, entry) =
+        case entry of
+            Git.TreeEntry treeEntryOid -> treeMeta path treeEntryOid
+            Git.BlobEntry _blobEntryOid _blobEntryKind -> blobMeta path _blobEntryOid _blobEntryKind
+            Git.CommitEntry e -> notImplementedYet "what's a commit within tree?"
+
+    blobMeta path _blobEntryOid _blobEntryKind = do
+        blob <- Git.lookupBlob _blobEntryOid
+        let mode = case _blobEntryKind of
+                Git.PlainBlob -> BlobMode
+                Git.ExecutableBlob -> ExecutableBlobMode
+                Git.SymlinkBlob -> SymlinkMode
+        let sha = renderObjOid _blobEntryOid
+        pure $ (path, TreeEntryMeta
+          { _TreeEntryMeta_path = decodeUtf8 path
+          , _TreeEntryMeta_mode = mode
+          , _TreeEntryMeta_type_ = "blob"
+          , _TreeEntryMeta_size = Just 100 -- TODO replace fake data
+          , _TreeEntryMeta_sha = sha
+          })
+    treeMeta path _treeOid = do
+        tree <- Git.lookupTree _treeOid
+        let sha = renderObjOid _treeOid
+        pure $ (path, TreeEntryMeta
+          { _TreeEntryMeta_path = decodeUtf8 path
+          , _TreeEntryMeta_mode = TreeMode
+          , _TreeEntryMeta_type_ = "tree"
+          , _TreeEntryMeta_size = Nothing
+          , _TreeEntryMeta_sha = sha
+          })
 
 -- XXX: The URL handling is awful. Not composable, assumes a certain path (by
 -- returning absolute URLs and encoding the path *to* the repo as well as the
 -- path *in* the repo). Really we should be using some sort of
 -- Servant-provided URL generation.
-
--- XXX: 'kind' is entry type, either "tree" or "blob". Really, we should have
--- a much better URL handling system.
-treeURL :: Tree -> Text -> Text
-treeURL tree kind = intercalate "/" (["", owner, name, kind, revspec] ++ treePath tree)
-  where
-    owner = _repoOwner repo
-    name = _repoName repo
-    repo = treeRepository tree
-    revspec = toUrlPiece (treeRevision tree)
-
-
-urlWithinTree :: Tree -> (Git.TreeFilePath, Git.TreeEntry r) -> Text
-urlWithinTree tree (path, entry) = intercalate "/" [basePath, decodeUtf8 path]
-  where
-    basePath =
-      case entry of
-        Git.TreeEntry _ -> treeURL tree "tree"
-        Git.BlobEntry _blobEntryOid _blobEntryKind -> treeURL tree "blob"
-        Git.CommitEntry _ -> notImplementedYet "what's a commit within tree?"
+urlWithinTree :: Tree -> Text -> TreeEntryMeta -> Text
+urlWithinTree Tree{treeRepository = Repo{_repoName, _repoOwner}, treeRevision} basePath TreeEntryMeta{..} =
+  intercalate "/"
+    [ _repoOwner
+    , _repoName
+    , case _TreeEntryMeta_type_ of
+          "tree" -> "git/trees"
+          "blob" -> "git/blobs"
+          "commit" -> "git/commits"
+    , toUrlPiece treeRevision
+    , basePath
+    , _TreeEntryMeta_path
+    ]
 
 
 instance ToMarkup Tree where
-  toMarkup tree = do
-    H.h1 $ makeLink (urlWithinTree tree (encodeUtf8 currentPath, gitTreeEntry tree)) currentPath
-    H.ul $ mapM_ renderEntry (gitEntries tree)
+  toMarkup tree@Tree{gitEntries, treePath} = do
+    H.ul $ mapM_ renderEntry gitEntries
 
     where
-      renderEntry treeEntry = H.li $ makeLink (urlWithinTree tree treeEntry) (decodeUtf8 (fst treeEntry))
+      renderEntry (_, meta@TreeEntryMeta{_TreeEntryMeta_path}) =
+        H.li $ makeLink (urlWithinTree tree currentPath meta) _TreeEntryMeta_path
 
-      currentPath = intercalate "/" (treePath tree)
+      currentPath = intercalate "/" treePath
       makeLink url path = H.a ! A.href (H.toValue ("/v1/repos/" <> url)) $ toMarkup path
 
 

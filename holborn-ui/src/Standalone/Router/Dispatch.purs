@@ -4,7 +4,7 @@
 module Standalone.Router.Dispatch where
 
 import Prelude
-import Text.Parsing.Simple (parse, char, Parser)
+import Text.Parsing.Simple (runParser, char, Parser)
 import Control.Monad.Eff (Eff)
 import Data.Either (Either(..))
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
@@ -30,6 +30,9 @@ navigate = pushState
 matches :: forall a e. Parser a -> (a -> Eff e Unit) -> Eff e Unit
 matches parser callback = do
   routeChanged $ \old new ->
-    case parse parser new of
-      Right x -> callback x
-      Left _ ->  unsafeThrow "You forgot an always matching 404 route in your route parser."
+    let result = runParser parser new in
+    case result.remaining of
+      "" -> case result.consumed of
+        Right x -> callback x
+        Left _ -> unsafeThrow "You forgot an always matching 404 route in your route parser."
+      _ -> unsafeThrow ("Not all of URL consumed. Remaining: " <> result.remaining)

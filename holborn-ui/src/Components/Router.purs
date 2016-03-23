@@ -16,9 +16,10 @@ import Network.HTTP.Affjax as AJ
 import React as React
 import React.DOM as R
 import React.DOM.Props as RP
+import Unsafe.Coerce (unsafeCoerce)
 
 import Text.Parsing.Simple (Parser, string)
-import Standalone.Router.Dispatch (matches)
+import Standalone.Router.Dispatch (matches, navigate)
 import Thermite as T
 import Web.Cookies as C
 
@@ -61,20 +62,25 @@ data Action =
 -- into real code.
 instance fetchRootRoutes :: Fetchable RootRoutes State where
   fetch route state@(RouterState { username = "anonymous" }) = do
-    traceAnyM "not logged in do a pretend login as alice"
-    -- if the user fetch failed (e.g. cookie expired we'd redirect to the signing route:)
-    --pure (set routeLens (SigninRoute Signin.initialState) state)
-    fetch route (set usernameLens "alice" state)
-  fetch (Settings s) state = do
-    sr <- fetch (view SettingsRoute.routeLens s) s -- of type SettingsRoute
-    pure (set routeLens (Settings sr) state)
+      traceAnyM "not logged in: doing a pretend login as `alice`"
+      -- if the user fetch failed (e.g. cookie expired we'd redirect to the signing route:)
+      --pure (set routeLens (SigninRoute Signin.initialState) state)
+      fetch route (set usernameLens "alice" state)
 
+  fetch (Settings s) state = do
+      sr <- fetch (view SettingsRoute.routeLens s) s -- of type SettingsRoute
+      pure (set routeLens (Settings sr) state)
+
+  -- Slightly different to settings: If we are already in a browse
+  -- route then recycle existing state (browseState).
   fetch (BrowseRoute s) state = do
-    sr <- fetch (view Browse.routeLens s) s
-    pure (set routeLens (BrowseRoute sr) state)
+    newState <- case view routeLens state of
+      BrowseRoute browseState -> fetch (view Browse.routeLens s) browseState
+      _ -> fetch (view Browse.routeLens s) s
+    pure (set routeLens (BrowseRoute newState) state)
 
   fetch rt s = do
-    pure (set routeLens rt s)
+      pure (set routeLens rt s)
 
 
 initialState :: State
@@ -145,9 +151,20 @@ spec = container $ handleActions $ fold
        ]
   where
     container = over T._render \render d p s c ->
-      [ R.div [RP.className "container-fluid"] [R.text (view usernameLens s)]
-      , R.div [RP.className "container-fluid"] (render d p s c)
+      [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.text (view usernameLens s)]
+      , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
       ]
+
+    -- Override link navigation to use pushState instead of the
+    -- browser following the link.
+    -- TODO: add escape-hatch, e.g. `data-external=true` attribute or
+    -- where the path is non-local
+    handleLinks ev = do
+      case (unsafeCoerce ev).target.nodeName of
+        "A" -> do
+          (unsafeCoerce ev).preventDefault
+          navigate ((unsafeCoerce ev).target.pathname)
+        _ -> pure unit
 
     handleActions = over T._performAction \nestedPerformAction a p s k -> do
       nestedPerformAction a p s k

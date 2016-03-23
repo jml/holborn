@@ -18,7 +18,6 @@ import Data.Foldable (fold)
 import Data.Argonaut.Decode (decodeJson)
 import Holborn.Fetchable (class Fetchable)
 import Text.Parsing.Simple (Parser, string)
-import Standalone.Router.Dispatch (navigate)
 
 import Holborn.Config (makeUrl)
 import Debug.Trace
@@ -117,11 +116,11 @@ spec = container $ fold
       ]
 
     -- just a link
-    lgi label link = R.a [RP.onClick \_ -> (navigate link), RP.className "list-group-item"] [R.text label]
+    lgi label link = R.a [RP.href link, RP.className "list-group-item"] [R.text label]
     -- active
-    lgia label link = R.a [RP.onClick \_ -> (navigate link), RP.className "list-group-item active"] [R.text label]
+    lgia label link = R.a [RP.href link, RP.className "list-group-item active"] [R.text label]
     -- disabled
-    lgid label link = R.a [RP.onClick \_ -> (navigate link), RP.className "list-group-item disabled"] [R.text label]
+    lgid label link = R.a [RP.href link, RP.className "list-group-item disabled"] [R.text label]
 
     menu :: SettingsRoutes -> React.ReactElement
     menu route =
