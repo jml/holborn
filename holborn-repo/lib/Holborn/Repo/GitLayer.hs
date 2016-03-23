@@ -270,7 +270,7 @@ treeEntryToList entry@(Git.CommitEntry oid) =
 -- https://developer.github.com/v3/git/trees/
 instance ToJSON Tree where
     toJSON Tree{..} = object
-      [ ("sha", toJSON (toText treeRevision))
+      [ ("sha", toJSON (toUrlPiece treeRevision))
       , ("tree", toJSON (map snd gitEntries))
       , ("path", toJSON treePath)
       ]
@@ -326,7 +326,7 @@ urlWithinTree Tree{treeRepository = Repo{_repoName, _repoOwner}, treeRevision} b
           "tree" -> "git/trees"
           "blob" -> "git/blobs"
           "commit" -> "git/commits"
-    , toText treeRevision
+    , toUrlPiece treeRevision
     , basePath
     , _TreeEntryMeta_path
     ]
