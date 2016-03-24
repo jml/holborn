@@ -19,7 +19,11 @@ var modulesDirectories = [
 var purescriptWebpackPlugin = new PurescriptWebpackPlugin({
   src: src,
   ffi: ffi,
-  bundle: true,
+  // TODO: bundeling disabled until psc-bundle can read unicode
+  // escapes like '\u1234'. Bugfix is live but only for new version of
+  // language-javascript (0.6.x). Alternative might be webpack2 tree
+  // shaking but that's incompatible with pulp.
+  bundle: false,
   psc: 'psa',
 });
 
