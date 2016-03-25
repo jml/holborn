@@ -16,3 +16,6 @@ import Web.Cookies as C
 -- so that downstream can deal with the error.
 class Fetchable action state where
   fetch :: forall eff. action -> state -> Aff (ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) state
+
+
+type Fetch eff state = Aff (ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) state

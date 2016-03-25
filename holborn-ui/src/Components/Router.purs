@@ -193,7 +193,7 @@ componentDidMount dispatch this = do
                        , cookie :: C.COOKIE | eff2) Unit
     callback rt = do
       maybeToken <- C.getCookie "auth-token" -- TODO this should go into the user fetching (which needs to check the token anyway)
-
+      traceAnyM rt
       case maybeToken of
         -- force sign-in
         Nothing -> dispatch this (UpdateRoute (SigninRoute Signin.initialState))
