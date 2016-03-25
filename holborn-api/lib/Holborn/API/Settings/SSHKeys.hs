@@ -31,7 +31,7 @@ type API =
          "v1" :> "users" :> Capture "username" Username :> "keys" :> Get '[JSON] [ListKeysRow]
     :<|> "v1" :> "user" :> "keys" :> Capture "id" Int :> Get '[JSON] ListKeysRow
     :<|> "v1" :> Header "Authorization" AuthToken :> "user" :> "keys" :> Capture "id" Int :> Delete '[JSON] ()
-    :<|> "v1" :> Header "Authorization" AuthToken :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> Post '[JSON] ListKeysRow
+    :<|> "v1" :> Header "Authorization" AuthToken :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> PostCreated '[JSON] ListKeysRow
 
 
 -- TODO Tom would really rather have an applicative validator that can
