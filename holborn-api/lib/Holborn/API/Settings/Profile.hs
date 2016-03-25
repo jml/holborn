@@ -33,12 +33,13 @@ type API =
     :<|> "v1" :> Header "Authorization" AuthToken :> "user" :> ReqBody '[JSON] ProfileData :> Post '[JSON] ()
 
 
-data Error = InvalidUrl | UserNotFound Text
+data Error = InvalidUrl | UserNotFound Text | UserNotInDb
 
 
 instance JSONCodeableError Error where
     toJSON InvalidUrl = (400, object ["url" .= ("Not a valid URL" :: Text)])
     toJSON (UserNotFound x) = (404, object ["message" .= ("User " <> x <> " not found")])
+    toJSON UserNotInDb = (400, object ["message" .= ("unsure about the problem!" :: Text)])
 
 
 server :: AppConf -> Server API
@@ -57,11 +58,21 @@ getUser AppConf{conn} username = do
 
     case r of
         [] -> throwE (SubAPIError (UserNotFound (show username)))
-        [(id_, un, created)] -> return (ProfileData id_ un "about" created)
+        [(id_, un, created)] -> return (ProfileData id_ un "about this user TODO fetch from DB" created)
 
 
+-- TODO The function to fetch the current user should go somewhere
+-- other than profile settings?
 getAuthorizedUser :: AppConf -> Maybe AuthToken -> ExceptT (APIError Error) IO ProfileData
-getAuthorizedUser conf token = undefined
+getAuthorizedUser conf@AppConf{conn} token = do
+    (userId, permissions) <- getAuthFromToken conf token
+    r <- liftIO $ query conn [sql|
+                   select username, created
+                   from "user" where id = ?
+               |] (Only userId)
+    case r of
+        [(uname, created)] -> pure (ProfileData userId uname "about this user TODO fetch from DB" created)
+        _ -> throwE (SubAPIError UserNotInDb) -- TODO more informative error by encrypting context and sending it to the user
 
 
 postAuthorizedUser :: AppConf -> Maybe AuthToken -> ProfileData -> ExceptT (APIError Error) IO ()

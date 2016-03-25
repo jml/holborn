@@ -7,6 +7,7 @@ import Control.Monad.Aff (runAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE())
 import Control.Monad.Eff.Exception as E
+import Control.Monad.Eff.Class (liftEff)
 import Data.Either (Either(..))
 import Data.Foldable (fold)
 import Data.Functor (($>))
@@ -17,19 +18,27 @@ import React as React
 import React.DOM as R
 import React.DOM.Props as RP
 import Unsafe.Coerce (unsafeCoerce)
+import Data.Argonaut.Decode (decodeJson)
 
 import Text.Parsing.Simple (Parser, string)
 import Standalone.Router.Dispatch (matches, navigate)
 import Thermite as T
 import Web.Cookies as C
+import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
 import Holborn.SettingsRoute as SettingsRoute
 import Holborn.Signin as Signin
+import Holborn.Config (makeUrl)
+import Holborn.Auth as Auth
 import Debug.Trace
+import Holborn.ManualEncoding.Profile as ManualCodingProfile
 
-data State = RouterState { currentRoute :: RootRoutes, username :: String }
+
+data UserMeta = SignedIn { username :: String, about :: String } | NotLoaded | Anonymous
+
+data State = RouterState { currentRoute :: RootRoutes, _userMeta :: UserMeta }
 
 
 data RootRoutes =
@@ -61,11 +70,19 @@ data Action =
 -- a state monad but it's a bit unclear how to fit that observation
 -- into real code.
 instance fetchRootRoutes :: Fetchable RootRoutes State where
-  fetch route state@(RouterState { username = "anonymous" }) = do
-      traceAnyM "not logged in: doing a pretend login as `alice`"
-      -- if the user fetch failed (e.g. cookie expired we'd redirect to the signing route:)
-      --pure (set routeLens (SigninRoute Signin.initialState) state)
-      fetch route (set usernameLens "alice" state)
+  fetch route state@(RouterState { _userMeta = NotLoaded }) = do
+      maybeToken <- liftEff (C.getCookie "auth-token")
+      newState <- case maybeToken of
+        Nothing -> pure (set userMeta Anonymous state)
+        Just _ -> do
+          r <- Auth.get (makeUrl "/v1/user")
+          case decodeJson r.response of
+            Left err ->
+              pure (set routeLens (SigninRoute Signin.initialState) state)
+            Right (ManualCodingProfile.Profile json) ->
+              pure (set userMeta (SignedIn {username: json.username, about: json.about}) state)
+
+      fetch route newState
 
   fetch (Settings s) state = do
       sr <- fetch (view SettingsRoute.routeLens s) s -- of type SettingsRoute
@@ -84,14 +101,14 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
 
 
 initialState :: State
-initialState = RouterState { currentRoute: EmptyRoute, username: "anonymous" }
+initialState = RouterState { currentRoute: EmptyRoute, _userMeta: NotLoaded }
 
 
 routeLens :: LensP State RootRoutes
 routeLens = lens (\(RouterState s) -> s.currentRoute) (\(RouterState s) x -> RouterState (s { currentRoute = x }))
 
-usernameLens :: LensP State String
-usernameLens = lens (\(RouterState s) -> s.username) (\(RouterState s) x -> RouterState (s { username = x }))
+userMeta :: LensP State UserMeta
+userMeta = lens (\(RouterState s) -> s._userMeta) (\(RouterState s) x -> RouterState (s { _userMeta = x }))
 
 
 _SigninState :: PrismP State Signin.State
@@ -150,10 +167,17 @@ spec = container $ handleActions $ fold
        , T.focusState routeLens (T.split _404State spec404)
        ]
   where
-    container = over T._render \render d p s c ->
-      [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.text (view usernameLens s)]
-      , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
-      ]
+    container = over T._render \render d p s c -> case view userMeta s of
+      NotLoaded -> [R.text "loading UI ..."]
+      Anonymous ->
+        [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.text "sign in here ..."]
+        , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
+        ]
+      SignedIn { username, about } ->
+        [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.text username, R.text about]
+        , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
+        ]
+
 
     -- Override link navigation to use pushState instead of the
     -- browser following the link.
@@ -191,13 +215,7 @@ componentDidMount dispatch this = do
                        , refs :: React.ReactRefs refs
                        , ajax :: AJ.AJAX
                        , cookie :: C.COOKIE | eff2) Unit
-    callback rt = do
-      maybeToken <- C.getCookie "auth-token" -- TODO this should go into the user fetching (which needs to check the token anyway)
-      case maybeToken of
-        -- TODO: sign-in-redirect should be done in Fetchable (if
-        -- fetching of user meta fails).
-        Nothing -> dispatch this (UpdateRoute (SigninRoute Signin.initialState))
-        Just _ -> dispatch this (UpdateRoute rt)
+    callback rt = dispatch this (UpdateRoute rt)
 
 
 component :: forall props. React.ReactClass props
