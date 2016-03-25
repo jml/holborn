@@ -132,7 +132,7 @@ pathToSegments = Text.splitOn "/" . decodeUtf8
 
 
 data Blob = Blob { _gitBlobOid :: Git.BlobOid GitRepo
-                 , blobContents :: ByteString  -- XXX: gitlib goes to some lengths (via Conduit) to allow for nice loading of this. Here, we just blat everything into memory.
+                 , blobContents :: ByteString  -- XXX: gitlib goes to some lengths (via Conduit) to allow for nice loading of this. Here, we just blat everything into memory. Tom comment: might be able to use https://hackage.haskell.org/package/pipes-aeson
                  , blobRevision :: Revision
                  , blobPath :: [Text]
                  , blobRepository :: Repository
@@ -273,6 +273,13 @@ instance ToJSON Tree where
       [ ("sha", toJSON (toUrlPiece treeRevision))
       , ("tree", toJSON (map snd gitEntries))
       , ("path", toJSON treePath)
+      ]
+
+instance ToJSON Blob where
+    toJSON Blob{..} = object
+      [ ("sha", toJSON (toUrlPiece blobRevision))
+      , ("contents", toJSON (decodeUtf8 blobContents)) -- TODO deal with binary data (e.g. utf8-decoding fails)
+      , ("path", toJSON blobPath)
       ]
 
 -- XXX: This is partial. If 'treeEntryOid' is not in the current repo, then it will raise an exce

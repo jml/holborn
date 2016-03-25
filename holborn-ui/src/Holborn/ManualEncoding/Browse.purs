@@ -69,6 +69,16 @@ data GitTree = GitTree
 
 derive instance genericGitTree :: Generic GitTree
 
+
+data GitBlob = GitBlob
+  { sha :: String
+  , path :: Array String
+  , contents :: String
+  }
+
+derive instance genericGitBlob :: Generic GitBlob
+
+
 tree :: LensP GitTree (Array GitTreeEntry)
 tree = lens (\(GitTree s) -> s.tree) (\(GitTree s) x -> GitTree (s { tree = x }))
 
@@ -77,4 +87,8 @@ treePath = lens (\(GitTree s) -> s.path) (\(GitTree s) x -> GitTree (s { path = 
 
 
 instance decodeGitTree :: DecodeJson GitTree where
+  decodeJson = gDecode
+
+
+instance decodeGitBlob :: DecodeJson GitBlob where
   decodeJson = gDecode

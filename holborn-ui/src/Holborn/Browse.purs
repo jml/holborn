@@ -26,7 +26,7 @@ import Data.Foldable (intercalate)
 
 import Holborn.Fetchable (class Fetchable, fetch, Fetch)
 import Holborn.Config (makeUrl)
-import Holborn.ManualEncoding.Browse (BrowseMetaResponse(..), GitTree(..), GitTreeEntry(..))
+import Holborn.ManualEncoding.Browse (BrowseMetaResponse(..), GitTree(..), GitTreeEntry(..), GitBlob(..))
 import Holborn.ManualEncoding.Browse as MB
 import Holborn.Auth as Auth
 
@@ -36,10 +36,11 @@ data State = State
     { route :: BrowseRoutes
     , _meta :: Maybe BrowseMetaResponse -- empty when not loaded
     , _tree :: Maybe GitTree -- Instead of maybe have a sum-type Nothing | Tree | Blob | Commit
+    , _blob :: Maybe GitBlob -- sum type?
     }
 
 startRoute :: BrowseRoutes -> State
-startRoute s = State { route: s, _meta: Nothing, _tree: Nothing }
+startRoute s = State { route: s, _meta: Nothing, _tree: Nothing, _blob: Nothing }
 
 data Action = NOP
 
@@ -86,6 +87,15 @@ instance browseFetchable :: Fetchable BrowseRoutes State where
         let state' = set routeLens (TreeLoaded owner repo ref path) state
         in pure (set tree (Just treeResponse) state')
 
+  fetch (Blob owner repo ref path) state = do
+    let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/blobs/" ++ ref ++ "/" ++ path)
+    r <- Auth.get url
+    case decodeJson r.response of
+      Left err -> buggyServer err
+      Right response ->
+        let state' = set routeLens (BlobLoaded owner repo ref path) state
+        in pure (set blob (Just response) state')
+
   fetch _ state = pure state
 
 
@@ -97,6 +107,9 @@ meta = lens (\(State s) -> s._meta) (\(State s) x -> State (s { _meta = x }))
 
 tree :: LensP State (Maybe GitTree)
 tree = lens (\(State s) -> s._tree) (\(State s) x -> State (s { _tree = x }))
+
+blob :: LensP State (Maybe GitBlob)
+blob = lens (\(State s) -> s._blob) (\(State s) x -> State (s { _blob = x }))
 
 type Repo = String
 type Owner = String
@@ -127,6 +140,8 @@ browseRoutes =
   map startRoute
     (     Tree <$> parseOwner <* string "/" <*> parseRepo <* string "tree/" <*> parseRef <* string "/" <*> parsePath
       <|> TreeLoaded <$> parseOwner <* string "/" <*> parseRepo <* string "tree/" <*> parseRef <* string "/" <*> parsePath
+      <|> Blob <$> parseOwner <* string "/" <*> parseRepo <* string "blob/" <*> parseRef <* string "/" <*> parsePath
+      <|> BlobLoaded <$> parseOwner <* string "/" <*> parseRepo <* string "blob/" <*> parseRef <* string "/" <*> parsePath
       <|> Home <$> parseOwner <* string "/" <*> parseRepo
       <|> HomeLoaded <$> parseOwner <* string "/" <*> parseRepo
     )
@@ -148,8 +163,13 @@ spec = T.simpleSpec T.defaultPerformAction render
       , R.h2 [] [R.text (view MB.description meta)]
       , R.ul [] (renderTree org repo tree)
       ]
+    render dispatch _ (State { route = BlobLoaded org repo ref path, _meta = Just meta, _blob = Just (GitBlob blob) }) _ =
+      [ R.h1 [] [R.text "browse"]
+      , R.h2 [] [R.text (view MB.description meta)]
+      , R.pre [] [R.text blob.contents]
+      ]
     render dispatch _ _ _ =
-      [ R.text "browse"
+      [ R.text "browse - not implemented probably a bug"
       ]
 
     -- TODO tom: rendering with the parsed path is extremely

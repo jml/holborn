@@ -46,12 +46,12 @@ type BrowseAPI =
   -- XXX: blob & tree have this hacky thing because Servant 0.5 broke our CaptureAll combinator.
   -- https://github.com/haskell-servant/servant/issues/257 tracks fixing this.
   :<|> "git" :> "blobs" :> Capture "revspec" Revision :>
-    ((Get '[HTML] Blob)
-     :<|> (Capture "pathspec" Text :> Get '[HTML] Blob)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML] Blob))
+    ((Get '[HTML, JSON] Blob)
+     :<|> (Capture "pathspec" Text :> Get '[HTML, JSON] Blob)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Blob)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Blob)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Blob)
+     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Blob))
   -- e.g. /v1/repos/src/pulp/tree/master/
   :<|> "git" :> "trees" :> Capture "revspec" Revision :>
     ((Get '[HTML, JSON] Tree)
