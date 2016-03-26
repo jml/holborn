@@ -3,7 +3,7 @@ module Holborn.Browse where
 import Prelude
 import Thermite as T
 import Control.Monad.Eff.Exception as E
-import Control.Apply ((*>), (<*))
+import Control.Apply ((<*))
 import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
 import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, word)
@@ -15,16 +15,13 @@ import React.DOM as R
 import React.DOM.Props as RP
 import Data.Lens (lens, LensP, set, view, toListOf)
 import Data.Lens.Traversal (traversed)
-import Data.Argonaut.Decode (decodeJson)
-import Data.Either (Either(..))
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..))
 import Data.Monoid.Endo (Endo)
 import Data.Lens.Types (Fold())
 import Data.List (toUnfoldable, List)
-import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 import Data.Foldable (intercalate)
 
-import Holborn.Fetchable (class Fetchable, fetch, Fetch)
+import Holborn.Fetchable (class Fetchable, fetch, Fetch, decodeResponse)
 import Holborn.Config (makeUrl)
 import Holborn.ManualEncoding.Browse (BrowseMetaResponse(..), GitTree(..), GitTreeEntry(..), GitBlob(..))
 import Holborn.ManualEncoding.Browse as MB
@@ -45,8 +42,6 @@ startRoute s = State { route: s, _meta: Nothing, _tree: Nothing, _blob: Nothing 
 data Action = NOP
 
 
-buggyServer = unsafeThrow
-
 -- TODO: I think toArrayOf has a bad runtime and can probably be
 -- rewritten via FFI to append to mutable Array because of the
 -- guarantees given by Traversable.
@@ -57,11 +52,9 @@ toArrayOf p s = toUnfoldable (toListOf p s)
 -- | Fetch metadata for a git repository (e.g. description)
 fetchMeta :: forall eff. BrowseRoutes -> Owner -> Repo -> State -> Fetch eff State
 fetchMeta rt owner repo state = do
-  r <- Auth.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo))
-  newState <- case decodeJson r.response of
-    Left err -> buggyServer err
-    Right browseMetaResponse ->
-      pure (set meta (Just browseMetaResponse) state)
+  let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo)
+  rx <- Auth.get url >>= decodeResponse
+  let newState = set meta (Just rx) state
   fetch rt newState
 
 
@@ -72,30 +65,21 @@ instance browseFetchable :: Fetchable BrowseRoutes State where
 
   fetch (Home owner repo) state = do
     let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/trees/master")
-    rTree <- Auth.get url
-    case decodeJson rTree.response of
-      Left err -> buggyServer err
-      Right treeResponse ->
-        let state' = set routeLens (HomeLoaded owner repo) state
-        in pure (set tree (Just treeResponse) state')
+    treeJson <- Auth.get url >>= decodeResponse
+    let state' = set routeLens (HomeLoaded owner repo) state
+    pure (set tree (Just treeJson) state')
 
   fetch (Tree owner repo ref path) state = do
     let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/trees/" ++ ref ++ "/" ++ path)
-    rTree <- Auth.get url
-    case decodeJson rTree.response of
-      Left err -> buggyServer err
-      Right treeResponse ->
-        let state' = set routeLens (TreeLoaded owner repo ref path) state
-        in pure (set tree (Just treeResponse) state')
+    treeJson <- Auth.get url >>= decodeResponse
+    let state' = set routeLens (TreeLoaded owner repo ref path) state
+    pure (set tree (Just treeJson) state')
 
   fetch (Blob owner repo ref path) state = do
     let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/blobs/" ++ ref ++ "/" ++ path)
-    r <- Auth.get url
-    case decodeJson r.response of
-      Left err -> buggyServer err
-      Right response ->
-        let state' = set routeLens (BlobLoaded owner repo ref path) state
-        in pure (set blob (Just response) state')
+    blobJson <- Auth.get url >>= decodeResponse
+    let state' = set routeLens (BlobLoaded owner repo ref path) state
+    pure (set blob (Just blobJson) state')
 
   fetch _ state = pure state
 
