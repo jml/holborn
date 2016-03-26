@@ -54,8 +54,8 @@ fetchMeta :: forall eff. BrowseRoutes -> Owner -> Repo -> State -> Fetch eff Sta
 fetchMeta rt owner repo state = do
   let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo)
   rx <- Auth.get url >>= decodeResponse
-  let newState = set meta (Just rx) state
-  fetch rt newState
+  let state' = set meta (Just rx) state
+  fetch rt state'
 
 
 instance browseFetchable :: Fetchable BrowseRoutes State where
@@ -111,12 +111,16 @@ data BrowseRoutes =
   | BlobLoaded Owner Repo Ref RepoPath
 
 
+parseOwner :: Parser String
 parseOwner = fromCharList <$> many1 alphanum
+parseRepo :: Parser String
 parseRepo =
   fromCharList <$> many1 alphanum <* (string "/" <|> string ".git" <|> string "")
 
 -- TODO: parsePath & parseRef need some sophistication
+parsePath :: Parser String
 parsePath = word
+parseRef :: Parser String
 parseRef = fromCharList <$> many1 alphanum
 
 -- NB the ordering of the parser is important, I can't make `eof` work.
