@@ -68,7 +68,7 @@ spec = T.simpleSpec performAction render
     runSignin state = do
       r <- AJ.post (makeUrl "/v1/signin") (encodeJson state.formData)
       case r.status of
-        StatusCode 201 -> case decodeJson r.response of
+        StatusCode 200 -> case decodeJson r.response of
           Left err -> return (\state -> state { loading = false })
           Right (SigninOK { token }) -> do
             liftEff $ C.setCookie "auth-token" token {path: "/"}

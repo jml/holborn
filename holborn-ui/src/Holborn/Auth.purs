@@ -10,49 +10,47 @@ import Network.HTTP.Method (Method(POST, DELETE))
 import Network.HTTP.RequestHeader (RequestHeader(..))
 import Web.Cookies as C
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff (Eff)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Eff.Exception (error)
 import Network.HTTP.StatusCode (StatusCode(..))
 
 
-authTokenMissing = error "auth-token cookie missing. This is unexpected because you should't see the signed in page without this cookie."
+getAuthHeader :: forall e. Eff (cookie :: C.COOKIE | e) (Array RequestHeader)
+getAuthHeader = do
+  maybeToken <- C.getCookie "auth-token"
+  pure $ case maybeToken of
+        Nothing -> []
+        Just x -> [RequestHeader "Authorization" (x :: String)]
+
 
 -- | Custom post that sends the correct auth header derived from the
 -- COOKIE.
-post :: forall e a b. (Requestable a, Respondable b) => URL -> a -> Affjax (cookie :: C.COOKIE | e)  b
+post :: forall e a b. (Requestable a, Respondable b) => URL -> a -> Affjax (cookie :: C.COOKIE | e) b
 post u c = do
-  maybeToken <- liftEff $ C.getCookie "auth-token"
-  t <- case maybeToken of
-    Nothing -> throwError authTokenMissing
-    Just x -> return x
+  authHeader <- liftEff getAuthHeader
   affjax $ defaultRequest
     { method = POST
     , url = u
     , content = Just c
-    , headers = [RequestHeader "Authorization" t, RequestHeader "Accept" "application/json"]
+    , headers = authHeader <> [RequestHeader "Accept" "application/json"]
     }
 
 -- | Custom get that sends the correct auth header derived from the
 -- COOKIE.
 get :: forall e a. (Respondable a) => URL -> Affjax (cookie :: C.COOKIE | e) a
 get u = do
-  maybeToken <- liftEff $ C.getCookie "auth-token"
-  t <- case maybeToken of
-    Nothing -> throwError authTokenMissing
-    Just x -> return x
+  authHeader <- liftEff getAuthHeader
   affjax $ defaultRequest
     { url = u
-    , headers = [RequestHeader "Authorization" t, RequestHeader "Accept" "application/json"]
+    , headers = authHeader <> [RequestHeader "Accept" "application/json"]
     }
 
 delete :: forall e b. (Respondable b) => URL -> Affjax (cookie :: C.COOKIE | e)  b
 delete u = do
-  maybeToken <- liftEff $ C.getCookie "auth-token"
-  t <- case maybeToken of
-    Nothing -> throwError authTokenMissing
-    Just x -> return x
+  authHeader <- liftEff getAuthHeader
   affjax $ defaultRequest
     { method = DELETE
     , url = u
-    , headers = [RequestHeader "Authorization" t, RequestHeader "Accept" "application/json"]
+    , headers = authHeader <> [RequestHeader "Accept" "application/json"]
     }

@@ -24,7 +24,9 @@ var purescriptWebpackPlugin = new PurescriptWebpackPlugin({
   // language-javascript (0.6.x). Alternative might be webpack2 tree
   // shaking but that's incompatible with pulp.
   bundle: false,
-  psc: 'psa',
+
+  // PSA not working for unknown reasons. Use psc for now.
+  //psc: 'psa',
 });
 
 
