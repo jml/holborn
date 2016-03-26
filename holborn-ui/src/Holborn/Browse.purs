@@ -6,7 +6,7 @@ import Control.Monad.Eff.Exception as E
 import Control.Apply ((*>), (<*))
 import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
-import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, eof, word)
+import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, word)
 import Text.Parsing.Combinators (many1)
 
 
@@ -54,6 +54,7 @@ toArrayOf :: forall s t a b. Fold (Endo (List a)) s t a b -> s -> Array a
 toArrayOf p s = toUnfoldable (toListOf p s)
 
 
+-- | Fetch metadata for a git repository (e.g. description)
 fetchMeta :: forall eff. BrowseRoutes -> Owner -> Repo -> State -> Fetch eff State
 fetchMeta rt owner repo state = do
   r <- Auth.get (makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo))

@@ -10,7 +10,6 @@ import Control.Monad.Eff.Exception as E
 import Control.Monad.Eff.Class (liftEff)
 import Data.Either (Either(..))
 import Data.Foldable (fold)
-import Data.Functor (($>))
 import Data.Lens(PrismP, prism, over, lens, LensP, view, set)
 import Data.Maybe (Maybe(..))
 import Network.HTTP.Affjax as AJ
@@ -24,7 +23,6 @@ import Text.Parsing.Simple (Parser, string)
 import Standalone.Router.Dispatch (matches, navigate)
 import Thermite as T
 import Web.Cookies as C
-import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
