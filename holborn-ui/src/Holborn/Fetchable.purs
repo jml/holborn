@@ -24,6 +24,13 @@ class Fetchable action state where
 type Fetch eff state = Aff (ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) state
 
 
+-- | Decode a JSON response in the Aff monad which is also an instance
+-- of (MonadError Error e). Use this whenever possible so we have a
+-- unified framework for handling e.g. 403s.
+--
+-- It's a bit lame that the Aff error is `Error` which is basically
+-- the same as a javascript exception so we're really writing
+-- throw/catch code here.
 decodeResponse :: forall eff result. (DecodeJson result) => AJ.AffjaxResponse Json -> Aff eff result
 decodeResponse r = case
   decodeJson r.response of
