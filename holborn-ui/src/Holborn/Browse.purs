@@ -8,7 +8,6 @@ import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
 import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, word)
 import Text.Parsing.Combinators (many1)
-import Control.Monad.Aff (liftEff')
 
 import Web.Cookies as C
 import React.DOM as R
@@ -26,7 +25,6 @@ import Holborn.Config (makeUrl)
 import Holborn.ManualEncoding.Browse (BrowseMetaResponse(..), GitTree(..), GitTreeEntry(..), GitBlob(..))
 import Holborn.ManualEncoding.Browse as MB
 import Holborn.Auth as Auth
-import Holborn.DomHelpers (scroll)
 
 import Debug.Trace
 
@@ -81,21 +79,18 @@ instance browseFetchable :: Fetchable BrowseRoutes State where
     let url = makeTreeUrl owner repo (Just "master") Nothing
     treeJson <- Auth.get url >>= decodeResponse
     let state' = set routeLens (HomeLoaded owner repo) state
-    liftEff' (scroll 0 0)
     pure (set tree (Just treeJson) state')
 
   fetch (Tree owner repo ref path) state = do
     let url = makeTreeUrl owner repo (Just ref) (Just path)
     treeJson <- Auth.get url >>= decodeResponse
     let state' = set routeLens (TreeLoaded owner repo ref path) state
-    liftEff' (scroll 0 0)
     pure (set tree (Just treeJson) state')
 
   fetch (Blob owner repo ref path) state = do
     let url = makeBlobUrl owner repo ref path
     blobJson <- Auth.get url >>= decodeResponse
     let state' = set routeLens (BlobLoaded owner repo ref path) state
-    liftEff' (scroll 0 0)
     pure (set blob (Just blobJson) state')
 
   fetch _ state = pure state
