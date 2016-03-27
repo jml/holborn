@@ -15,7 +15,7 @@ import React.DOM as R
 import React.DOM.Props as RP
 import Data.Lens (lens, LensP, set, view, toListOf)
 import Data.Lens.Traversal (traversed)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid.Endo (Endo)
 import Data.Lens.Types (Fold())
 import Data.List (toUnfoldable, List)
@@ -58,25 +58,38 @@ fetchMeta rt owner repo state = do
   fetch rt state'
 
 
+makeTreeUrl :: String -> String -> Maybe String -> Maybe String -> String
+makeTreeUrl owner repo ref path =
+  makeUrl (intercalate "/" (
+              ["/v1/repos", owner, repo]
+              <> (maybe [] (\ref' -> ["git/trees", ref']) ref) <> (maybe [] (\path' -> [path']) path)))
+
+
+makeBlobUrl :: String -> String -> String -> String -> String
+makeBlobUrl owner repo ref path =
+  makeUrl (intercalate "/" (
+              ["/v1/repos", owner, repo, "git/blobs", ref, path]))
+
+
 instance browseFetchable :: Fetchable BrowseRoutes State where
   fetch rt@(Home owner repo) state@(State { _meta = Nothing }) = fetchMeta rt owner repo state
   fetch rt@(Tree owner repo _ _) state@(State { _meta = Nothing }) = fetchMeta rt owner repo state
   fetch rt@(Blob owner repo _ _) state@(State { _meta = Nothing }) = fetchMeta rt owner repo state
 
   fetch (Home owner repo) state = do
-    let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/trees/master")
+    let url = makeTreeUrl owner repo (Just "master") Nothing
     treeJson <- Auth.get url >>= decodeResponse
     let state' = set routeLens (HomeLoaded owner repo) state
     pure (set tree (Just treeJson) state')
 
   fetch (Tree owner repo ref path) state = do
-    let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/trees/" ++ ref ++ "/" ++ path)
+    let url = makeTreeUrl owner repo (Just ref) (Just path)
     treeJson <- Auth.get url >>= decodeResponse
     let state' = set routeLens (TreeLoaded owner repo ref path) state
     pure (set tree (Just treeJson) state')
 
   fetch (Blob owner repo ref path) state = do
-    let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo ++ "/git/blobs/" ++ ref ++ "/" ++ path)
+    let url = makeBlobUrl owner repo ref path
     blobJson <- Auth.get url >>= decodeResponse
     let state' = set routeLens (BlobLoaded owner repo ref path) state
     pure (set blob (Just blobJson) state')
