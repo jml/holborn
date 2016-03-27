@@ -15,6 +15,21 @@ var modulesDirectories = [
   'bower_components'
 ];
 
+
+var purescriptWebpackPlugin = new PurescriptWebpackPlugin({
+  src: src,
+  ffi: ffi,
+  // TODO: bundeling disabled until psc-bundle can read unicode
+  // escapes like '\u1234'. Bugfix is live but only for new version of
+  // language-javascript (0.6.x). Alternative might be webpack2 tree
+  // shaking but that's incompatible with pulp.
+  bundle: false,
+
+  // PSA not working for unknown reasons. Use psc for now.
+  //psc: 'psa',
+});
+
+
 var config = {
   entry: {
     app: './entry',
@@ -24,12 +39,13 @@ var config = {
             , pathinfo: true
             , filename: 'bundle.js'
           },
-  module: { loaders: [ { test: /\.purs$/
-                         , loader: 'purs-loader'
-                       } ] },
+  module: { loaders: [{ test: /\.purs$/,
+                        loader: 'purs-loader',
+                      },
+                     ]},
   resolve: { modulesDirectories: modulesDirectories, extensions: [ '', '.js', '.purs'] },
   plugins: [
-    new PurescriptWebpackPlugin({src: src, ffi: ffi}),
+    purescriptWebpackPlugin,
     new webpack.optimize.CommonsChunkPlugin("vendor", "vendor.bundle.js"),
   ]
 };

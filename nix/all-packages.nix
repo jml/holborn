@@ -33,5 +33,7 @@ haskellPackages.override {
       unexceptionalio = self.callPackage ./unexceptionalio.nix {};
 
       purescript = haskell.lib.doJailbreak super.purescript;
+
+      language-javascript = self.callPackage ./language-javascript.nix {};
     };
 }
