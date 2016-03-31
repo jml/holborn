@@ -32,6 +32,7 @@ import Holborn.Config (makeUrl)
 import Holborn.Auth as Auth
 import Debug.Trace
 import Holborn.ManualEncoding.Profile as ManualCodingProfile
+import Holborn.DomHelpers (scroll)
 
 
 data UserMeta = SignedIn { username :: String, about :: String } | NotLoaded | Anonymous
@@ -181,7 +182,7 @@ spec = container $ handleActions $ fold
     -- browser following the link.
     -- TODO: add escape-hatch, e.g. `data-external=true` attribute or
     -- where the path is non-local
-    handleLinks ev = do
+    handleLinks ev =
       case (unsafeCoerce ev).target.nodeName of
         "A" -> do
           (unsafeCoerce ev).preventDefault
@@ -193,7 +194,7 @@ spec = container $ handleActions $ fold
       handleAction a p s k
 
     -- TODO error handling when fetch fails
-    handleAction action@(UpdateRoute r) p s k = do
+    handleAction action@(UpdateRoute r) p s k =
       runAff (\err -> traceAnyM err >>= const (k id)) (\result -> k \s -> result) (fetch r s)
     handleAction _ _ _ _ = pure unit
 
@@ -216,8 +217,16 @@ componentDidMount dispatch this = do
     callback rt = dispatch this (UpdateRoute rt)
 
 
+componentDidUpdate :: forall props eff state. React.ComponentDidUpdate props state eff
+componentDidUpdate this props state = do
+  scroll 0 0
+  pure unit
+
+
 component :: forall props. React.ReactClass props
 component =
   let rspec = T.createReactSpec spec initialState
   in React.createClass
-     ((_.spec rspec) { componentDidMount = (componentDidMount (_.dispatcher rspec)) })
+     ((_.spec rspec) { componentDidMount = (componentDidMount (_.dispatcher rspec))
+                     , componentDidUpdate = componentDidUpdate
+                     })

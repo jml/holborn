@@ -9,7 +9,6 @@ import Network.HTTP.Affjax as AJ
 import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, word)
 import Text.Parsing.Combinators (many1)
 
-
 import Web.Cookies as C
 import React.DOM as R
 import React.DOM.Props as RP
