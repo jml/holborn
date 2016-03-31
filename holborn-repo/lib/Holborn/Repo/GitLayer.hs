@@ -287,33 +287,33 @@ loadTree revision segments repo tree entry = do
     -- Use conduits to compress a whole repository to sth readable in
     -- ~constant space.
     entriesMeta <- runConduit (Git.sourceTreeEntries tree =$= compressPaths =$= CL.mapM toTreeEntryMeta =$= sinkList)
-    return (Tree tree entry entriesMeta revision segments repo)
+
+    return (Tree tree entry (sortBy compareEntriesMeta entriesMeta) revision segments repo)
 
   where
-    -- compressPaths compresses empty paths like
+    compareEntriesMeta (path1, TreeEntryMeta{_TreeEntryMeta_type_=type1}) (path2, TreeEntryMeta{_TreeEntryMeta_type_=type2}) =
+      case (type1, type2) of
+          ("tree", "tree") -> compare path1 path2
+          ("tree", _) -> LT
+          (_, "tree") -> GT
+          _ -> compare path1 path2
+
+    -- TODO: compresses empty paths like
     --   a/
     --   a/b/
     --   a/b/c/
     -- to just
     --   a/b/c
-    -- and it only keeps the top level files, i.e. if a file is in a
+    -- unfortunately not that easy to do with the depth-first
+    -- structure we're getting here...
+    -- Right now we only keep the top level files, i.e. if a file is in a
     -- subtree (a/README.md) we're not keeping it.
     compressPaths = awaitForever $ \(path, entry) -> do
         -- Skip nested paths (length > 1)
         case pathToSegments path of
             [_] -> case entry of
-                Git.TreeEntry treeEntryOid -> waitForPaths path entry
-                _ -> yield (path, entry) >> compressPaths
-            _ -> compressPaths
-
-    waitForPaths path entry = do
-        maybeX <- await
-        case maybeX of
-            Nothing -> void (yield (path, entry))
-            Just (path', entry') -> do
-                case entry' of
-                    Git.TreeEntry treeEntryOid -> waitForPaths path' entry'
-                    _ -> yield (path, entry) >> compressPaths
+                _ -> void (yield (path, entry))
+            _ -> pure ()
 
     toTreeEntryMeta (path, entry) = case entry of
         Git.TreeEntry treeEntryOid -> treeMeta path treeEntryOid
