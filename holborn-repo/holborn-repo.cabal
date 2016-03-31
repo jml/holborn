@@ -68,6 +68,8 @@ library
                      , servant-blaze >= 0.5
                      , blaze-markup
                      , blaze-html
+                     , conduit >=1.1
+                     , conduit-combinators >=1.0
                      , holborn-common-types
 
 executable holborn-repo

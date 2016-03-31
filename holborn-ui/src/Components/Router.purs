@@ -218,9 +218,7 @@ componentDidMount dispatch this = do
 
 
 componentDidUpdate :: forall props eff state. React.ComponentDidUpdate props state eff
-componentDidUpdate this props state = do
-  scroll 0 0
-  pure unit
+componentDidUpdate this props state = scroll 0 0
 
 
 component :: forall props. React.ReactClass props

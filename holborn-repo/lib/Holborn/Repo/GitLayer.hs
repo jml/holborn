@@ -29,12 +29,15 @@ import Control.Monad.Trans.Except (ExceptT)
 import Data.Tagged (Tagged(..))
 import qualified Data.Text as Text
 import qualified Git
-import Git.Types (IsOid(renderObjOid, renderOid))
+import Git.Types (IsOid(renderObjOid))
 import Git.Libgit2 (LgRepo, MonadLg, lgFactory)
 import Text.Blaze (ToMarkup(..))
-import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, defaultOptions, object)
+import Data.Aeson (ToJSON(..), genericToJSON, defaultOptions, object)
 import Data.Aeson.Types (Options(fieldLabelModifier, omitNothingFields))
 import GHC.Generics (Generic)
+import Data.Conduit.Combinators (sinkList)
+import qualified Data.Conduit.List as CL
+import Data.Conduit (Conduit, runConduit, yield, awaitForever, (=$=), await)
 
 -- XXX: Putting web stuff here to avoid orphan warnings. Would be nice to have
 -- it completely separate.
@@ -171,7 +174,6 @@ getBlob revision segments repo = do
         [] -> notImplementedYet "Not sure what to do for blob root"
         _ -> do
           entry <- Git.treeEntry tree (segmentsToPath segments)
-          liftIO $ print ("sef", segmentsToPath segments, oid', isJust entry)
           case entry of
             Nothing -> return Nothing
             Just entry' ->
@@ -254,17 +256,6 @@ data Tree = Tree { _gitTree :: Git.Tree GitRepo
                  , treeRepository :: Repository
                  }
 
--- TODO - Gitlib doesn't seem to give us all the information we need
--- like mode, last commit etc. for an entry. Needs work.
-treeEntryToList entry@(Git.BlobEntry oid kind) =
-    [ ("type", "blob")
-    ]
-treeEntryToList entry@(Git.TreeEntry oid) =
-    [ ("type", "tree")
-    ]
-treeEntryToList entry@(Git.CommitEntry oid) =
-    [ ("type",  "commit")
-    ]
 
 -- Not sure this encoder should be here.
 -- https://developer.github.com/v3/git/trees/
@@ -282,21 +273,57 @@ instance ToJSON Blob where
       , ("path", toJSON blobPath)
       ]
 
--- XXX: This is partial. If 'treeEntryOid' is not in the current repo, then it will raise an exce
-loadTree :: Git.MonadGit GitRepo m => Revision -> [Text] -> Repository -> Git.Tree GitRepo -> Git.TreeEntry GitRepo -> m Tree
+
+
+-- XXX: loadTree is partial. If 'treeEntryOid' is not in the current
+-- repo, then it will raise an exception.
+--
+-- NB lgSourceTreeEntries is recursive so we're loading the whole
+-- repository here (gitlib doesn't give us any other option even
+-- though the c-layer libgit2 allows us to selectively skip over
+-- entries). TODO this is also super slow for large repos so we should
+-- at the very least cache in process or find a faster way to
+-- traverse.
+loadTree :: (Git.MonadGit GitRepo m, MonadIO m) => Revision -> [Text] -> Repository -> Git.Tree GitRepo -> Git.TreeEntry GitRepo -> m Tree
 loadTree revision segments repo tree entry = do
-    entries <- Git.listTreeEntries tree
-    entriesMeta <- mapM toTreeEntryMeta entries
-    return $ Tree tree entry entriesMeta revision segments repo
+    -- Use conduits to compress a whole repository to sth readable in
+    -- ~constant space.
+    entriesMeta <- runConduit (Git.sourceTreeEntries tree =$= compressPaths =$= CL.mapM toTreeEntryMeta =$= sinkList)
+
+    return (Tree tree entry (sortBy compareEntriesMeta entriesMeta) revision segments repo)
+
   where
-    toTreeEntryMeta (path, entry) =
-        case entry of
-            Git.TreeEntry treeEntryOid -> treeMeta path treeEntryOid
-            Git.BlobEntry _blobEntryOid _blobEntryKind -> blobMeta path _blobEntryOid _blobEntryKind
-            Git.CommitEntry e -> notImplementedYet "what's a commit within tree?"
+    compareEntriesMeta (path1, TreeEntryMeta{_TreeEntryMeta_type_=type1}) (path2, TreeEntryMeta{_TreeEntryMeta_type_=type2}) =
+      case (type1, type2) of
+          ("tree", "tree") -> compare path1 path2
+          ("tree", _) -> LT
+          (_, "tree") -> GT
+          _ -> compare path1 path2
+
+    -- TODO: compresses empty paths like
+    --   a/
+    --   a/b/
+    --   a/b/c/
+    -- to just
+    --   a/b/c
+    -- unfortunately not that easy to do with the depth-first
+    -- structure we're getting here...
+    -- Right now we only keep the top level files, i.e. if a file is in a
+    -- subtree (a/README.md) we're not keeping it.
+    compressPaths = awaitForever $ \(path, entry) -> do
+        -- Skip nested paths (length > 1)
+        case pathToSegments path of
+            [_] -> case entry of
+                _ -> void (yield (path, entry))
+            _ -> pure ()
+
+    toTreeEntryMeta (path, entry) = case entry of
+        Git.TreeEntry treeEntryOid -> treeMeta path treeEntryOid
+        Git.BlobEntry _blobEntryOid _blobEntryKind -> blobMeta path _blobEntryOid _blobEntryKind
+        Git.CommitEntry e -> notImplementedYet "what's a commit within tree?"
 
     blobMeta path _blobEntryOid _blobEntryKind = do
-        blob <- Git.lookupBlob _blobEntryOid
+        -- blob <- Git.lookupBlob _blobEntryOid -- left commented out as documentation for later
         let mode = case _blobEntryKind of
                 Git.PlainBlob -> BlobMode
                 Git.ExecutableBlob -> ExecutableBlobMode
@@ -310,7 +337,7 @@ loadTree revision segments repo tree entry = do
           , _TreeEntryMeta_sha = sha
           })
     treeMeta path _treeOid = do
-        tree <- Git.lookupTree _treeOid
+        -- tree <- Git.lookupTree _treeOid -- left commented out as documentation for later
         let sha = renderObjOid _treeOid
         pure $ (path, TreeEntryMeta
           { _TreeEntryMeta_path = decodeUtf8 path
