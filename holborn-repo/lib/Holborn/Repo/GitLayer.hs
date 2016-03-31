@@ -281,7 +281,9 @@ instance ToJSON Blob where
 -- NB lgSourceTreeEntries is recursive so we're loading the whole
 -- repository here (gitlib doesn't give us any other option even
 -- though the c-layer libgit2 allows us to selectively skip over
--- entries).
+-- entries). TODO this is also super slow for large repos so we should
+-- at the very least cache in process or find a faster way to
+-- traverse.
 loadTree :: (Git.MonadGit GitRepo m, MonadIO m) => Revision -> [Text] -> Repository -> Git.Tree GitRepo -> Git.TreeEntry GitRepo -> m Tree
 loadTree revision segments repo tree entry = do
     -- Use conduits to compress a whole repository to sth readable in
