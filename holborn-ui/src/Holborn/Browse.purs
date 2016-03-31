@@ -19,6 +19,7 @@ import Data.Monoid.Endo (Endo)
 import Data.Lens.Types (Fold())
 import Data.List (toUnfoldable, List)
 import Data.Foldable (intercalate)
+import Data.Array (range)
 
 import Holborn.Fetchable (class Fetchable, fetch, Fetch, decodeResponse)
 import Holborn.Config (makeUrl)
@@ -167,11 +168,17 @@ spec = T.simpleSpec T.defaultPerformAction render
     render dispatch _ (State { route = BlobLoaded org repo ref path, _meta = Just meta, _blob = Just (GitBlob blob) }) _ =
       [ R.h1 [] [R.text "browse"]
       , R.h2 [] [R.text (view MB.description meta)]
+        -- TODO count number of lines
+      , R.pre [RP.style {width: "5em", float: "left", textAlign: "right"}] (renderLines 10)
       , R.pre [] [R.text blob.contents]
       ]
     render dispatch _ _ _ =
       [ R.text "browse - not implemented probably a bug"
       ]
+
+    -- TODO is renderLines very slow?
+    renderLines :: Int -> Array React.ReactElement
+    renderLines n = map (\i -> R.div [] [R.text (show i)]) (range 1 (n + 1))
 
     -- TODO tom: rendering with the parsed path is extremely
     -- fragile. Probably best to extract the path handling into a set
