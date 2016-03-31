@@ -6,7 +6,7 @@ import Control.Monad.Eff.Exception as E
 import Control.Apply ((<*))
 import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
-import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, word)
+import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, word, anyOf)
 import Text.Parsing.Combinators (many1)
 
 import Web.Cookies as C
@@ -125,10 +125,10 @@ data BrowseRoutes =
 
 
 parseOwner :: Parser String
-parseOwner = fromCharList <$> many1 alphanum
+parseOwner = fromCharList <$> many1 (alphanum <|> anyOf "-_")
 parseRepo :: Parser String
 parseRepo =
-  fromCharList <$> many1 alphanum <* (string "/" <|> string ".git" <|> string "")
+  fromCharList <$> many1 (alphanum <|> anyOf "-_") <* (string "/" <|> string ".git" <|> string "")
 
 -- TODO: parsePath & parseRef need some sophistication
 parsePath :: Parser String
