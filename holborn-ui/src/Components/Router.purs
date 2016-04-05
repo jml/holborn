@@ -53,6 +53,7 @@ rootRoutes :: Parser RootRoutes
 rootRoutes =
   string "/" *>
     ( string "settings/" *> (map Settings SettingsRoute.settingsRoutes)
+      <|> string "signin" *> pure (SigninRoute Signin.initialState)
       <|> map BrowseRoute Browse.browseRoutes
       <|> pure Route404
     )
@@ -110,11 +111,11 @@ userMeta :: LensP State UserMeta
 userMeta = lens (\(RouterState s) -> s._userMeta) (\(RouterState s) x -> RouterState (s { _userMeta = x }))
 
 
-_SigninState :: PrismP State Signin.State
-_SigninState = prism (\s -> set routeLens (SigninRoute s) initialState) \state ->
-  case view routeLens state of
+_SigninState :: PrismP RootRoutes Signin.State
+_SigninState = prism SigninRoute \route ->
+  case route of
     SigninRoute s -> Right s
-    _ -> Left state
+    _ -> Left route
 
 _SigninAction :: PrismP Action Signin.Action
 _SigninAction = prism SigninAction \action ->
@@ -160,7 +161,7 @@ spec404 = T.simpleSpec T.defaultPerformAction render
 
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = container $ handleActions $ fold
-       [ T.split _SigninState (T.match _SigninAction Signin.spec)
+       [ T.focusState routeLens (T.split _SigninState (T.match _SigninAction Signin.spec))
        , T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  SettingsRoute.spec))
        , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction  Browse.spec))
        , T.focusState routeLens (T.split _404State spec404)
@@ -169,7 +170,7 @@ spec = container $ handleActions $ fold
     container = over T._render \render d p s c -> case view userMeta s of
       NotLoaded -> [R.text "loading UI ..."]
       Anonymous ->
-        [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.text "sign in here ..."]
+        [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.a [RP.href "/signin"] [R.text "sign in here ..."]]
         , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
         ]
       SignedIn { username, about } ->
