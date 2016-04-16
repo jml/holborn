@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell #-}
+
 -- | When connecting via SSH we don't have the luxury of the HTTP
 -- protocol so we need to be able to run git-{receive,upload}-pack
 -- directly with stdin and stdout connected to a network socket.
@@ -15,7 +15,8 @@ module Holborn.Repo.RawProtocol
 import           BasicPrelude
 
 import           Control.Monad.State.Strict (runStateT)
-import           Data.Aeson.TH (deriveJSON,  defaultOptions, fieldLabelModifier)
+import           Data.Aeson (FromJSON(..), ToJSON(..), genericParseJSON, genericToJSON)
+import           Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import           GHC.Generics (Generic)
 import           Network.Socket (Socket, SockAddr)
 import           Pipes.Aeson (decode)
@@ -42,8 +43,12 @@ gitReceivePack :: Config -> Text -> Text -> Producer ByteString IO () -> Consume
 gitReceivePack = gitPack "git-receive-pack"
 
 data RepoCall = RepoCall { _command :: Text, _org :: Text, _repo :: Text } deriving (Show, Generic)
--- | See docs at https://hackage.haskell.org/package/aeson-0.10.0.0/docs/Data-Aeson-TH.html
-$(deriveJSON defaultOptions{fieldLabelModifier = drop 1} ''RepoCall)
+
+instance FromJSON RepoCall where
+  parseJSON = genericParseJSON defaultOptions{fieldLabelModifier = drop 1}
+
+instance ToJSON RepoCall where
+  toJSON = genericToJSON defaultOptions{fieldLabelModifier = drop 1}
 
 -- | The openssh thingy needs to tell us which repository we're
 -- talking about before it establishes the bidirectional pipe for the
