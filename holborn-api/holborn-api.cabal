@@ -15,6 +15,7 @@ library
                      , Holborn.API.Auth
                      , Holborn.API.Settings.SSHKeys
                      , Holborn.API.Settings.Profile
+                     , Holborn.API.Templates
   build-depends:       base >=4.8 && <5
                      , postgresql-simple
                      , text
@@ -26,6 +27,7 @@ library
                      , servant-blaze >=0.5
                      , servant-server >=0.5
                      , blaze-html
+                     , blaze-markup
                      , shakespeare
                      , either
                      , jwt
