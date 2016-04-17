@@ -16,7 +16,7 @@ import BasicPrelude
 import Database.PostgreSQL.Simple (Only (..), execute, query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Control.Monad.Trans.Except (ExceptT, throwE)
-import Data.Aeson (Value(..), object, (.=))
+import Data.Aeson (object, (.=))
 import Servant
 
 import Holborn.API.Types (AppConf(..), Username, parseSSHKey)
@@ -63,7 +63,7 @@ listKeys AppConf{conn=conn} username = do
 
 
 getKey :: AppConf -> Int -> ExceptT (APIError KeyError) IO ListKeysRow
-getKey conf keyId = undefined
+getKey _conf _keyId = undefined
 
 
 deleteKey :: AppConf -> Maybe AuthToken -> Int -> ExceptT (APIError KeyError) IO ()
