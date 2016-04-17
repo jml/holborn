@@ -45,7 +45,7 @@ library
                      , OverloadedStrings
                      , NamedFieldPuns
                      , RecordWildCards
-
+                     , GeneralizedNewtypeDeriving
 
 Test-Suite holborn-api-tests
   type:                exitcode-stdio-1.0
@@ -67,6 +67,7 @@ Test-Suite holborn-api-tests
                      , OverloadedStrings
                      , NamedFieldPuns
                      , RecordWildCards
+                     , GeneralizedNewtypeDeriving
 
 
 executable holborn-api-server
@@ -89,3 +90,4 @@ executable holborn-api-server
                      , OverloadedStrings
                      , NamedFieldPuns
                      , RecordWildCards
+                     , GeneralizedNewtypeDeriving

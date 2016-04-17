@@ -1,4 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Holborn.API.Types
        ( newUsername
        , newEmail

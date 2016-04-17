@@ -33,6 +33,7 @@ library
                      , OverloadedStrings
                      , NamedFieldPuns
                      , RecordWildCards
+                     , GeneralizedNewtypeDeriving
   ghc-options:         -Wall
 
 Test-Suite holborn-test
@@ -50,3 +51,4 @@ Test-Suite holborn-test
                      , OverloadedStrings
                      , NamedFieldPuns
                      , RecordWildCards
+                     , GeneralizedNewtypeDeriving

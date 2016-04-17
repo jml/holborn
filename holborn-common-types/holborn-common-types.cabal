@@ -42,3 +42,4 @@ library
                      , OverloadedStrings
                      , NamedFieldPuns
                      , RecordWildCards
+                     , GeneralizedNewtypeDeriving
