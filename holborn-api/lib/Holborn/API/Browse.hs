@@ -8,7 +8,6 @@
 -- $ curl 127.0.0.1:8002/v1/browse -H "content-type: application/json" -d'{"repo": "jml/holborn", "path": ""}'
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE TypeOperators      #-}
-{-# LANGUAGE NamedFieldPuns     #-}
 
 module Holborn.API.Browse
        ( API

@@ -2,7 +2,6 @@
 -- $ curl 127.0.0.1:8002/v1/users/alice/keys
 
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes        #-}
 

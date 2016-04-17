@@ -40,3 +40,6 @@ library
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
+                     , NamedFieldPuns
+                     , RecordWildCards
+                     , GeneralizedNewtypeDeriving

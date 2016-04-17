@@ -31,6 +31,9 @@ library
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
+                     , NamedFieldPuns
+                     , RecordWildCards
+                     , GeneralizedNewtypeDeriving
   ghc-options:         -Wall
 
 Test-Suite holborn-test
@@ -46,3 +49,6 @@ Test-Suite holborn-test
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
+                     , NamedFieldPuns
+                     , RecordWildCards
+                     , GeneralizedNewtypeDeriving

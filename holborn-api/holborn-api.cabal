@@ -43,7 +43,9 @@ library
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
-
+                     , NamedFieldPuns
+                     , RecordWildCards
+                     , GeneralizedNewtypeDeriving
 
 Test-Suite holborn-api-tests
   type:                exitcode-stdio-1.0
@@ -63,6 +65,9 @@ Test-Suite holborn-api-tests
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
+                     , NamedFieldPuns
+                     , RecordWildCards
+                     , GeneralizedNewtypeDeriving
 
 
 executable holborn-api-server
@@ -83,3 +88,6 @@ executable holborn-api-server
   ghc-options:         -eventlog
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
+                     , NamedFieldPuns
+                     , RecordWildCards
+                     , GeneralizedNewtypeDeriving
