@@ -39,8 +39,7 @@ library
                      , holborn-common-types >= 0.1.3
 
   hs-source-dirs:      lib
--- Disabled because there are too many warnings atm :(
---  ghc-options:         -Wall
+  ghc-options:         -Wall
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings

@@ -8,7 +8,6 @@ module Holborn.API.User
 
 import BasicPrelude
 import Control.Error (ExceptT, throwE)
-import Data.Aeson (ToJSON)
 import Database.PostgreSQL.Simple (Connection, Only (..), execute, query)
 import Database.PostgreSQL.Simple.Errors (ConstraintViolation (..), constraintViolation)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
@@ -20,16 +19,15 @@ import qualified Holborn.JSON.Response as U
 
 signup :: Connection -> Username -> Email -> Password -> ExceptT ApiError IO ()
 signup conn u e p = do
-    res <- catchJust constraintViolation
+    void $ catchJust constraintViolation
         (liftIO (execute conn [sql|
             insert into "user" (id, username, signup_email, password, created)
             values (default, ?, ?, ?, default)
             |] (u, e, p)))
-        handle
-    return ()
+        handleError
   where
-    handle (UniqueViolation "user_username_key") = throwE (UserAlreadyExists u)
-    handle unknown = throwE (UnexpectedConstraintViolation (show unknown))
+    handleError (UniqueViolation "user_username_key") = throwE (UserAlreadyExists u)
+    handleError unknown = throwE (UnexpectedConstraintViolation (show unknown))
 
 
 listUsers :: Connection -> Int -> ExceptT ApiError IO (U.PaginatedResponse [U.ListUsersRow])
@@ -40,7 +38,7 @@ listUsers conn startId = do
         |] (Only startId) :: IO [U.ListUsersRow])
     let next = case r of
                    [] -> ""
-                   l -> show (maximum (map U._ListUsersRow_id r))
+                   _ -> show (maximum (map U._ListUsersRow_id r))
     return (U.PaginatedResponse r next)
 
 

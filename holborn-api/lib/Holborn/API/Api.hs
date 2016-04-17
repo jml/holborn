@@ -82,18 +82,17 @@ signupPost AppConf{conn, jwtSecret} SignupData{..} = do
 -- cookie in the client.
 signin :: AppConf -> SigninData -> ExceptT ServantErr IO SigninOK
 signin AppConf{conn} SigninData{..} = do
-    pwd <- liftIO (newPassword _SigninData_password)
     r <- liftIO $ query conn [sql|
                    select id, password
                    from "user"
                    where username = ?
                |] (Only _SigninData_username)
 
-    (ownerId, password) <- case r of
-      [(id_ :: Int, pwd :: Password)] -> return (id_, pwd)
+    ownerId <- case r of
+      [(id_ :: Int, pwd :: Password)]
+        | checkPassword pwd (encodeUtf8 _SigninData_password) -> return id_
+        | otherwise -> throwE err400  -- Wrong password
       _ -> throwE err400 -- TODO encode errors
-
-    unless (checkPassword password (encodeUtf8 _SigninData_password)) (throwE err400)
 
     token <- liftIO createAuthToken
 

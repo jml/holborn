@@ -13,16 +13,15 @@ module Holborn.API.Settings.Profile
 
 import BasicPrelude
 
-import Control.Monad.Trans.Either (left)
-import Database.PostgreSQL.Simple (Only (..), execute, query)
+import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Control.Monad.Trans.Except (ExceptT, throwE)
-import Data.Aeson (Value(..), object, (.=))
+import Data.Aeson (object, (.=))
 import Servant
 
 import Holborn.API.Types (AppConf(..), Username)
 import Holborn.JSON.Settings.Profile (ProfileData(..))
-import Holborn.Auth (AuthToken(..), Permission(..), hasPermission)
+import Holborn.Auth (AuthToken(..))
 import Holborn.API.Auth (getAuthFromToken)
 import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
 
@@ -59,13 +58,14 @@ getUser AppConf{conn} username = do
     case r of
         [] -> throwE (SubAPIError (UserNotFound (show username)))
         [(id_, un, created)] -> return (ProfileData id_ un "about this user TODO fetch from DB" created)
+        _ -> terror $ "Multiple users found in the database for " ++ show username ++ ". Found: " ++ show r
 
 
 -- TODO The function to fetch the current user should go somewhere
 -- other than profile settings?
 getAuthorizedUser :: AppConf -> Maybe AuthToken -> ExceptT (APIError Error) IO ProfileData
 getAuthorizedUser conf@AppConf{conn} token = do
-    (userId, permissions) <- getAuthFromToken conf token
+    (userId, _permissions) <- getAuthFromToken conf token
     r <- liftIO $ query conn [sql|
                    select username, created
                    from "user" where id = ?
@@ -76,4 +76,4 @@ getAuthorizedUser conf@AppConf{conn} token = do
 
 
 postAuthorizedUser :: AppConf -> Maybe AuthToken -> ProfileData -> ExceptT (APIError Error) IO ()
-postAuthorizedUser conf token newProfile = undefined
+postAuthorizedUser _conf _token _newProfile = undefined
