@@ -2,11 +2,11 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes        #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NamedFieldPuns     #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Holborn.API.Api
        ( API
@@ -18,25 +18,20 @@ import BasicPrelude
 import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
-import Data.Text (unpack)
 import Servant
-import Servant.HTML.Blaze (HTML)
-import Text.Blaze.Html (Html)
-import Text.Hamlet (shamletFile)
+
 import qualified Web.JWT as JWT
-import Database.PostgreSQL.Simple (Only (..), execute, query)
+import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 
+import Holborn.API.Templates (landingPage)
 import Holborn.API.Types (ApiError(..), newEmail, newPassword, newUsername, checkPassword, Password, Username, AppConf(..))
 import Holborn.JSON.User (SigninData(..), SigninOK(..))
 import qualified Holborn.API.User as U
-import qualified Holborn.JSON.User as U
 import Holborn.Auth (webPermissions, createAuthToken)
 import Network.Wai (Application, responseLBS)
 import Network.HTTP.Types.Status (status200)
-import Text.Blaze.Html.Renderer.Text (renderHtml)
-import qualified Data.Text.Lazy.Encoding as E
-import Web.HttpApiData (FromHttpApiData(..))
+import Text.Blaze.Renderer.Utf8 (renderMarkup)
 
 
 data SignupData = SignupData
@@ -63,8 +58,8 @@ type API =
     -- Special POST for signing up / in etc
 
 landing :: AppConf -> Application
-landing AppConf{staticBaseUrl, baseUrl} = \request respond ->
-  respond (responseLBS status200 [] (E.encodeUtf8 (renderHtml $(shamletFile "./templates/landing.html"))))
+landing AppConf{staticBaseUrl, baseUrl} = \_request respond ->
+  respond (responseLBS status200 [] (renderMarkup (landingPage baseUrl staticBaseUrl)))
 
 
 signupPost :: AppConf -> SignupData -> ExceptT ServantErr IO (Either SignupError SignupOk)
@@ -73,7 +68,7 @@ signupPost AppConf{conn, jwtSecret} SignupData{..} = do
     result <- liftIO (runExceptT (U.signup conn (newUsername username) (newEmail email) pwd))
     case result of
         Left (UserAlreadyExists _) -> return $ Left (EUserExists "user already exists")
-        Left err@(UnexpectedConstraintViolation _) -> do
+        Left (UnexpectedConstraintViolation _) -> do
             throwE err400
         Left _ -> throwE err400
         Right _ -> do

@@ -30,7 +30,7 @@ import Holborn.SettingsRoute as SettingsRoute
 import Holborn.Signin as Signin
 import Holborn.Config (makeUrl)
 import Holborn.Auth as Auth
-import Debug.Trace
+import Debug.Trace (traceAnyM)
 import Holborn.ManualEncoding.Profile as ManualCodingProfile
 import Holborn.DomHelpers (scroll)
 

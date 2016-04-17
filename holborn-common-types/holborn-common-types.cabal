@@ -33,7 +33,6 @@ library
                      , postgresql-simple
                      , entropy
                      , containers
-                     , transformers
                      , http-api-data
 
   hs-source-dirs:      lib
