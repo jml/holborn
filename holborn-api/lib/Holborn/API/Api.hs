@@ -1,11 +1,8 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE RecordWildCards    #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes        #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE NamedFieldPuns     #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Holborn.API.Api

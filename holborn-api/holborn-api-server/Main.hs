@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeFamilies  #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Main where
 

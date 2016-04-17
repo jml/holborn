@@ -1,10 +1,8 @@
 -- | Profile settings, e.g. full name, location, ...
 
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes        #-}
-{-# LANGUAGE NamedFieldPuns     #-}
 
 module Holborn.API.Settings.Profile
        ( API
