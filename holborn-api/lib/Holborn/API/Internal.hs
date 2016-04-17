@@ -65,8 +65,8 @@ checkKey AppConf{conn} request = do
 
 
 data SSHCommandLine =
-      GitReceivePack { orgOrUser :: Text, repo :: Text }
-    | GitUploadPack { orgOrUser :: Text, repo :: Text }
+      GitReceivePack { _orgOrUser :: Text, _repo :: Text }
+    | GitUploadPack { _orgOrUser :: Text, _repo :: Text }
     deriving Show
 
 
@@ -165,7 +165,7 @@ type KeyId = Int
 
 
 data CheckKeyResponse = CheckKeyResponse
-    { key_id_ :: Maybe KeyId -- TODO might be more useful to return Either with error message?
+    { _key_id :: Maybe KeyId -- TODO might be more useful to return Either with error message?
     } deriving (Show, Generic)
 
 instance ToJSON CheckKeyResponse where
@@ -187,7 +187,7 @@ instance FromJSON CheckRepoAccessRequest
 
 data CheckRepoAccessResponse = CheckRepoAccessResponse
     { -- | 'Nothing' means no access allowed. Otherwise, the command that the SSH server should run in a shell.
-      target :: Maybe Text -- E.g. "nc 127.0.0.1:8080"
+      _target :: Maybe Text -- e.g. "nc 127.0.0.1:8080"
     } deriving (Show)
 
 instance ToJSON CheckRepoAccessResponse where
