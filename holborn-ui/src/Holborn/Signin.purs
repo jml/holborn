@@ -62,7 +62,7 @@ spec = T.simpleSpec performAction render
       runAff (\err -> traceAnyM err >>= \_ -> k id) k (runSignin state)
     performAction (UpdateFormData x) props state k = k $ \state -> state { formData = x }
 
-    runSignin :: forall effect. State -> Aff (ajax :: AJAX, cookie :: C.COOKIE | effect) (State -> State)
+    runSignin :: forall eff'. State -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff') (State -> State)
     runSignin state = do
       r <- AJ.post (makeUrl "/v1/signin") (encodeJson state.formData)
       case r.status of

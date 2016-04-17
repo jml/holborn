@@ -45,10 +45,10 @@ gitReceivePack = gitPack "git-receive-pack"
 data RepoCall = RepoCall { _command :: Text, _org :: Text, _repo :: Text } deriving (Show, Generic)
 
 instance FromJSON RepoCall where
-  parseJSON = genericParseJSON defaultOptions{fieldLabelModifier = drop 1}
+  parseJSON = genericParseJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
 
 instance ToJSON RepoCall where
-  toJSON = genericToJSON defaultOptions{fieldLabelModifier = drop 1}
+  toJSON = genericToJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
 
 -- | The openssh thingy needs to tell us which repository we're
 -- talking about before it establishes the bidirectional pipe for the
