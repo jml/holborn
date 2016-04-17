@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns     #-}
+
 module Holborn.API.Auth
        ( getAuthFromToken
        ) where
@@ -12,7 +14,7 @@ import Control.Monad.Trans.Except (ExceptT, throwE)
 
 -- ExceptT trying to auth the user
 getAuthFromToken :: AppConf -> Maybe AuthToken -> ExceptT (APIError a) IO (Int, Permissions)
-getAuthFromToken AppConf{conn=conn} token = do
+getAuthFromToken AppConf{conn} token = do
     authToken <- case token of
         Nothing -> throwE MissingAuthToken
         Just x -> return x
