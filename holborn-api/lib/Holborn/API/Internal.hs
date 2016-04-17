@@ -29,7 +29,6 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Types (AppConf(..), KeyType(..))
 import qualified Holborn.Logging as Log
 
-import System.IO (stdout, hFlush)
 
 -- | Main internal API (only used by our openssh version ATM).
 type API =
