@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- | Browse Git repository
 
@@ -12,10 +13,12 @@ import BasicPrelude
 import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Except (ExceptT)
 import Data.ByteString.Lazy (fromStrict)
-import Servant ((:>), (:<|>)(..), Capture, Get, Proxy(..), QueryParam, ServantErr(..), Server, JSON)
+import Servant ((:>), (:<|>)(..), Capture, Get, Proxy(..), QueryParam, ServantErr(..), Server, JSON, MimeRender(mimeRender))
 import Servant.HTML.Blaze (HTML)
 import Servant.Server (enter, (:~>)(..), err500)
+import Data.Aeson (encode)
 
+import Holborn.ServantTypes (RenderedJson)
 import Holborn.Repo.GitLayer ( Blob
                              , Commit
                              , GitException(..)
@@ -38,29 +41,32 @@ type Author = Text
 -- Github will accept a single segment, but will also accept, e.g.
 -- 'refs/heads/master'.
 
+type CPS = Capture "pathspec" Text
+
 type BrowseAPI =
   -- just the root
-  Get '[HTML, JSON] RepoMeta
+  Get '[HTML, JSON, RenderedJson] RepoMeta
 
   -- e.g. /v1/repos/src/pulp/blob/master/setup.py
   -- XXX: blob & tree have this hacky thing because Servant 0.5 broke our CaptureAll combinator.
   -- https://github.com/haskell-servant/servant/issues/257 tracks fixing this.
   :<|> "git" :> "blobs" :> Capture "revspec" Revision :>
-    ((Get '[HTML, JSON] Blob)
-     :<|> (Capture "pathspec" Text :> Get '[HTML, JSON] Blob)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Blob)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Blob)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Blob)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Blob))
+    ((Get '[HTML, JSON, RenderedJson] Blob)
+     :<|> (CPS :> Get '[HTML, JSON, RenderedJson] Blob)
+     :<|> (CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Blob)
+     :<|> (CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Blob)
+     :<|> (CPS :> CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Blob)
+     :<|> (CPS :> CPS :> CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Blob))
+
 
   -- e.g. /v1/repos/src/pulp/tree/master/
   :<|> "git" :> "trees" :> Capture "revspec" Revision :>
-    ((Get '[HTML, JSON] Tree)
-     :<|> (Capture "pathspec" Text :> Get '[HTML, JSON] Tree)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Tree)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Tree)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Tree)
-     :<|> (Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Capture "pathspec" Text :> Get '[HTML, JSON] Tree))
+    ((Get '[HTML, JSON, RenderedJson] Tree)
+     :<|> (CPS :> Get '[HTML, JSON, RenderedJson] Tree)
+     :<|> (CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Tree)
+     :<|> (CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Tree)
+     :<|> (CPS :> CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Tree)
+     :<|> (CPS :> CPS :> CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Tree))
 
   :<|> "commits" :> Capture "revspec" Revision :> QueryParam "author" Author :> Get '[HTML] [Commit]
   :<|> "git" :> "commits" :> Capture "revspec" Revision :> Get '[HTML] Commit
@@ -115,3 +121,12 @@ renderCommits = notImplementedYet "render commits"
 
 renderCommit :: Repository -> Revision -> RepoBrowser Commit
 renderCommit = notImplementedYet "render commit"
+
+
+
+instance MimeRender RenderedJson RepoMeta where
+   mimeRender _ = encode
+
+
+instance MimeRender RenderedJson Tree where
+   mimeRender _ = encode
