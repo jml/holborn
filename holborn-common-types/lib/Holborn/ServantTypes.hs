@@ -3,7 +3,7 @@
 module Holborn.ServantTypes (RenderedJson) where
 
 
-import Servant
+import Servant (Accept(..))
 import qualified Network.HTTP.Media as M
 import Data.Aeson (encode, ToJSON)
 
