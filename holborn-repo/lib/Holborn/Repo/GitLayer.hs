@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-|
 The Holborn interface to Git.
 -}
@@ -30,12 +31,15 @@ import qualified Git
 import Git.Types (IsOid(renderObjOid))
 import Git.Libgit2 (LgRepo, MonadLg, lgFactory)
 import Text.Blaze (ToMarkup(..))
-import Data.Aeson (ToJSON(..), genericToJSON, defaultOptions, object)
+import Text.Blaze.Renderer.Text (renderMarkup)
+import Data.Aeson (ToJSON(..), genericToJSON, defaultOptions, object, encode)
 import Data.Aeson.Types (Options(fieldLabelModifier, omitNothingFields))
 import GHC.Generics (Generic)
 import Data.Conduit.Combinators (sinkList)
 import qualified Data.Conduit.List as CL
 import Data.Conduit (Conduit, runConduit, yield, awaitForever, (=$=), await)
+import Servant (MimeRender(mimeRender))
+import qualified Data.ByteString.Char8 as BSC8
 
 -- XXX: Putting web stuff here to avoid orphan warnings. Would be nice to have
 -- it completely separate.
@@ -49,6 +53,7 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Holborn.Repo.HtmlFormatTokens ()
 import Holborn.JSON.RepoMeta (RepoMeta(..))
 import Holborn.Syntax (annotateCode)
+import Holborn.ServantTypes (RenderedJson)
 
 -- | A git repository
 data Repository =
@@ -154,6 +159,24 @@ instance ToMarkup Blob where
     where
       filename = intercalate "/" (blobPath blob)
       contents = blobContents blob
+
+
+
+instance MimeRender RenderedJson Blob where
+   mimeRender _ Blob{..} = encode json
+     where
+       json = object
+         -- TODO line count almost certainly too naive, needs to be
+         -- content-aware
+         [ ("num_lines", toJSON (BSC8.count '\n' blobContents))
+         , ("contents", toJSON rendered)
+         , ("sha", toJSON (toUrlPiece blobRevision))
+         , ("path", toJSON blobPath)
+         ]
+       rendered = renderMarkup $ case annotateCode filename blobContents of
+           Left e -> toMarkup (decodeUtf8 blobContents)
+           Right annotated -> toMarkup annotated
+       filename = intercalate "/" blobPath
 
 
 -- XXX: Copy/paste of getTree, which is also terrible and staircasey.

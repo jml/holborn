@@ -23,7 +23,7 @@ import Data.Array (range)
 
 import Holborn.Fetchable (class Fetchable, fetch, Fetch, decodeResponse)
 import Holborn.Config (makeUrl)
-import Holborn.ManualEncoding.Browse (BrowseMetaResponse(..), GitTree(..), GitTreeEntry(..), GitBlob(..))
+import Holborn.ManualEncoding.Browse (BrowseMetaResponse(..), GitTree(..), GitTreeEntry(..), GitBlobRendered(..))
 import Holborn.ManualEncoding.Browse as MB
 import Holborn.Auth as Auth
 
@@ -33,7 +33,7 @@ data State = State
     { route :: BrowseRoutes
     , _meta :: Maybe BrowseMetaResponse -- empty when not loaded
     , _tree :: Maybe GitTree -- Instead of maybe have a sum-type Nothing | Tree | Blob | Commit
-    , _blob :: Maybe GitBlob -- sum type?
+    , _blob :: Maybe GitBlobRendered -- sum type?
     }
 
 startRoute :: BrowseRoutes -> State
@@ -90,7 +90,7 @@ instance browseFetchable :: Fetchable BrowseRoutes State where
 
   fetch (Blob owner repo ref path) state = do
     let url = makeBlobUrl owner repo ref path
-    blobJson <- Auth.get url >>= decodeResponse
+    blobJson <- Auth.getRendered url >>= decodeResponse
     let state' = set routeLens (BlobLoaded owner repo ref path) state
     pure (set blob (Just blobJson) state')
 
@@ -106,7 +106,7 @@ meta = lens (\(State s) -> s._meta) (\(State s) x -> State (s { _meta = x }))
 tree :: LensP State (Maybe GitTree)
 tree = lens (\(State s) -> s._tree) (\(State s) x -> State (s { _tree = x }))
 
-blob :: LensP State (Maybe GitBlob)
+blob :: LensP State (Maybe GitBlobRendered)
 blob = lens (\(State s) -> s._blob) (\(State s) x -> State (s { _blob = x }))
 
 type Repo = String
@@ -165,12 +165,12 @@ spec = T.simpleSpec T.defaultPerformAction render
       , R.h2 [] [R.text (view MB.description meta)]
       , R.ul [] (renderTree org repo tree)
       ]
-    render dispatch _ (State { route = BlobLoaded org repo ref path, _meta = Just meta, _blob = Just (GitBlob blob) }) _ =
+    render dispatch _ (State { route = BlobLoaded org repo ref path, _meta = Just meta, _blob = Just (GitBlobRendered blob) }) _ =
       [ R.h1 [] [R.text "browse"]
       , R.h2 [] [R.text (view MB.description meta)]
         -- TODO count number of lines
-      , R.pre [RP.style {width: "5em", float: "left", textAlign: "right"}] (renderLines 10)
-      , R.pre [] [R.text blob.contents]
+      , R.pre [RP.style {width: "5em", float: "left", textAlign: "right"}] (renderLines blob.num_lines)
+      , R.div [RP.dangerouslySetInnerHTML {__html: blob.contents}] []
       ]
     render dispatch _ _ _ =
       [ R.text "browse - not implemented probably a bug"

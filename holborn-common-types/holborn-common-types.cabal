@@ -21,6 +21,7 @@ library
                      , Holborn.Logging
                      , Holborn.API.Types
                      , Holborn.Auth
+                     , Holborn.ServantTypes
 
   build-depends:       base >=4.8 && <5.0
                      , aeson >= 0.10
@@ -34,6 +35,9 @@ library
                      , entropy
                      , containers
                      , http-api-data
+                     , servant
+                     , servant-server
+                     , http-media
 
   hs-source-dirs:      lib
   ghc-options:         -Wall

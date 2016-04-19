@@ -46,6 +46,14 @@ get u = do
     , headers = authHeader <> [RequestHeader "Accept" "application/json"]
     }
 
+getRendered :: forall e a. (Respondable a) => URL -> Affjax (cookie :: C.COOKIE | e) a
+getRendered u = do
+  authHeader <- liftEff getAuthHeader
+  affjax $ defaultRequest
+    { url = u
+    , headers = authHeader <> [RequestHeader "Accept" "application/r-json"]
+    }
+
 delete :: forall e b. (Respondable b) => URL -> Affjax (cookie :: C.COOKIE | e)  b
 delete u = do
   authHeader <- liftEff getAuthHeader

@@ -70,13 +70,14 @@ data GitTree = GitTree
 derive instance genericGitTree :: Generic GitTree
 
 
-data GitBlob = GitBlob
+data GitBlobRendered = GitBlobRendered
   { sha :: String
   , path :: Array String
+  , num_lines :: Int
   , contents :: String
   }
 
-derive instance genericGitBlob :: Generic GitBlob
+derive instance genericGitBlobRendered :: Generic GitBlobRendered
 
 
 tree :: LensP GitTree (Array GitTreeEntry)
@@ -90,5 +91,5 @@ instance decodeGitTree :: DecodeJson GitTree where
   decodeJson = gDecode
 
 
-instance decodeGitBlob :: DecodeJson GitBlob where
+instance decodeGitBlobRendered :: DecodeJson GitBlobRendered where
   decodeJson = gDecode
