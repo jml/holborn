@@ -30,14 +30,18 @@ import Holborn.SettingsRoute as Settings
 import Holborn.Signin as Signin
 import Holborn.Config (makeUrl)
 import Holborn.Auth as Auth
-import Debug.Trace (traceAnyM)
+import Debug.Trace (traceAnyM, spy)
 import Holborn.ManualEncoding.Profile as ManualCodingProfile
 import Holborn.DomHelpers (scroll)
 
 
 data UserMeta = SignedIn { username :: String, about :: String } | NotLoaded | Anonymous
 
-data State = RouterState { currentRoute :: RootRoutes, _userMeta :: UserMeta }
+data State = RouterState
+    { currentRoute :: RootRoutes
+    , _userMeta :: UserMeta
+    , _burgerOpen :: Boolean
+    }
 
 
 data RootRoutes =
@@ -64,6 +68,7 @@ data Action =
   | SigninAction Signin.Action
   | SettingsAction Settings.Action
   | BrowseAction Browse.Action
+  | BurgerMenuToggle
 
 
 -- TODO: As jml observed fetching (and our entire app) is essentially
@@ -101,11 +106,14 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
 
 
 initialState :: State
-initialState = RouterState { currentRoute: EmptyRoute, _userMeta: NotLoaded }
+initialState = RouterState { currentRoute: EmptyRoute, _userMeta: NotLoaded, _burgerOpen: false }
 
 
 routeLens :: LensP State RootRoutes
 routeLens = lens (\(RouterState s) -> s.currentRoute) (\(RouterState s) x -> RouterState (s { currentRoute = x }))
+
+burgerOpen :: LensP State Boolean
+burgerOpen = lens (\(RouterState s) -> s._burgerOpen) (\(RouterState s) x -> RouterState (s { _burgerOpen = x }))
 
 userMeta :: LensP State UserMeta
 userMeta = lens (\(RouterState s) -> s._userMeta) (\(RouterState s) x -> RouterState (s { _userMeta = x }))
@@ -178,7 +186,7 @@ spec = container $ handleActions $ fold
       SignedIn { username, about } ->
         [ R.div [RP.onClick handleLinks]
           [ R.header []
-            [ R.div [RP.className "burger" ] [ R.text "=" ]
+            [ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
             , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
             , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
             , R.div [RP.className "pad" ] []
@@ -190,8 +198,15 @@ spec = container $ handleActions $ fold
             , R.a [RP.href "/src/werkzeug"] [R.text "werkzeug"]
             ]
           ]
-        , R.section [RP.className "content", RP.onClick handleLinks] (render d p s c)
+        , R.section
+          [ RP.className if view burgerOpen s then "content burger-menu-open" else "content"
+          , RP.onClick handleLinks] (render d p s c)
+        , burgerMenu s
         ]
+
+    burgerMenu s =
+      R.div [RP.className if spy (view burgerOpen s) then "burger-menu open" else "burger-menu"]
+      [ ]
 
     contextLabel s = case view routeLens s of
       EmptyRoute -> "loading.."
@@ -200,6 +215,7 @@ spec = container $ handleActions $ fold
       SettingsRoute _ -> "Settings"
       BrowseRoute _ -> "Browse"
 
+    burgerMenuToggle dispatch ev = dispatch BurgerMenuToggle
 
     -- Override link navigation to use pushState instead of the
     -- browser following the link.
@@ -217,6 +233,8 @@ spec = container $ handleActions $ fold
       handleAction a p s k
 
     -- TODO error handling when fetch fails
+    handleAction BurgerMenuToggle p s k = k (\s -> over burgerOpen not s)
+
     handleAction action@(UpdateRoute r) p s k =
       runAff (\err -> traceAnyM err >>= const (k id)) (\result -> k \s -> result) (fetch r s)
     handleAction _ _ _ _ = pure unit

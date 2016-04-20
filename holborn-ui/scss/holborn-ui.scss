@@ -7,6 +7,9 @@ body {
 
 $main-blue: #3B78E8;
 $header-height: 50px;
+$header-z-index: 100;
+$burger-menu-background: #ececec;
+
 
 header {
     background: $main-blue;
@@ -15,6 +18,7 @@ header {
     font-size: 16pt;
     position: fixed;
     width: 100vw;
+    z-index: $header-z-index;
 
     height: $header-height;
 
@@ -23,6 +27,7 @@ header {
 
     .burger {
         padding: 10px;
+        cursor: pointer;
     }
     .context {
         padding: 10px;
@@ -76,14 +81,28 @@ pre.line-numbers {
 section.content {
     margin: auto;
     width: 960px;
-
     margin-top: $header-height;
+}
+
+section.content.burger-menu-open {
+    margin-left: 220px;
 }
 
 .burger-menu {
     position: absolute;
-    left: 0px;
+    left: -200px;
     top: 0px;
     height: 100vh;
-    width: 300px;
+    z-index: $header-z-index - 1;
+    background: $burger-menu-background;
+
+    width: 200px;
+    opacity: 0;
+    transition: left 0.2s, opacity 0.2s;
+}
+
+.burger-menu.open {
+    left: 0px;
+    opacity: 1;
+    transition: left 0.2s, opacity 0.2s;
 }
