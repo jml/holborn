@@ -179,11 +179,14 @@ spec = container $ handleActions $ fold
       NotLoaded -> [R.text "loading UI ..."]
 
       Anonymous ->
-        [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.a [RP.href "/signin"] [R.text "sign in here ..."]]
-        , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
+        [ R.div [RP.onClick handleLinks] [R.a [RP.href "/signin"] [R.text "sign in here ..."]]
+        , R.div [RP.onClick handleLinks] (render d p s c)
         ]
 
       SignedIn { username, about } ->
+        -- TODO: for reasons I don't understand the onClick handler on
+        -- the top-level div is never called so I need to add more
+        -- specific onClick handlers
         [ R.div [RP.onClick handleLinks]
           [ R.header []
             [ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
@@ -199,14 +202,19 @@ spec = container $ handleActions $ fold
             ]
           ]
         , R.section
-          [ RP.className if view burgerOpen s then "content burger-menu-open" else "content"
-          , RP.onClick handleLinks] (render d p s c)
+          [ RP.className if view burgerOpen s then "content burger-menu-open" else "content", RP.onClick handleLinks] (render d p s c)
         , burgerMenu s
         ]
 
     burgerMenu s =
-      R.div [RP.className if spy (view burgerOpen s) then "burger-menu open" else "burger-menu"]
-      [ ]
+      R.div [RP.className if spy (view burgerOpen s) then "burger-menu open" else "burger-menu", RP.onClick handleLinks]
+      [ R.ul []
+        [ R.li [] [R.text "Dashboard"]
+        , R.li [] [R.text "My Projects"]
+        , R.li [] [R.text "Candidates"]
+        , R.li [] [R.a [RP.href "/settings/ssh-keys" ] [R.text "Settings"]]
+        ]
+      ]
 
     contextLabel s = case view routeLens s of
       EmptyRoute -> "loading.."
@@ -221,7 +229,7 @@ spec = container $ handleActions $ fold
     -- browser following the link.
     -- TODO: add escape-hatch, e.g. `data-external=true` attribute or
     -- where the path is non-local
-    handleLinks ev =
+    handleLinks ev = do
       case (unsafeCoerce ev).target.nodeName of
         "A" -> do
           (unsafeCoerce ev).preventDefault
