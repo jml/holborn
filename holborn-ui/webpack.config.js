@@ -61,7 +61,18 @@ var config = {
   devServer: {
     port: 1337,
     // Route all 404s to index.html
-    historyApiFallback: true
+    historyApiFallback: {
+      verbose: true,
+
+      // bizarrely the historyApiFallback code decides that a dot in
+      // the path should stop rewriting:
+      // https://github.com/bripkens/connect-history-api-fallback/blob/master/lib/index.js#L59
+      // We fix this in the dev server by catching dot paths unless they are a bundle
+      rewrites: [{
+        from: /\./,
+        to: 'index.html',
+      }],
+    },
   },
 };
 

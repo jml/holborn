@@ -7,6 +7,22 @@ header {
     background: #3B78E8;
     box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
     color: white;
-    font-size: 22pt;
+    font-size: 16pt;
     padding: 10px;
+}
+
+
+// code highlighting style:
+@import "friendly";
+
+pre {
+    margin: 0px;
+}
+
+pre.line-numbers {
+    width: 5em;
+    float: left;
+    text-align: right;
+    margin-right: 10px;
+    color: #999;
 }
