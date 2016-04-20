@@ -178,12 +178,19 @@ spec = container $ handleActions $ fold
       SignedIn { username, about } ->
         [ R.div [RP.onClick handleLinks]
           [ R.header []
+            [ R.div [RP.className "burger" ] [ R.text "B" ]
+            , R.div [RP.className "pad" ] []
+            , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
+            , R.div [RP.className "pad" ] []
+            , R.div [RP.className "me" ] [ R.text "ME" ]
+            ]
+          , R.div []
             [ R.text username
             , R.text about
             , R.a [RP.href "/src/werkzeug"] [R.text "werkzeug"]
             ]
           ]
-        , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
+        , R.section [RP.className "content", RP.onClick handleLinks] (render d p s c)
         ]
 
 
