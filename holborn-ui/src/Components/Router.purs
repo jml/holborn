@@ -26,7 +26,7 @@ import Web.Cookies as C
 
 import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
-import Holborn.SettingsRoute as SettingsRoute
+import Holborn.SettingsRoute as Settings
 import Holborn.Signin as Signin
 import Holborn.Config (makeUrl)
 import Holborn.Auth as Auth
@@ -44,7 +44,7 @@ data RootRoutes =
     EmptyRoute
   | Route404
   | SigninRoute Signin.State
-  | Settings SettingsRoute.State -- TODO fix inconsitent naming
+  | SettingsRoute Settings.State -- TODO fix inconsitent naming
   | BrowseRoute Browse.State
 
 -- TODO tom: Routes should really be "invertible" so I can create a
@@ -52,7 +52,7 @@ data RootRoutes =
 rootRoutes :: Parser RootRoutes
 rootRoutes =
   string "/" *>
-    ( string "settings/" *> (map Settings SettingsRoute.settingsRoutes)
+    ( string "settings/" *> (map SettingsRoute Settings.settingsRoutes)
       <|> string "signin" *> pure (SigninRoute Signin.initialState)
       <|> map BrowseRoute Browse.browseRoutes
       <|> pure Route404
@@ -62,7 +62,7 @@ rootRoutes =
 data Action =
   UpdateRoute RootRoutes
   | SigninAction Signin.Action
-  | SettingsAction SettingsRoute.Action
+  | SettingsAction Settings.Action
   | BrowseAction Browse.Action
 
 
@@ -84,9 +84,9 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
 
       fetch route newState
 
-  fetch (Settings s) state = do
-      sr <- fetch (view SettingsRoute.routeLens s) s -- of type SettingsRoute
-      pure (set routeLens (Settings sr) state)
+  fetch (SettingsRoute s) state = do
+      sr <- fetch (view Settings.routeLens s) s -- of type SettingsRoute
+      pure (set routeLens (SettingsRoute sr) state)
 
   -- Slightly different to settings: If we are already in a browse
   -- route then recycle existing state (browseState).
@@ -123,13 +123,13 @@ _SigninAction = prism SigninAction \action ->
     SigninAction x -> Right x
     _ -> Left action
 
-_SettingsState :: PrismP RootRoutes SettingsRoute.State
-_SettingsState = prism Settings \route ->
+_SettingsState :: PrismP RootRoutes Settings.State
+_SettingsState = prism SettingsRoute \route ->
   case route of
-    Settings x -> Right x
+    SettingsRoute x -> Right x
     _ -> Left route
 
-_SettingsAction :: PrismP Action SettingsRoute.Action
+_SettingsAction :: PrismP Action Settings.Action
 _SettingsAction = prism SettingsAction \action ->
   case action of
     SettingsAction x -> Right x
@@ -162,7 +162,7 @@ spec404 = T.simpleSpec T.defaultPerformAction render
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = container $ handleActions $ fold
        [ T.focusState routeLens (T.split _SigninState (T.match _SigninAction Signin.spec))
-       , T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  SettingsRoute.spec))
+       , T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  Settings.spec))
        , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction  Browse.spec))
        , T.focusState routeLens (T.split _404State spec404)
        ]
@@ -178,8 +178,8 @@ spec = container $ handleActions $ fold
       SignedIn { username, about } ->
         [ R.div [RP.onClick handleLinks]
           [ R.header []
-            [ R.div [RP.className "burger" ] [ R.text "B" ]
-            , R.div [RP.className "pad" ] []
+            [ R.div [RP.className "burger" ] [ R.text "=" ]
+            , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
             , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
             , R.div [RP.className "pad" ] []
             , R.div [RP.className "me" ] [ R.text "ME" ]
@@ -192,6 +192,13 @@ spec = container $ handleActions $ fold
           ]
         , R.section [RP.className "content", RP.onClick handleLinks] (render d p s c)
         ]
+
+    contextLabel s = case view routeLens s of
+      EmptyRoute -> "loading.."
+      Route404 -> "404"
+      SigninRoute _ -> "Sign In"
+      SettingsRoute _ -> "Settings"
+      BrowseRoute _ -> "Browse"
 
 
     -- Override link navigation to use pushState instead of the

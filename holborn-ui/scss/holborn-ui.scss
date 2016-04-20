@@ -24,7 +24,8 @@ header {
     .burger {
         padding: 10px;
     }
-    .pad {
+    .context {
+        padding: 10px;
         flex: 1;
     }
     .search {
@@ -36,7 +37,7 @@ header {
         input {
             max-width: 960px;
             flex: 1;
-            background: lighten($main-blue, 20%);
+            background: lighten($main-blue, 10%);
             border: 0px;
             border-radius: 2px;
             padding: 6px;
