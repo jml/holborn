@@ -3,7 +3,7 @@
 , holborn-common-types, http-client, http-reverse-proxy, http-types
 , jwt, postgresql-simple, QuickCheck, servant-docs, servant-server
 , stdenv, tasty, tasty-hunit, tasty-quickcheck, text, time
-, transformers, wai, warp
+, transformers, wai, wai-cors, warp
 }:
 mkDerivation {
   pname = "holborn-api";
@@ -19,7 +19,7 @@ mkDerivation {
   ];
   executableHaskellDepends = [
     base basic-prelude envparse holborn-common-types http-client
-    postgresql-simple servant-server wai warp
+    postgresql-simple servant-server wai wai-cors warp
   ];
   testHaskellDepends = [
     base basic-prelude errors holborn-common-types postgresql-simple

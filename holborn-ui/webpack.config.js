@@ -45,7 +45,13 @@ var config = {
   plugins: [
     purescriptWebpackPlugin,
     new webpack.optimize.CommonsChunkPlugin("vendor", "vendor.bundle.js"),
-  ]
+  ],
+
+  devServer: {
+    port: 1337,
+    // Route all 404s to index.html
+    historyApiFallback: true
+  },
 };
 
 

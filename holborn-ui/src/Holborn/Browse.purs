@@ -169,7 +169,7 @@ spec = T.simpleSpec T.defaultPerformAction render
       [ R.h1 [] [R.text "browse"]
       , R.h2 [] [R.text (view MB.description meta)]
         -- TODO count number of lines
-      , R.pre [RP.style {width: "5em", float: "left", textAlign: "right"}] (renderLines blob.num_lines)
+      , R.pre [RP.style {width: "5em", float: "left", textAlign: "right"}] (renderLines (spy blob.num_lines))
       , R.div [RP.dangerouslySetInnerHTML {__html: blob.contents}] []
       ]
     render dispatch _ _ _ =

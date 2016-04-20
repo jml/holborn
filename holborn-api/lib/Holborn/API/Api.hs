@@ -21,7 +21,6 @@ import qualified Web.JWT as JWT
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 
-import Holborn.API.Templates (landingPage)
 import Holborn.API.Types (ApiError(..), newEmail, newPassword, newUsername, checkPassword, Password, Username, AppConf(..))
 import Holborn.JSON.User (SigninData(..), SigninOK(..))
 import qualified Holborn.API.User as U
@@ -51,12 +50,7 @@ instance FromHttpApiData Username where
 type API =
     "users" :> "signup" :> ReqBody '[JSON] SignupData :> Post '[JSON] (Either SignupError SignupOk)
     :<|> "v1" :> "signin" :> ReqBody '[JSON] SigninData :> Post '[JSON] SigninOK
-    :<|> Raw
     -- Special POST for signing up / in etc
-
-landing :: AppConf -> Application
-landing AppConf{staticBaseUrl, baseUrl} = \_request respond ->
-  respond (responseLBS status200 [] (renderMarkup (landingPage baseUrl staticBaseUrl)))
 
 
 signupPost :: AppConf -> SignupData -> ExceptT ServantErr IO (Either SignupError SignupOk)
@@ -105,4 +99,3 @@ server :: AppConf -> Server API
 server conf =
     signupPost conf
     :<|> signin conf
-    :<|> landing conf

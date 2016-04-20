@@ -14,7 +14,8 @@
     "react": "^0.14.7",
     "react-dom": "^0.14.7",
     "touch": "^1.0.0",
-    "webpack": "^1.12.14"
+    "webpack": "^1.12.14",
+    "webpack-dev-server": "^1.14.1"
   },
   "devDependencies": {
     "purescript-webpack-plugin": "^0.2.0",

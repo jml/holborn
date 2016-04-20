@@ -14,6 +14,9 @@ import Database.PostgreSQL.Simple (connect, ConnectInfo(..), defaultConnectInfo)
 import Holborn.API.Types (AppConf(..))
 import Servant (serve, (:<|>)(..))
 import Data.Proxy (Proxy(..))
+import Network.Wai.Middleware.Cors (cors, CorsResourcePolicy(..), simpleCorsResourcePolicy, simpleHeaders)
+-- import Network.HTTP.Types.Header (HeaderName)
+
 
 import qualified Holborn.Docs
 import qualified Holborn.API.Api
@@ -73,6 +76,9 @@ type FullAPI =
 api :: Proxy FullAPI
 api = Proxy
 
+
+devCors _ = Just (simpleCorsResourcePolicy { corsRequestHeaders = (simpleHeaders ++ ["Authorization"]) })
+
 app :: AppConf -> Application
 app conf = serve api $
         Holborn.API.Internal.server conf
@@ -93,4 +99,4 @@ main = do
     conn <- connect (defaultConnectInfo  { connectDatabase = pgDb, connectUser = pgUser})
     httpManager <- newManager defaultManagerSettings
     let conf = AppConf conn "test-secret-todo-read-from-env" httpManager (fromString baseUrl) (fromString staticBaseUrl)
-    Warp.runSettings (warpSettings _port) (app conf)
+    Warp.runSettings (warpSettings _port) ((cors devCors) (app conf))

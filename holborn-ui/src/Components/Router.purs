@@ -169,12 +169,20 @@ spec = container $ handleActions $ fold
   where
     container = over T._render \render d p s c -> case view userMeta s of
       NotLoaded -> [R.text "loading UI ..."]
+
       Anonymous ->
         [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.a [RP.href "/signin"] [R.text "sign in here ..."]]
         , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
         ]
+
       SignedIn { username, about } ->
-        [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.text username, R.text about]
+        [ R.div [RP.onClick handleLinks]
+          [ R.header []
+            [ R.text username
+            , R.text about
+            , R.a [RP.href "/src/werkzeug"] [R.text "werkzeug"]
+            ]
+          ]
         , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
         ]
 
