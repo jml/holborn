@@ -24,12 +24,7 @@ We're using http://sass-lang.com/ to compile scss files to css files. Invoke lik
 sassc scss/holborn-ui.scss static/holborn-ui.css
 ```
 
-If developing a lot it'll be easier to run with a filesystem watcher, e.g.:
-
-```
-while inotifywait -e close_write,moved_from -r scss/; do sassc scss/holborn-ui.scss static/app.css; done
-```
-
+While developing webpack will take care of that.
 
 # Notes
 

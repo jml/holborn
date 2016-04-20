@@ -1,6 +1,7 @@
 // webpack.config.js
 'use strict';
 var webpack = require("webpack");
+var path = require("path");
 
 var PurescriptWebpackPlugin = require('purescript-webpack-plugin');
 
@@ -37,10 +38,20 @@ var config = {
             , pathinfo: true
             , filename: 'bundle.js'
           },
-  module: { loaders: [{ test: /\.purs$/,
-                        loader: 'purs-loader',
-                      },
-                     ]},
+  module: { loaders: [
+    { test: /\.purs$/,
+      loader: 'purs-loader',
+    },
+    {
+      test: /\.scss$/,
+      loaders: ["style", "css", "sass"],
+    },
+  ]},
+
+  sassLoader: {
+    includePaths: ["./scss"],
+  },
+
   resolve: { modulesDirectories: modulesDirectories, extensions: [ '', '.js', '.purs'] },
   plugins: [
     purescriptWebpackPlugin,
