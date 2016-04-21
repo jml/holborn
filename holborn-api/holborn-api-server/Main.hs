@@ -10,7 +10,7 @@ import qualified Env
 import Network.Wai (Application)
 import qualified Network.Wai.Handler.Warp as Warp
 import Database.PostgreSQL.Simple (connect, ConnectInfo(..), defaultConnectInfo)
-
+import GHC.Word (Word16)
 import Holborn.API.Types (AppConf(..))
 import Servant (serve, (:<|>)(..))
 import Data.Proxy (Proxy(..))
@@ -31,9 +31,10 @@ import Network.HTTP.Client (newManager, defaultManagerSettings)
 data Config = Config { _port :: Warp.Port
                      , pgDb :: String
                      , pgUser :: String
+                     , pgPort :: Word16
                      , baseUrl :: String
                      , staticBaseUrl :: String
-                     }
+                     } deriving Show
 
 
 loadConfig :: IO Config
@@ -46,6 +47,8 @@ loadConfig =
       "HOLBORN_PG_DATABASE" (Env.def "holborn" <> Env.help "pg database name")
   <*> Env.var (Env.str Env.<=< Env.nonempty)
       "HOLBORN_PG_USER" (Env.def "holborn" <> Env.help "pg user")
+  <*> Env.var (Env.auto Env.<=< Env.nonempty)
+      "HOLBORN_PG_PORT" (Env.def 5432 <> Env.help "pg port")
   <*> Env.var (Env.str Env.<=< Env.nonempty)
       "HOLBORN_BASE_URL" (Env.def "http://127.0.0.1:8002" <> Env.help "e.g. http://127.0.0.1:8002")
   <*> Env.var (Env.str Env.<=< Env.nonempty)
@@ -95,8 +98,10 @@ app conf = serve api $
 
 
 main = do
-    Config{..} <- loadConfig
-    conn <- connect (defaultConnectInfo  { connectDatabase = pgDb, connectUser = pgUser})
+    conf@Config{..} <- loadConfig
+    print "Using config:"
+    print conf
+    conn <- connect (defaultConnectInfo  { connectDatabase = pgDb, connectUser = pgUser, connectPort = pgPort })
     httpManager <- newManager defaultManagerSettings
     let conf = AppConf conn "test-secret-todo-read-from-env" httpManager (fromString baseUrl) (fromString staticBaseUrl)
     Warp.runSettings (warpSettings _port) ((cors devCors) (app conf))

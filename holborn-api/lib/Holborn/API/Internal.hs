@@ -42,11 +42,12 @@ type API =
 
 -- | Implementation
 checkKey :: AppConf -> CheckKeyRequest -> ExceptT ServantErr IO CheckKeyResponse
-checkKey AppConf{conn} request = do
+checkKey AppConf{conn} request@CheckKeyRequest{..} = do
     Log.debug ("checkKey" :: Text, request)
-    let comparison_pubkey = case key_type request of
-            RSA -> "ssh-rsa " <> key request
-            DSA -> "ssh-dsa " <> key request
+    let comparison_pubkey = case key_type of
+            RSA -> "ssh-rsa " <> key
+            DSA -> "ssh-dsa " <> key
+    Log.debug ("actual db check", comparison_pubkey)
     rows <- liftIO $ query conn [sql|
                    select pk.id, pk.verified
                    from "public_key" as pk  where comparison_pubkey = ?
