@@ -1,5 +1,5 @@
 { pkgs, stdenv, nodejs-4_x, closurecompiler, nix, node_modules, bower_modules,
-  haskellPackages, glibcLocales, zopfli }:
+  haskellPackages, glibcLocales, zopfli, sassc }:
 stdenv.mkDerivation {
   name = "holborn-frontend";
   phases = "unpackPhase buildPhase installPhase";
@@ -9,6 +9,7 @@ stdenv.mkDerivation {
     haskellPackages.purescript
     glibcLocales
     zopfli
+    sassc
   ];
   src = ../holborn-ui;
 
@@ -37,14 +38,21 @@ stdenv.mkDerivation {
     mv bundle.min.js static/bundle.$BUNDLE_HASH.min.js
     mv vendor.bundle.min.js static/vendor.bundle.$VENDOR_HASH.min.js
 
+    # CSS
+    sassc scss/holborn-ui.scss > app.css
+    export CSS_HASH=$(nix-hash app.css)
+    mv app.css static/app.$CSS_HASH.css
+
+
     # Note that zopfli keeps the uncompressed file around. We need
     # that for clients that don't send accept-encoding: gzip
     zopfli -i1000 static/*.min.js
+    zopfli -i1000 static/*.css
 
     cat >index.html <<HEREDOC
     <head>
       <title>norf</title>
-      <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+      <link href="/static/app.$CSS_HASH.css" rel="stylesheet" type="text/css">
     <body>
       <div id="container" class="container">
         <script>window.holbornBaseUrl = "https://norf.co";</script>

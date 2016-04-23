@@ -1,0 +1,50 @@
+header {
+    background: $main-blue;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+    color: white;
+    font-size: 16pt;
+    position: fixed;
+    width: 100vw;
+    z-index: $header-z-index;
+
+    height: $header-height;
+
+    display: flex;
+    flex-direction: row;
+
+    .burger {
+        padding: 10px;
+        cursor: pointer;
+    }
+    .context {
+        padding: 10px;
+        flex: 1;
+    }
+    .search {
+        flex: 10;
+        padding: 10px;
+        text-align: center;
+        display: flex;
+
+        input {
+            max-width: 960px;
+            flex: 1;
+            background: lighten($main-blue, 10%);
+            border: 0px;
+            border-radius: 2px;
+            padding: 6px;
+            font-size: 12pt;
+            color: white;
+        }
+        input:focus {
+            outline: 2px solid #fc0;
+        }
+        @include placeholder {
+            color: white;
+        }
+    }
+    .me {
+        width: 3em;
+        padding: 10px;
+    }
+}

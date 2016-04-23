@@ -26,25 +26,29 @@ import Web.Cookies as C
 
 import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
-import Holborn.SettingsRoute as SettingsRoute
+import Holborn.SettingsRoute as Settings
 import Holborn.Signin as Signin
 import Holborn.Config (makeUrl)
 import Holborn.Auth as Auth
-import Debug.Trace (traceAnyM)
+import Debug.Trace (traceAnyM, spy)
 import Holborn.ManualEncoding.Profile as ManualCodingProfile
 import Holborn.DomHelpers (scroll)
 
 
 data UserMeta = SignedIn { username :: String, about :: String } | NotLoaded | Anonymous
 
-data State = RouterState { currentRoute :: RootRoutes, _userMeta :: UserMeta }
+data State = RouterState
+    { currentRoute :: RootRoutes
+    , _userMeta :: UserMeta
+    , _burgerOpen :: Boolean
+    }
 
 
 data RootRoutes =
     EmptyRoute
   | Route404
   | SigninRoute Signin.State
-  | Settings SettingsRoute.State -- TODO fix inconsitent naming
+  | SettingsRoute Settings.State -- TODO fix inconsitent naming
   | BrowseRoute Browse.State
 
 -- TODO tom: Routes should really be "invertible" so I can create a
@@ -52,7 +56,7 @@ data RootRoutes =
 rootRoutes :: Parser RootRoutes
 rootRoutes =
   string "/" *>
-    ( string "settings/" *> (map Settings SettingsRoute.settingsRoutes)
+    ( string "settings/" *> (map SettingsRoute Settings.settingsRoutes)
       <|> string "signin" *> pure (SigninRoute Signin.initialState)
       <|> map BrowseRoute Browse.browseRoutes
       <|> pure Route404
@@ -62,8 +66,9 @@ rootRoutes =
 data Action =
   UpdateRoute RootRoutes
   | SigninAction Signin.Action
-  | SettingsAction SettingsRoute.Action
+  | SettingsAction Settings.Action
   | BrowseAction Browse.Action
+  | BurgerMenuToggle
 
 
 -- TODO: As jml observed fetching (and our entire app) is essentially
@@ -84,9 +89,9 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
 
       fetch route newState
 
-  fetch (Settings s) state = do
-      sr <- fetch (view SettingsRoute.routeLens s) s -- of type SettingsRoute
-      pure (set routeLens (Settings sr) state)
+  fetch (SettingsRoute s) state = do
+      sr <- fetch (view Settings.routeLens s) s -- of type SettingsRoute
+      pure (set routeLens (SettingsRoute sr) state)
 
   -- Slightly different to settings: If we are already in a browse
   -- route then recycle existing state (browseState).
@@ -101,11 +106,14 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
 
 
 initialState :: State
-initialState = RouterState { currentRoute: EmptyRoute, _userMeta: NotLoaded }
+initialState = RouterState { currentRoute: EmptyRoute, _userMeta: NotLoaded, _burgerOpen: false }
 
 
 routeLens :: LensP State RootRoutes
 routeLens = lens (\(RouterState s) -> s.currentRoute) (\(RouterState s) x -> RouterState (s { currentRoute = x }))
+
+burgerOpen :: LensP State Boolean
+burgerOpen = lens (\(RouterState s) -> s._burgerOpen) (\(RouterState s) x -> RouterState (s { _burgerOpen = x }))
 
 userMeta :: LensP State UserMeta
 userMeta = lens (\(RouterState s) -> s._userMeta) (\(RouterState s) x -> RouterState (s { _userMeta = x }))
@@ -123,13 +131,13 @@ _SigninAction = prism SigninAction \action ->
     SigninAction x -> Right x
     _ -> Left action
 
-_SettingsState :: PrismP RootRoutes SettingsRoute.State
-_SettingsState = prism Settings \route ->
+_SettingsState :: PrismP RootRoutes Settings.State
+_SettingsState = prism SettingsRoute \route ->
   case route of
-    Settings x -> Right x
+    SettingsRoute x -> Right x
     _ -> Left route
 
-_SettingsAction :: PrismP Action SettingsRoute.Action
+_SettingsAction :: PrismP Action Settings.Action
 _SettingsAction = prism SettingsAction \action ->
   case action of
     SettingsAction x -> Right x
@@ -162,28 +170,66 @@ spec404 = T.simpleSpec T.defaultPerformAction render
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = container $ handleActions $ fold
        [ T.focusState routeLens (T.split _SigninState (T.match _SigninAction Signin.spec))
-       , T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  SettingsRoute.spec))
+       , T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  Settings.spec))
        , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction  Browse.spec))
        , T.focusState routeLens (T.split _404State spec404)
        ]
   where
     container = over T._render \render d p s c -> case view userMeta s of
       NotLoaded -> [R.text "loading UI ..."]
+
       Anonymous ->
-        [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.a [RP.href "/signin"] [R.text "sign in here ..."]]
-        , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
-        ]
-      SignedIn { username, about } ->
-        [ R.div [RP.className "container-fluid", RP.onClick handleLinks] [R.text username, R.text about]
-        , R.div [RP.className "container-fluid", RP.onClick handleLinks] (render d p s c)
+        [ R.div [RP.onClick handleLinks] [R.a [RP.href "/signin"] [R.text "sign in here ..."]]
+        , R.div [RP.onClick handleLinks] (render d p s c)
         ]
 
+      SignedIn { username, about } ->
+        -- TODO: for reasons I don't understand the onClick handler on
+        -- the top-level div is never called so I need to add more
+        -- specific onClick handlers
+        [ R.div [RP.onClick handleLinks]
+          [ R.header []
+            [ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
+            , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
+            , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
+            , R.div [RP.className "pad" ] []
+            , R.div [RP.className "me" ] [ R.text "ME" ]
+            ]
+          , R.div []
+            [ R.text username
+            , R.text about
+            , R.a [RP.href "/src/werkzeug"] [R.text "werkzeug"]
+            ]
+          ]
+        , R.section
+          [ RP.className if view burgerOpen s then "content burger-menu-open" else "content", RP.onClick handleLinks] (render d p s c)
+        , burgerMenu s
+        ]
+
+    burgerMenu s =
+      R.div [RP.className if spy (view burgerOpen s) then "burger-menu open" else "burger-menu", RP.onClick handleLinks]
+      [ R.ul []
+        [ R.li [] [R.text "Dashboard"]
+        , R.li [] [R.text "My Projects"]
+        , R.li [] [R.text "Candidates"]
+        , R.li [] [R.a [RP.href "/settings/ssh-keys" ] [R.text "Settings"]]
+        ]
+      ]
+
+    contextLabel s = case view routeLens s of
+      EmptyRoute -> "loading.."
+      Route404 -> "404"
+      SigninRoute _ -> "Sign In"
+      SettingsRoute _ -> "Settings"
+      BrowseRoute _ -> "Browse"
+
+    burgerMenuToggle dispatch ev = dispatch BurgerMenuToggle
 
     -- Override link navigation to use pushState instead of the
     -- browser following the link.
     -- TODO: add escape-hatch, e.g. `data-external=true` attribute or
     -- where the path is non-local
-    handleLinks ev =
+    handleLinks ev = do
       case (unsafeCoerce ev).target.nodeName of
         "A" -> do
           (unsafeCoerce ev).preventDefault
@@ -195,6 +241,8 @@ spec = container $ handleActions $ fold
       handleAction a p s k
 
     -- TODO error handling when fetch fails
+    handleAction BurgerMenuToggle p s k = k (\s -> over burgerOpen not s)
+
     handleAction action@(UpdateRoute r) p s k =
       runAff (\err -> traceAnyM err >>= const (k id)) (\result -> k \s -> result) (fetch r s)
     handleAction _ _ _ _ = pure unit

@@ -15,7 +15,6 @@ library
                      , Holborn.API.Auth
                      , Holborn.API.Settings.SSHKeys
                      , Holborn.API.Settings.Profile
-                     , Holborn.API.Templates
   build-depends:       base >=4.8 && <5
                      , postgresql-simple
                      , text
@@ -84,6 +83,7 @@ executable holborn-api-server
                      , http-client
                      , holborn-api
                      , holborn-common-types
+                     , wai-cors
 
   ghc-options:         -eventlog
   default-extensions:  NoImplicitPrelude

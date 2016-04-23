@@ -156,20 +156,17 @@ spec = T.simpleSpec T.defaultPerformAction render
       , R.text $ org ++ repo
       ]
     render dispatch _ (State { route = HomeLoaded org repo, _meta = Just meta, _tree = Just tree }) _ =
-      [ R.h1 [] [R.text "browse"]
-      , R.h2 [] [R.text (view MB.description meta)]
+      [ R.h2 [] [R.text (view MB.description meta)]
       , R.ul [] (renderTree org repo tree)
       ]
     render dispatch _ (State { route = TreeLoaded org repo ref path, _meta = Just meta, _tree = Just tree }) _ =
-      [ R.h1 [] [R.text "browse"]
-      , R.h2 [] [R.text (view MB.description meta)]
+      [ R.h2 [] [R.text (view MB.description meta)]
       , R.ul [] (renderTree org repo tree)
       ]
     render dispatch _ (State { route = BlobLoaded org repo ref path, _meta = Just meta, _blob = Just (GitBlobRendered blob) }) _ =
-      [ R.h1 [] [R.text "browse"]
-      , R.h2 [] [R.text (view MB.description meta)]
+      [ R.h2 [] [R.text (view MB.description meta)]
         -- TODO count number of lines
-      , R.pre [RP.style {width: "5em", float: "left", textAlign: "right"}] (renderLines blob.num_lines)
+      , R.pre [RP.className "line-numbers"] (renderLines (spy blob.num_lines))
       , R.div [RP.dangerouslySetInnerHTML {__html: blob.contents}] []
       ]
     render dispatch _ _ _ =
