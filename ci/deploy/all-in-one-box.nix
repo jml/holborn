@@ -11,7 +11,10 @@ let
   projectName = "holborn";
   projectURL = "https://bitbucket.com/holbornlondon/holborn";
   buildbotWebPort = 3000;
-  buildbotURL = "http://52.49.196.110:3000/";
+  # XXX: Specifying this in the *machine* configuration is wrong. Should be in
+  # the network / deployment configuration.
+  buildbotURL = "http://52.48.211.75:3000/";
+  # TODO: Change this to 5 minutes once we're done configuring the server.
   pollInterval = 60; # poll git repo every N seconds
 
   workerName = "single-host";
@@ -20,18 +23,22 @@ let
 in
 {
   require = [
-    ./buildbot-module.nix
-    ./buildbot-slave-module.nix
+    ../modules/buildbot-master.nix
+    ../modules/buildbot-worker.nix
   ];
 
   environment.systemPackages = [];
 
+  # XXX: If the master doesn't come up properly then the worker will give up
+  # trying to connect and need a kick in the pants. Not sure how to properly
+  # encode this, since in the general case the worker will be running on a
+  # different machine.
   services.buildbot-worker = {
     enable = true;
     name = workerName;
     password  = workerPassword;
     adminContact = "Jonathan Lange <jml@mumak.net>";
-    hostInfo = "Some EC2 instance somewhere, I guess.";
+    hostInfo = "Worker running on same box as master.";
     buildmasterHost = "localhost";
     buildmasterPort = workerPort;
     # We need git to be able to get the source code to build it!
@@ -40,7 +47,7 @@ in
 
   services.buildbot = {
     enable = true;
-    configFile = pkgs.writeText "master.cfg" (import ./master.cfg.nix
+    configFile = pkgs.writeText "master.cfg" (import ./templates/master.cfg.nix
     { inherit projectName projectURL workerPort buildbotURL buildbotWebPort;
       inherit gitRepo gitBranch builderName pollInterval workerName workerPassword;
     });

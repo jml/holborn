@@ -5,5 +5,5 @@
 {
   network.description = "Holborn CI";
 
-  buildbot = import ./buildbot-master-box.nix;
+  buildbot = import ./all-in-one-box.nix;
 }

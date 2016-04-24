@@ -6,12 +6,12 @@ let
   buildbotDirectory = "/var/run/buildbot-worker";
 
   # XXX: Depend on custom package for now.
-  buildbotWorkerPackage = pkgs.callPackage ./buildbot-slave-0.9.nix {};
+  buildbotWorkerPackage = pkgs.callPackage ../packages/buildbot-slave-0.9.nix {};
   buildbotWorkerCommand = "${buildbotWorkerPackage}/bin/buildslave";
 
   cfg = config.services.buildbot-worker;
   tacFile = pkgs.writeText "buildbot.tac" (
-    import ./buildbot-slave.tac.nix {
+    import ./templates/buildbot-worker.tac.nix {
       host = cfg.buildmasterHost;
       port = cfg.buildmasterPort;
       name = cfg.name;

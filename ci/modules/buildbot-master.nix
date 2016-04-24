@@ -16,8 +16,8 @@ let
   # - buildbotWebPort
 
   # XXX: Depend on our custom packages for now.
-  buildbotPackage = pkgs.callPackage ./buildbot-0.9.nix { enableWWW = true; };
-  buildbotWebPackage = pkgs.callPackage ./buildbot-www-0.9.nix {};
+  buildbotPackage = pkgs.callPackage ../packages/buildbot-0.9.nix { enableWWW = true; };
+  buildbotWebPackage = pkgs.callPackage ../packages/buildbot-www-0.9.nix {};
 
   cfg = config.services.buildbot;
 
@@ -73,14 +73,6 @@ in
         '';
       };
 
-      pidDirectory = mkOption {
-        type = types.path;
-        default = cfg.runDirectory;
-        description = ''
-          Directory to store the pid file in.
-        '';
-      };
-
       extraPackages = mkOption {
         type = types.listOf types.package;
         default = [];
@@ -115,6 +107,12 @@ in
         cp ${buildbotTac} ${cfg.runDirectory}/buildbot.tac
         # Always try to upgrade the database
         ${buildbotPackage}/bin/buildbot upgrade-master ${cfg.runDirectory}
+        # XXX: Technically the buildbot master doesn't need write access to
+        # everything in this directory, only the sqlite database. However,
+        # since the sqlite database is (*sigh*) an implementation detail of
+        # the configuration file, it's probably best to just give everything
+        # in this directory write access.
+        chown -R buildbot ${cfg.runDirectory}
       '';
 
       serviceConfig = {
