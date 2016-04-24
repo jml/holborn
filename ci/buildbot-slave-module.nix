@@ -100,6 +100,14 @@ in
           Will be displayed on the buildbot master web UI.
         '';
       };
+
+      extraPackages = mkOption {
+        type = types.listOf types.package;
+        default = [];
+        description = ''
+          Packages that will be available to the worker service.
+        '';
+      };
     };
   };
 
@@ -112,11 +120,11 @@ in
       useDefaultShell = true;
     };
 
-    environment.systemPackages = [ buildbotWorkerPackage ];
+    environment.systemPackages = [ ];
 
     systemd.services.buildbot-worker = {
       description = "buildbot worker";
-      path = [ buildbotWorkerPackage ];
+      path = [ buildbotWorkerPackage ] ++ cfg.extraPackages;
       wantedBy = [ "multi-user.target" ];  # XXX: What is this for?
       after = [ "network-interfaces.target" ];
 

@@ -80,6 +80,14 @@ in
           Directory to store the pid file in.
         '';
       };
+
+      extraPackages = mkOption {
+        type = types.listOf types.package;
+        default = [];
+        description = ''
+          Packages that will be available to the buildmaster process.
+        '';
+      };
     };
   };
 
@@ -97,7 +105,7 @@ in
 
     systemd.services.buildbot = {
       description = "buildbot master";
-      path = [ buildbotPackage buildbotWebPackage ];
+      path = [ buildbotPackage buildbotWebPackage ] ++ cfg.extraPackages;
       wantedBy = [ "multi-user.target" ];  # XXX: What is this for?
       after = [ "network-interfaces.target" ];
 
