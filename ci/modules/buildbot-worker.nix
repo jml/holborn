@@ -125,7 +125,7 @@ in
     systemd.services.buildbot-worker = {
       description = "buildbot worker";
       path = [ buildbotWorkerPackage ] ++ cfg.extraPackages;
-      wantedBy = [ "multi-user.target" ];  # XXX: What is this for?
+      wantedBy = [ "multi-user.target" ];
       after = [ "network-interfaces.target" ];
 
       preStart = ''

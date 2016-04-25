@@ -11,7 +11,6 @@ let
   repeatedArgs = concatMapStringsSep " ";
 
   # 'toString' doesn't quite do what we want for bools.
-  # XXX: Should we be doing type checking here?
   fromBool = x: if x then "true" else "false";
 
   # oauth2_proxy provides many options that are only relevant if you are using
@@ -73,7 +72,7 @@ let
     ${optionalString (!isNull cfg.signatureKey) "--signature-key=${cfg.signatureKey}"} \
     --upstream=${cfg.upstream} \
     ${optionalString (!isNull cfg.validateURL) "--validate-url=${cfg.validateURL}"} \
-    ${optionalString cfg.tls.enable "--tls-cert=${cfg.tls.certificate} --tls-key=${cfg.tls.key} --https-address=${cfg.https-address}"}
+    ${optionalString cfg.tls.enable "--tls-cert=${cfg.tls.certificate} --tls-key=${cfg.tls.key} --https-address=${cfg.tls.httpsAddress}"}
   '';
 in
 {
@@ -211,13 +210,6 @@ in
       '';
       example = "https://internalapp.yourcompany.com/oauth2/callback";
     };
-
-
-    # XXX: Since oauth2_proxy only allows one provider at a time, perhaps we
-    # should make it so that the following provider-specific clauses are
-    # themselves in a top-level 'providers' attribute and then we could do
-    # some checking / inference to ensure that the settings are present for
-    # the chosen provider. Maybe.
 
     azure = {
       tenant = mkOption {
@@ -405,15 +397,11 @@ in
       type = types.str;
       default = "127.0.0.1:4180";
       description = ''
-        [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients
-      '';
-    };
+        [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients.
 
-    httpsAddress = mkOption {
-      type = types.str;
-      default = ":443";
-      description = ''
-        <addr>:<port> to listen on for HTTPS clients
+        This module does *not* expose the port by default. If you want this URL
+        to be accessible to other machines, please add the port to
+        networking.firewall.allowedTCPPorts.
       '';
     };
 
@@ -474,6 +462,17 @@ in
           path to private key file
         '';
       };
+
+      httpsAddress = mkOption {
+        type = types.str;
+        default = ":443";
+        description = ''
+          <addr>:<port> to listen on for HTTPS clients.
+
+          Remember to add <port> to allowedTCPPorts if you want other machines
+          to be able to connect to it.
+        '';
+      };
     };
 
     requestLogging = mkOption {
@@ -512,8 +511,6 @@ in
 
     users.extraUsers.oauth2_proxy = {
       description = "OAuth2 Proxy";
-      createHome = true;
-      useDefaultShell = true;
     };
 
     systemd.services.oauth2_proxy = {
@@ -525,16 +522,12 @@ in
       serviceConfig = {
         User = "oauth2_proxy";
         Restart = "always";
-        RestartSec = 2;  # XXX: Cargo culted value
-        PermissionsStartOnly = true;  # XXX: cargo culted option
+        # Arbitrarily chosen value.
+        RestartSec = 2;
 
         ExecStart = "${cfg.package}/bin/oauth2_proxy ${mkCommandLine cfg}";
       };
     };
-
-    # XXX: Need to expose port. Wonder what the best way of specifying port is
-    # (already sort of a part of the httpAddress and httpsAddress options)
-
 
   };
 }

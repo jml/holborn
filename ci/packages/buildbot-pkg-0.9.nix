@@ -10,7 +10,7 @@ buildPythonPackage (rec {
     sha256 = "02gg9mk0v95dwbz330yilmlg94gz9vqr6jk3bgjxdxpm27zmqp2b";
   };
 
-  doCheck = false;
+  doCheck = true;
 
   meta = with stdenv.lib; {
     homepage = http://buildbot.net/;

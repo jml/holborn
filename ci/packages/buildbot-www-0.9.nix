@@ -18,7 +18,7 @@ buildPythonPackage (rec {
 
   buildInputs = [ buildbot buildbotPkg pythonPackages.mock ];
 
-  doCheck = false;
+  doCheck = true;
 
   postInstall = ''
   '';

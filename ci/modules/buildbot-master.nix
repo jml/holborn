@@ -1,8 +1,10 @@
-# NixOS module for buildbot.
+# NixOS module for buildbot master.
 #
-# Just runs everything on one machine.
-
-# XXX: some of the twisted stuff modelled on 'kippo'. Maybe we can generalize?
+# Buildbot 0.9 allows the master to have various plugins. The web UI is one
+# such plugin.
+#
+# This module does *not* allow plugins to be customized, and instead always
+# loads the web UI and nothing else.
 
 { config, lib, pkgs, ... }:
 
@@ -91,9 +93,6 @@ in
       home = cfg.runDirectory;
       useDefaultShell = true;
     };
-
-    # XXX: Should be pkgs.buildbot
-    environment.systemPackages = [ ];
 
     systemd.services.buildbot = {
       description = "buildbot master";

@@ -1,7 +1,7 @@
 { stdenv, buildPythonPackage, fetchurl
 , pythonPackages }:
 
-# XXX: Assumes Python 2.7
+assert pythonPackages.isPy27;
 
 buildPythonPackage rec {
   name = "txaio-${version}";
@@ -22,12 +22,10 @@ buildPythonPackage rec {
       futures
     ];
 
-  # TODO: Maybe this works, haven't tested.
-  doCheck = false;
+  doCheck = true;
 
   meta = {
     description = "helper library for writing code that runs unmodified on both Twisted and asyncio / Trollius.";
     homepage = http://pypi.python.org/pypi/txaio;
-    #license = licenses.mit;
   };
 }

@@ -1,7 +1,7 @@
 { stdenv, buildPythonPackage, fetchurl, callPackage
 , pythonPackages }:
 
-# XXX: Assumes Python 2.7
+# Only tested with Python 2.7.
 
 buildPythonPackage rec {
   name = "autobahn-${version}";
@@ -19,12 +19,16 @@ buildPythonPackage rec {
       (callPackage ./txaio.nix {})
     ];
 
-  # TODO: Maybe this works, haven't tested.
+  buildInputs =
+    with pythonPackages;
+    [ unittest2 ];
+
+  # Tests fail due to missing module:
+  # https://github.com/crossbario/autobahn-python/issues/650
   doCheck = false;
 
   meta = {
     description = "WebSocket client & server library, WAMP real-time framework";
     homepage = http://pypi.python.org/pypi/autobahn;
-    #license = licenses.mit;
   };
 }

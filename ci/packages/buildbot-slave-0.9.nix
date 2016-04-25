@@ -14,6 +14,15 @@ buildPythonPackage (rec {
     with pythonPackages;
     [ twisted future ];
 
+  # What's up with this?! 'trial' should be 'test', no?
+  #
+  # running tests
+  # usage: setup.py [global_opts] cmd1 [cmd1_opts] [cmd2 [cmd2_opts] ...]
+  #    or: setup.py --help [cmd1 cmd2 ...]
+  #    or: setup.py --help-commands
+  #    or: setup.py cmd --help
+  #
+  # error: invalid command 'trial'
   doCheck = false;
 
   meta = with stdenv.lib; {

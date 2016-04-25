@@ -9,7 +9,7 @@ let
       deployment.ec2.accessKeyId = accessKeyId;
       deployment.ec2.region = region;
       # TODO: Pick a better instance type
-      deployment.ec2.instanceType = "t2.micro";
+      deployment.ec2.instanceType = "t2.nano";
       # TODO: Not sure this is right.
       deployment.ec2.keyPair = resources.ec2KeyPairs.my-key-pair;
       deployment.ec2.securityGroups = [
