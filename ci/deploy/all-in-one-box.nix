@@ -11,13 +11,15 @@ let
   projectName = "holborn";
   projectURL = "https://bitbucket.com/holbornlondon/holborn";
   buildbotWebPort = 3000;
-  # XXX: Specifying this in the *machine* configuration is wrong. Should be in
-  # the network / deployment configuration.
-  buildbotURL = "http://52.48.211.75:3000/";
+  # XXX: Duplicated somewhat from the AWS deployment file:
+  # XXX: Port is from oauth2_proxy's httpAddress
+  buildbotURL = "http://buildbot.mumak.net:4180/";
   # TODO: Change this to 5 minutes once we're done configuring the server.
   pollInterval = 60; # poll git repo every N seconds
 
   workerName = "single-host";
+  # XXX: PUPPY: We don't really care what this is as long as master & worker
+  # are synchronized. Can we ask Nix to generate it?
   workerPassword = "whatever";
 
 in
@@ -25,6 +27,7 @@ in
   require = [
     ../modules/buildbot-master.nix
     ../modules/buildbot-worker.nix
+    ../modules/oauth2_proxy.nix
   ];
 
   environment.systemPackages = [];
@@ -45,6 +48,7 @@ in
     extraPackages = [ pkgs.git ];
   };
 
+  # TODO: Only bind web service to loopback device.
   services.buildbot = {
     enable = true;
     configFile = pkgs.writeText "master.cfg" (import ./templates/master.cfg.nix
@@ -55,6 +59,33 @@ in
     extraPackages = [ pkgs.git ];
   };
 
+  services.oauth2_proxy = {
+    enable = true;
+    provider = "google";
+    # XXX: PUPPY: Secrets! How do they work?
+    clientID = "579594549675-nuh9d5m5kvdckfdec785o9cbcqe6sje7.apps.googleusercontent.com";
+    clientSecret = "bLlMleNsy_63ivGSIktA1EpP";
+    cookie = {
+      refresh = "1h";
+      # XXX: jml doesn't actually understand what this is for.
+      # Randomly generated w/ Lastpass.
+      secret = "dC1AKxDIlcDzmJOIUh0P1HG7CfoMke4u";
+      secure = false;
+    };
+    httpAddress = "http://0.0.0.0:4180";
+    # oauth2_proxy *almost* guesses right. It insists on 'https' though, which
+    # isn't being served (yet!) or configured as a valid redirect URL at
+    # Google's side.
+    redirectURL = "http://buildbot.mumak.net:4180/oauth2/callback";
+    upstream = "http://localhost:3000";
+    email.addresses = ''
+      jonathan.lange@gmail.com
+      tehunger@gmail.com
+    '';
+  };
+
   services.sshd.enable = true;
-  networking.firewall.allowedTCPPorts = [ 22 80 443 buildbotWebPort ];
+  # XXX: '4180' duplicated from httpAddress
+  # XXX: After we bind buildbot web service to loopback, remove buildbotWebPort from this list.
+  networking.firewall.allowedTCPPorts = [ 22 80 443 4180 ];
 }

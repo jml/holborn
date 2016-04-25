@@ -15,6 +15,12 @@ let
       deployment.ec2.securityGroups = [
         resources.ec2SecurityGroups.buildbot-security
       ];
+
+      deployment.route53 = {
+        inherit accessKeyId;
+        hostName = "buildbot.mumak.net";
+        usePublicDNSName = true;
+      };
     };
 
 in
@@ -27,12 +33,16 @@ in
 
   resources.ec2SecurityGroups.buildbot-security = {
     inherit region accessKeyId;
-    # XXX: Duplicated from buildbot-master-box port list.
+    # XXX: Duplicates information from all-in-one-box port list.
     rules = [
       { fromPort = 22; toPort = 22; sourceIp = "0.0.0.0/0"; }
       { fromPort = 80; toPort = 80; sourceIp = "0.0.0.0/0"; }
       { fromPort = 443; toPort = 443; sourceIp = "0.0.0.0/0"; }
-      { fromPort = 3000; toPort = 3000; sourceIp = "0.0.0.0/0"; }
+      # XXX: We could use this security rule to serve on port 80 publicly
+      # while not needed root permissions. To jml, that seems like an
+      # effective hack but also something that might complicate the deployment
+      # going forward
+      { fromPort = 4180; toPort = 4180; sourceIp = "0.0.0.0/0"; }
     ];
   };
 }
