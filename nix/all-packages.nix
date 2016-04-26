@@ -32,9 +32,11 @@ haskellPackages.override {
       pipes-aeson = haskell.lib.doJailbreak (self.callPackage ./pipes-aeson.nix {});
       unexceptionalio = self.callPackage ./unexceptionalio.nix {};
 
-      # jailbreak because of aeson, don't check because tests need npm
-      purescript = haskell.lib.dontCheck (haskell.lib.doJailbreak (self.callPackage ./purescript.nix {}));
-
+      # purescript relies on > 0.6 but we only have 0.5 branch in nix
       language-javascript = self.callPackage ./language-javascript.nix {};
+
+      # jailbreak because of aeson, don't check because tests need npm
+      purescript = haskell.lib.dontCheck (haskell.lib.doJailbreak (
+        self.callPackage ./purescript.nix { language-javascript = self.language-javascript; }));
     };
 }

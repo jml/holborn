@@ -12,6 +12,9 @@ stdenv.mkDerivation {
   srcs = ./.;
   phases = "unpackPhase buildPhase";
   buildPhase = ''
+      set -ex
+      echo "*** holborn-protocol-test-1"
+
       # Make this script more readable by placing git into PATH
       export PATH=$PATH:${git}/bin
 
