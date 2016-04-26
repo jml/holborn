@@ -20,12 +20,14 @@ import BasicPrelude
 import GHC.Generics (Generic)
 import Control.Error (rightZ)
 import Control.Monad.Trans.Except (ExceptT)
-import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, withText)
+import Data.ByteString.Lazy (toStrict)
+import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, withText, encode)
 import Servant ((:>), (:<|>)(..), Post, ReqBody, JSON, ServantErr, Server)
 import qualified Data.Attoparsec.Text as AT
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Types (AppConf(..), KeyType(..))
+import Holborn.JSON.SSHRepoCommunication (RepoCall(..))
 import qualified Holborn.Logging as Log
 
 
@@ -47,7 +49,7 @@ checkKey AppConf{conn} request@CheckKeyRequest{..} = do
     let comparison_pubkey = case key_type of
             RSA -> "ssh-rsa " <> key
             DSA -> "ssh-dsa " <> key
-    Log.debug ("actual db check", comparison_pubkey)
+    Log.debug ("actual db check" :: String, comparison_pubkey)
     rows <- liftIO $ query conn [sql|
                    select pk.id, pk.verified
                    from "public_key" as pk  where comparison_pubkey = ?
@@ -70,21 +72,19 @@ data SSHCommandLine =
     deriving Show
 
 
+
+
 -- | Emit the Holborn side of the SSH command
 accessGranted :: SSHCommandLine -> Text
 accessGranted (GitReceivePack org repo) =
-  concat ["(echo -n '{\"command\": \"git-receive-pack\", \"org\": \""
-         , org
-         , "\", \"repo\": \""
-         , repo
-         ,"\"}' && cat) | nc 127.0.0.1 8081"
+  concat ["(echo -n '"
+         , decodeUtf8 (toStrict (encode (WritableRepoCall "git-receive-pack" org repo)))
+         , "' && cat) | nc 127.0.0.1 8081"
          ]
 accessGranted (GitUploadPack org repo) =
-  concat ["(echo -n '{\"command\": \"git-upload-pack\", \"org\": \""
-         , org
-         , "\", \"repo\": \""
-         , repo
-         ,"\"}' && cat) | nc 127.0.0.1 8081"
+  concat ["(echo -n '"
+         , decodeUtf8 (toStrict (encode (WritableRepoCall "git-upload-pack" org repo)))
+         , "' && cat) | nc 127.0.0.1 8081"
          ]
 
 

@@ -63,9 +63,9 @@ accept config (sock, _) = do
     (header, fromRest) <- runStateT getRepoParser from
     Log.debug header
     void $ case header of
-        Just (RepoCall "git-upload-pack" org repo) ->
+        Just (WritableRepoCall "git-upload-pack" org repo) ->
             gitUploadPack config org repo fromRest to
-        Just (RepoCall "git-receive-pack" org repo) ->
+        Just (WritableRepoCall "git-receive-pack" org repo) ->
             gitReceivePack config org repo fromRest to
         _ -> terror "if the data is properly cleaned this doesn't happen"
     return ()

@@ -11,8 +11,10 @@ import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import GHC.Generics (Generic)
 
 
-data RepoCall = RepoCall { _command :: Text, _org :: Text, _repo :: Text } deriving (Show, Generic)
-
+data RepoCall =
+      WritableRepoCall { _command :: Text, _org :: Text, _repo :: Text }
+    | ImplicitRepoCall { _command :: Text, _org :: Text, _repo :: Text, _owner :: Text }
+    deriving (Show, Generic)
 
 instance FromJSON RepoCall where
   parseJSON = genericParseJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
