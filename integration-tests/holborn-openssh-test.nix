@@ -48,7 +48,8 @@ stdenv.mkDerivation {
   srcs = ./.;
   phases = "unpackPhase buildPhase";
   buildPhase = ''
-      set -e
+      set -ex
+      echo "*** holborn-openssh-test"
       trap 'kill $(jobs -p)' EXIT # kill everything before exit
 
       # Make this script more readable by placing git into PATH
