@@ -1,5 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE DeriveGeneric #-}
+
 
 -- | When connecting via SSH we don't have the luxury of the HTTP
 -- protocol so we need to be able to run git-{receive,upload}-pack
@@ -15,20 +15,17 @@ module Holborn.Repo.RawProtocol
 import           BasicPrelude
 
 import           Control.Monad.State.Strict (runStateT)
-import           Data.Aeson (FromJSON(..), ToJSON(..), genericParseJSON, genericToJSON)
-import           Data.Aeson.TH (defaultOptions, fieldLabelModifier)
-import           GHC.Generics (Generic)
 import           Network.Socket (Socket, SockAddr)
-import           Pipes.Aeson (decode)
 import           Pipes.Core (Consumer, Producer)
 import           Pipes.Network.TCP (HostPreference(..))
 import           Pipes.Network.TCP.Safe (serve, fromSocket, toSocket)
 import qualified Pipes.Parse as PP
 import           Pipes.Safe (runSafeT)
-
+import           Pipes.Aeson (decode)
 import           Holborn.Repo.Config (Config, buildRepoPath)
 import           Holborn.Repo.Process (streamIO, proc)
 import qualified Holborn.Logging as Log
+import           Holborn.JSON.SSHRepoCommunication (RepoCall(..))
 
 
 gitPack :: String -> Config -> Text -> Text -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
@@ -42,13 +39,6 @@ gitUploadPack = gitPack "git-upload-pack"
 gitReceivePack :: Config -> Text -> Text -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
 gitReceivePack = gitPack "git-receive-pack"
 
-data RepoCall = RepoCall { _command :: Text, _org :: Text, _repo :: Text } deriving (Show, Generic)
-
-instance FromJSON RepoCall where
-  parseJSON = genericParseJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
-
-instance ToJSON RepoCall where
-  toJSON = genericToJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
 
 -- | The openssh thingy needs to tell us which repository we're
 -- talking about before it establishes the bidirectional pipe for the
@@ -73,9 +63,9 @@ accept config (sock, _) = do
     (header, fromRest) <- runStateT getRepoParser from
     Log.debug header
     void $ case header of
-        Just (RepoCall "git-upload-pack" org repo) ->
+        Just (WritableRepoCall "git-upload-pack" org repo) ->
             gitUploadPack config org repo fromRest to
-        Just (RepoCall "git-receive-pack" org repo) ->
+        Just (WritableRepoCall "git-receive-pack" org repo) ->
             gitReceivePack config org repo fromRest to
         _ -> terror "if the data is properly cleaned this doesn't happen"
     return ()
