@@ -5,14 +5,16 @@ with pkgs.goPackages;
 buildGoPackage {
   name = "oauth2_proxy";
   goPackagePath = "github.com/bitly/oauth2_proxy";
+  # https://github.com/bitly/oauth2_proxy/pull/201/ adds web socket support,
+  # which is necessary for buildbot's web UI.
   src = fetchFromGitHub {
-    rev = "10f47e325b782a60b8689653fa45360dee7fbf34";
-    owner = "bitly";
+    rev = "d67c0f62d9ebc856b198ba86aa02657660606ec6";
+    owner = "soellman";
     repo = "oauth2_proxy";
-    sha256 = "13f6kaq15f6ial9gqzrsx7i94jhd5j70js2k93qwxcw1vkh1b6si";
+    sha256 = "0khbpj2pbvi2hb9j5ks8fn267qby4hg0cxjz5wji4alms4l9n355";
   };
   buildInputs = [
     go-assert go-options go-simplejson toml fsnotify.v1 oauth2
-    google-api-go-client hmacauth
+    google-api-go-client hmacauth websocket
   ];
 }
