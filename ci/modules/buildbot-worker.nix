@@ -108,6 +108,17 @@ in
           Packages that will be available to the worker service.
         '';
       };
+
+      enableNixBuilds = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Whether or not the worker is allowed to do nix-builds.
+
+          Enabling this will add nix to the worker path and grant worker user
+          permissions to build nix packages.
+        '';
+      };
     };
   };
 
@@ -120,11 +131,16 @@ in
       useDefaultShell = true;
     };
 
+    nix.trustedUsers = if cfg.enableNixBuilds then [ "buildbot-worker" ] else [];
+
     environment.systemPackages = [ ];
 
     systemd.services.buildbot-worker = {
       description = "buildbot worker";
-      path = [ buildbotWorkerPackage ] ++ cfg.extraPackages;
+      # TODO: Toggle nix packages based on this.
+      path = [ buildbotWorkerPackage ] ++ cfg.extraPackages ++
+        (if cfg.enableNixBuilds
+         then  [ pkgs.nix ] else [ ]);
       wantedBy = [ "multi-user.target" ];
       after = [ "network-interfaces.target" ];
 
