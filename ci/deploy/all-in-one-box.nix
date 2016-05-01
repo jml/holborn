@@ -9,8 +9,11 @@ let
 
   publicHostName = "buildbot.mumak.net";
 
+  oauth2ProxyURL = "http://127.0.0.1:4180";
+
   # The public URL for buildbot.
-  publicURL = "https://${publicHostName}:4180";
+  publicURL = "https://${publicHostName}";
+
   workerName = "single-host";
   # PUPPY: We don't really care what this is as long as master & worker are
   # synchronized.
@@ -28,8 +31,10 @@ let
       gitRepo = "https://holbornlondon:DSmiB2AVZJhftk4XRyH1N98XNMYzOmY9@bitbucket.org/holbornlondon/holborn";
       gitBranch = "master";
       builderName = "holborn-experimental-builder";
-      pollInterval = 300;
+      pollInterval = 300; # poll git repo every N seconds
     });
+
+  challengeDir = "/var/www/challenges";
 
 in
 {
@@ -80,7 +85,7 @@ in
       secret = "dC1AKxDIlcDzmJOIUh0P1HG7CfoMke4u";
       secure = false;
     };
-    httpAddress = "http://0.0.0.0:4180";
+    httpAddress = oauth2ProxyURL;
     # oauth2_proxy *almost* guesses right. It insists on 'https' though, which
     # isn't being served (yet!) or configured as a valid redirect URL at
     # Google's side.
@@ -92,8 +97,20 @@ in
     '';
   };
 
+  security.acme.certs."buildbot.mumak.net" = {
+    webroot = "/var/www/challenges";
+    email = "jml@mumak.net";
+  };
+
+  services.nginx = {
+    enable = true;
+    config = (import ./templates/nginx.conf.nix {
+      inherit challengeDir;
+      serverName = publicHostName;
+      backendURL = oauth2ProxyURL;
+    });
+  };
+
   services.sshd.enable = true;
-  # XXX: '4180' duplicated from httpAddress
-  # XXX: After we bind buildbot web service to loopback, remove buildbotWebPort from this list.
-  networking.firewall.allowedTCPPorts = [ 22 80 443 4180 ];
+  networking.firewall.allowedTCPPorts = [ 22 80 443 ];
 }
