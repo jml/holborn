@@ -56,8 +56,11 @@ in
     hostInfo = "Worker running on same box as master.";
     buildmasterHost = "localhost";
     buildmasterPort = workerPort;
-    # We need git to be able to get the source code to build it!
-    extraPackages = [ pkgs.git ];
+    enableNixBuilds = true;
+    extraPackages = [
+      # We need git to be able to get the source code to build it!
+      pkgs.git
+    ];
   };
 
   # TODO: Only bind web service to loopback device.
