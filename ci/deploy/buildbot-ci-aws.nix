@@ -19,6 +19,14 @@ let
         hostName = "buildbot.mumak.net";
         usePublicDNSName = true;
       };
+
+      # Because we're building Haskell packages on a t2.nano instance we need
+      # some swap to fit everything in memory.
+      swapDevices = [
+        { device = "/swap";
+          size = 4096;  # Megabytes
+        }
+      ];
     };
 
 in
