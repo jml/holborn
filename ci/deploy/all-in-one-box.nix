@@ -46,6 +46,9 @@ in
 
   environment.systemPackages = [];
 
+  # We need to build holborn, which is not free.
+  nixpkgs.config.allowUnfree = true;
+
   # If the master doesn't come up properly then the worker will give up trying
   # to connect and need a kick in the pants.
   services.buildbot-worker = {

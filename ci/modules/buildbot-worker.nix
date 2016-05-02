@@ -30,6 +30,10 @@ let
     ''
     ${cfg.hostInfo}
     '';
+  nixConfigFile = pkgs.writeText "config.nix" (
+    if cfg.allowUnfree
+    then "{ allowUnfree = true; }"
+    else "");
 
 in
 {
@@ -119,6 +123,14 @@ in
           permissions to build nix packages.
         '';
       };
+
+      allowUnfree = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Is the worker allowed to do unfree nix-builds?
+        '';
+      };
     };
   };
 
@@ -150,6 +162,10 @@ in
         cp ${tacFile} ${cfg.runDirectory}/buildbot.tac
         cp ${hostInfoFile} ${cfg.runDirectory}/info/host
         cp ${adminFile} ${cfg.runDirectory}/info/admin
+
+        # Configure nixpkgs. Only relevant if we're using nix-build on the worker.
+        mkdir -m 0755 -p ${cfg.runDirectory}/.nixpkgs
+        cp ${nixConfigFile} ${cfg.runDirectory}/.nixpkgs/config.nix
       '';
 
       serviceConfig = {
