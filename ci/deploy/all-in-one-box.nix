@@ -15,6 +15,7 @@ let
   publicURL = "https://${publicHostName}";
 
   workerName = "single-host";
+
   # PUPPY: We don't really care what this is as long as master & worker are
   # synchronized.
   #
@@ -60,6 +61,7 @@ in
     buildmasterHost = "localhost";
     buildmasterPort = workerPort;
     enableNixBuilds = true;
+    allowUnfree = true;
     extraPackages = [
       # We need git to be able to get the source code to build it!
       pkgs.git

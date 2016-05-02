@@ -53,8 +53,16 @@ BuildmasterConfig = {
             factory=util.BuildFactory([
                 # check out the source
                 steps.Git(repourl='${gitRepo}', mode='incremental'),
-                # run the tests (note that this will require that 'trial' is installed)
-                steps.ShellCommand(command=["true"]),
+                # run the tests
+                # XXX: How do I get nix environment variables?
+                steps.ShellCommand(
+                  command=[
+                    "/bin/sh",
+                    "--login",
+                    "-c",
+                    ". $PWD/.envrc && nix-build ./integration-tests",
+                  ]
+                ),
             ]),
         ),
     ],
