@@ -106,7 +106,7 @@ in
   };
 
   security.acme.certs."buildbot.mumak.net" = {
-    webroot = "/var/www/challenges";
+    webroot = challengeDir;
     email = "jml@mumak.net";
   };
 
