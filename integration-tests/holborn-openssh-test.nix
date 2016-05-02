@@ -15,6 +15,13 @@ let
     PidFile=/dev/null
     HolbornApiEndpoint=http://127.0.0.1:8082
   '';
+
+  holborn-ssh-client-config = writeText "client-config" ''
+    UserKnownHostsFile = /dev/null
+    StrictHostKeyChecking = no
+    IdentityFile = ${testKey}/testkey
+  '';
+
   initial_sql = ../holborn-api/sql/initial.sql;
 
   testKey = stdenv.mkDerivation {
@@ -56,7 +63,7 @@ stdenv.mkDerivation {
       export PATH=$PATH:${git}/bin:${holborn-ssh}/bin
 
       # GIT_SSH_COMMAND requires at least git 2.3
-      export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${testKey}/testkey"
+      export GIT_SSH_COMMAND="ssh -F ${holborn-ssh-client-config}"
 
       export HOLBORN_PG_PORT=5444
       export HOLBORN_PG_USER=test-user
