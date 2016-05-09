@@ -8,9 +8,7 @@ let
     { deployment.targetEnv = "ec2";
       deployment.ec2.accessKeyId = accessKeyId;
       deployment.ec2.region = region;
-      # TODO: Pick a better instance type
       deployment.ec2.instanceType = "t2.nano";
-      # TODO: Not sure this is right.
       deployment.ec2.keyPair = resources.ec2KeyPairs.my-key-pair;
       deployment.ec2.securityGroups = [
         resources.ec2SecurityGroups.buildbot-security
@@ -38,11 +36,6 @@ in
       { fromPort = 22; toPort = 22; sourceIp = "0.0.0.0/0"; }
       { fromPort = 80; toPort = 80; sourceIp = "0.0.0.0/0"; }
       { fromPort = 443; toPort = 443; sourceIp = "0.0.0.0/0"; }
-      # XXX: We could use this security rule to serve on port 80 publicly
-      # while not needed root permissions. To jml, that seems like an
-      # effective hack but also something that might complicate the deployment
-      # going forward
-      { fromPort = 4180; toPort = 4180; sourceIp = "0.0.0.0/0"; }
     ];
   };
 }
