@@ -15,6 +15,19 @@ let
     PidFile=/dev/null
     HolbornApiEndpoint=http://127.0.0.1:8082
   '';
+
+  # ssh tries to create an ~/.ssh directory if it's not given a config file,
+  # and it uses the home directory found in getpwent (see
+  # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=706194)
+  #
+  # On NixOS, this is /var/empty, which is not writeable. Thus, make our own
+  # config file.
+  holborn-ssh-client-config = writeText "client-config" ''
+    UserKnownHostsFile = /dev/null
+    StrictHostKeyChecking = no
+    IdentityFile = ${testKey}/testkey
+  '';
+
   initial_sql = ../holborn-api/sql/initial.sql;
 
   testKey = stdenv.mkDerivation {
@@ -44,7 +57,7 @@ let
 in
 stdenv.mkDerivation {
   name = "holborn-openssh-test";
-  buildInputs = [ git holborn-ssh postgresql hcl procps ];
+  buildInputs = [ git holborn-ssh postgresql hcl procps holborn-api holborn-repo test-repos ];
   srcs = ./.;
   phases = "unpackPhase buildPhase";
   buildPhase = ''
@@ -56,7 +69,7 @@ stdenv.mkDerivation {
       export PATH=$PATH:${git}/bin:${holborn-ssh}/bin
 
       # GIT_SSH_COMMAND requires at least git 2.3
-      export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${testKey}/testkey"
+      export GIT_SSH_COMMAND="ssh -F ${holborn-ssh-client-config}"
 
       export HOLBORN_PG_PORT=5444
       export HOLBORN_PG_USER=test-user

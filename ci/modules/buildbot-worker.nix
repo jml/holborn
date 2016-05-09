@@ -30,6 +30,10 @@ let
     ''
     ${cfg.hostInfo}
     '';
+  nixConfigFile = pkgs.writeText "config.nix" (
+    if cfg.allowUnfree
+    then "{ allowUnfree = true; }"
+    else "");
 
 in
 {
@@ -108,6 +112,25 @@ in
           Packages that will be available to the worker service.
         '';
       };
+
+      enableNixBuilds = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Whether or not the worker is allowed to do nix-builds.
+
+          Enabling this will add nix to the worker path and grant worker user
+          permissions to build nix packages.
+        '';
+      };
+
+      allowUnfree = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Is the worker allowed to do unfree nix-builds?
+        '';
+      };
     };
   };
 
@@ -120,11 +143,16 @@ in
       useDefaultShell = true;
     };
 
+    nix.trustedUsers = if cfg.enableNixBuilds then [ "buildbot-worker" ] else [];
+
     environment.systemPackages = [ ];
 
     systemd.services.buildbot-worker = {
       description = "buildbot worker";
-      path = [ buildbotWorkerPackage ] ++ cfg.extraPackages;
+      # TODO: Toggle nix packages based on this.
+      path = [ buildbotWorkerPackage ] ++ cfg.extraPackages ++
+        (if cfg.enableNixBuilds
+         then  [ pkgs.nix ] else [ ]);
       wantedBy = [ "multi-user.target" ];
       after = [ "network-interfaces.target" ];
 
@@ -134,6 +162,10 @@ in
         cp ${tacFile} ${cfg.runDirectory}/buildbot.tac
         cp ${hostInfoFile} ${cfg.runDirectory}/info/host
         cp ${adminFile} ${cfg.runDirectory}/info/admin
+
+        # Configure nixpkgs. Only relevant if we're using nix-build on the worker.
+        mkdir -m 0755 -p ${cfg.runDirectory}/.nixpkgs
+        cp ${nixConfigFile} ${cfg.runDirectory}/.nixpkgs/config.nix
       '';
 
       serviceConfig = {

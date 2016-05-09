@@ -15,6 +15,7 @@ let
   publicURL = "https://${publicHostName}";
 
   workerName = "single-host";
+
   # PUPPY: We don't really care what this is as long as master & worker are
   # synchronized.
   #
@@ -46,6 +47,9 @@ in
 
   environment.systemPackages = [];
 
+  # We need to build holborn, which is not free.
+  nixpkgs.config.allowUnfree = true;
+
   # If the master doesn't come up properly then the worker will give up trying
   # to connect and need a kick in the pants.
   services.buildbot-worker = {
@@ -56,8 +60,12 @@ in
     hostInfo = "Worker running on same box as master.";
     buildmasterHost = "localhost";
     buildmasterPort = workerPort;
-    # We need git to be able to get the source code to build it!
-    extraPackages = [ pkgs.git ];
+    enableNixBuilds = true;
+    allowUnfree = true;
+    extraPackages = [
+      # We need git to be able to get the source code to build it!
+      pkgs.git
+    ];
   };
 
   # TODO: Only bind web service to loopback device.
@@ -98,7 +106,7 @@ in
   };
 
   security.acme.certs."buildbot.mumak.net" = {
-    webroot = "/var/www/challenges";
+    webroot = challengeDir;
     email = "jml@mumak.net";
   };
 
