@@ -18,8 +18,8 @@ data Config = Config { port :: Warp.Port
                      , pgDb :: String
                      , pgUser :: String
                      , pgPort :: Word16
-                     , configBaseUrl :: String
-                     , configStaticBaseUrl :: String
+                     , configBaseUrl :: Text
+                     , configStaticBaseUrl :: Text
                      , configRepoHostname :: Text
                      , configRepoPort :: Warp.Port
                      , configRawRepoHostname :: Text
@@ -52,8 +52,8 @@ loadAppConf Config{..} =
     <$> connect (defaultConnectInfo  { connectDatabase = pgDb, connectUser = pgUser, connectPort = pgPort })
     <*> pure "test-secret-todo-read-from-env"
     <*> newManager defaultManagerSettings
-    <*> pure (fromString configBaseUrl)
-    <*> pure (fromString configStaticBaseUrl)
+    <*> pure configBaseUrl
+    <*> pure configStaticBaseUrl
     <*> pure configRepoHostname
     <*> pure configRepoPort
     <*> pure configRawRepoHostname
