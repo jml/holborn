@@ -20,6 +20,10 @@ data Config = Config { port :: Warp.Port
                      , pgPort :: Word16
                      , configBaseUrl :: String
                      , configStaticBaseUrl :: String
+                     , configRepoHostname :: Text
+                     , configRepoPort :: Warp.Port
+                     , configRawRepoHostname :: Text
+                     , configRawRepoPort :: Warp.Port
                      } deriving Show
 
 
@@ -30,6 +34,14 @@ data AppConf = AppConf
   , httpManager :: Manager
   , baseUrl :: Text -- e.g. https://holborn-example.com/
   , staticBaseUrl :: Text -- e.g. https://holborn-example.com/
+  , repoHostname :: Text
+    -- ^ Hostname for the repo server.
+  , repoPort :: Warp.Port
+    -- ^ Port for the repo server.
+  , rawRepoHostname :: Text
+    -- ^ Hostname for the raw repo server.
+  , rawRepoPort :: Warp.Port
+    -- ^ Port for the raw repo server.
   }
 
 
@@ -42,3 +54,7 @@ loadAppConf Config{..} =
     <*> newManager defaultManagerSettings
     <*> pure (fromString configBaseUrl)
     <*> pure (fromString configStaticBaseUrl)
+    <*> pure configRepoHostname
+    <*> pure configRepoPort
+    <*> pure configRawRepoHostname
+    <*> pure configRawRepoPort

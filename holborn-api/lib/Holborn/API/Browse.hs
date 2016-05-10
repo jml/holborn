@@ -91,8 +91,8 @@ poorMansJsonGet manager endpoint = do
 
 
 browse :: AppConf -> Maybe AuthToken -> Owner -> Repo -> ExceptT (APIError BrowseError) IO BrowseMetaResponse
-browse AppConf{httpManager} _token owner repo = do
-    r <- liftIO $ poorMansJsonGet httpManager ("http://127.0.0.1:8080/v1/repos/" <> owner <> "/" <> repo)
+browse AppConf{httpManager, repoHostname, repoPort} _token owner repo = do
+    r <- liftIO $ poorMansJsonGet httpManager ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> owner <> "/" <> repo)
     repoMeta <- case r of
         Just x -> pure x
         Nothing -> throwE (SubAPIError NotFound)
@@ -105,11 +105,11 @@ browse AppConf{httpManager} _token owner repo = do
 -- Tree, commit & blob are passed straight through if they meet the
 -- authentication requirements.
 treeCommitBlob :: AppConf -> Maybe AuthToken -> Owner -> Repo -> Application
-treeCommitBlob AppConf{httpManager} _token owner _repo =
+treeCommitBlob AppConf{httpManager, repoHostname, repoPort} _token owner _repo =
     waiProxyTo proxy defaultOnExc httpManager
   where
     -- pass the raw request through if the user is authorized
     proxy request =
         return $ case owner of
             "jml" -> WPRResponse (responseLBS status404 [] "not found")
-            _  -> WPRModifiedRequest request (ProxyDest "127.0.0.1" 8080)
+            _  -> WPRModifiedRequest request (ProxyDest (encodeUtf8 repoHostname) repoPort)

@@ -29,6 +29,7 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
 import Holborn.API.Types (KeyType(..))
 import Holborn.JSON.SSHRepoCommunication (RepoCall(..))
+import Network.Wai.Handler.Warp (Port)
 import qualified Holborn.Logging as Log
 
 
@@ -76,11 +77,14 @@ data SSHCommandLine =
 
 
 -- | Emit the Holborn side of the SSH command
-accessGranted :: SSHCommandLine -> Text
-accessGranted commandLine =
+accessGranted :: Text -> Port -> SSHCommandLine -> Text
+accessGranted hostname port commandLine =
   concat ["(echo -n '"
          , decodeUtf8 (toStrict (encode repoCall))
-         , "' && cat) | nc 127.0.0.1 8081"
+         , "' && cat) | nc "
+         , hostname
+         , " "
+         , fromShow port
          ]
   where
     repoCall =
@@ -122,7 +126,7 @@ instance FromJSON SSHCommandLine where
 
 
 checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> ExceptT ServantErr IO CheckRepoAccessResponse
-checkRepoAccess AppConf{conn} request = do
+checkRepoAccess AppConf{conn, rawRepoHostname, rawRepoPort} request = do
     Log.debug request
     rows <- liftIO $ query conn [sql|
                    select id, pk.readonly, pk.verified
@@ -142,10 +146,10 @@ checkRepoAccess AppConf{conn} request = do
       case (cmd, rows) of
         (_, []) -> reportError "No SSH key"
         (_, _:_:_) -> reportError "Multiple SSH keys"
-        (GitReceivePack _ _, [(_, False, True)]) -> accessGranted cmd
+        (GitReceivePack _ _, [(_, False, True)]) -> accessGranted rawRepoHostname rawRepoPort cmd
         (GitReceivePack _ _, [(keyId, True, True)]) ->
             reportError ("SSH key with id " <> show (keyId :: Int) <> " is readonly")
-        (GitUploadPack _ _, [(_, _, True)]) -> accessGranted cmd
+        (GitUploadPack _ _, [(_, _, True)]) -> accessGranted rawRepoHostname rawRepoPort cmd
         (_, [(_, _, False)]) -> reportError "SSH key not verified"
 
 
