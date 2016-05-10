@@ -40,13 +40,13 @@ loadConfig =
   <*> Env.var (Env.str Env.<=< Env.nonempty)
       "HOLBORN_STATIC_BASE_URL" (Env.def "http://127.0.0.1:1337" <> Env.help "e.g. http://127.0.0.1:1337")
   <*> Env.var (Env.str Env.<=< Env.nonempty)
-      "HOLBORN_REPO_HOSTNAME" (Env.help "Where the holborn-repo server is running. e.g. 127.0.0.1")
+      "HOLBORN_REPO_HOSTNAME" (Env.def "127.0.0.1" <> Env.help "Where the holborn-repo server is running. e.g. 127.0.0.1")
   <*> Env.var Env.auto
-      "HOLBORN_REPO_PORT" (Env.help "What port the holborn-repo server is listening on. e.g. 8080")
+      "HOLBORN_REPO_PORT" (Env.def 8080 <> Env.help "What port the holborn-repo server is listening on. e.g. 8080")
   <*> Env.var (Env.str Env.<=< Env.nonempty)
-      "HOLBORN_REPO_RAW_HOSTNAME" (Env.help "Where the holborn-repo raw server is running. e.g. 127.0.0.1")
+      "HOLBORN_REPO_RAW_HOSTNAME" (Env.def "127.0.0.1" <> Env.help "Where the holborn-repo raw server is running. e.g. 127.0.0.1")
   <*> Env.var Env.auto
-      "HOLBORN_REPO_RAW_PORT" (Env.help "What port the holborn-repo raw server is listening on. e.g. 8081")
+      "HOLBORN_REPO_RAW_PORT" (Env.def 8081 <> Env.help "What port the holborn-repo raw server is listening on. e.g. 8081")
 
 
 -- XXX: Duplicated & modified from Holborn.Repo.Config
