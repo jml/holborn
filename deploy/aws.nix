@@ -69,19 +69,34 @@ rec {
         # Our holborn code is unfree:
         nixpkgs.config.allowUnfree = true;
 
-        services.openssh.ports = [ normalSSHPort ];
-        services.holborn-openssh.holbornApiEndpoint = "http://127.0.01:${ports.API}";
-        services.holborn-api.port = ports.API;
-
-        environment.systemPackages = [ pkgs.git pkgs.vim frontend ];
         require = [
           ./nix/holborn-openssh-module.nix
           ./nix/holborn-api-module.nix
           ./nix/holborn-repo-module.nix
         ];
-        services.holborn-openssh.package = holborn-openssh;
-        services.holborn-api.package = holborn-api;
-        services.holborn-repo.package = holborn-repo;
+
+        services.openssh.ports = [ normalSSHPort ];
+
+        services.holborn-openssh = {
+          package = holborn-openssh;
+          holbornApiEndpoint = "http://127.0.01:${ports.API}";
+        };
+
+        services.holborn-api = {
+          package = holborn-api;
+          port = ports.API;
+          repoServer = "127.0.0.1";
+          repoPort = ports.REPO;
+          rawRepoPort = ports.RAW;
+        };
+
+        services.holborn-repo = {
+          package = holborn-repo;
+          port = ports.REPO;
+          rawPort = ports.RAW;
+        };
+
+        environment.systemPackages = [ pkgs.git pkgs.vim frontend ];
 
         services.postgresql.enable = true;
         services.postgresql.package = pkgs.postgresql95;
