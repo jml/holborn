@@ -76,16 +76,16 @@ data SSHCommandLine =
 
 -- | Emit the Holborn side of the SSH command
 accessGranted :: SSHCommandLine -> Text
-accessGranted (GitReceivePack org repo) =
+accessGranted commandLine =
   concat ["(echo -n '"
-         , decodeUtf8 (toStrict (encode (WritableRepoCall "git-receive-pack" org repo)))
+         , decodeUtf8 (toStrict (encode repoCall))
          , "' && cat) | nc 127.0.0.1 8081"
          ]
-accessGranted (GitUploadPack org repo) =
-  concat ["(echo -n '"
-         , decodeUtf8 (toStrict (encode (WritableRepoCall "git-upload-pack" org repo)))
-         , "' && cat) | nc 127.0.0.1 8081"
-         ]
+  where
+    repoCall =
+      case commandLine of
+        GitReceivePack org repo -> WritableRepoCall "git-receive-pack" org repo
+        GitUploadPack org repo -> WritableRepoCall "git-upload-pack" org repo
 
 
 -- There are two acceptable commands:
