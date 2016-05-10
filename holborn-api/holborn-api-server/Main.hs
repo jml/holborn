@@ -15,8 +15,6 @@ import Holborn.API.Types (AppConf(..))
 import Servant (serve, (:<|>)(..))
 import Data.Proxy (Proxy(..))
 import Network.Wai.Middleware.Cors (cors, CorsResourcePolicy(..), simpleCorsResourcePolicy, simpleHeaders)
--- import Network.HTTP.Types.Header (HeaderName)
-
 
 import qualified Holborn.Docs
 import qualified Holborn.API.Api
@@ -82,6 +80,17 @@ api = Proxy
 
 devCors _ = Just (simpleCorsResourcePolicy { corsRequestHeaders = (simpleHeaders ++ ["Authorization"]) })
 
+
+loadAppConf :: Config -> IO AppConf
+loadAppConf =
+  AppConf
+    <$> connect (defaultConnectInfo  { connectDatabase = pgDb, connectUser = pgUser, connectPort = pgPort })
+    <*> pure "test-secret-todo-read-from-env"
+    <*> newManager defaultManagerSettings
+    <*> pure (fromString baseUrl)
+    <*> pure (fromString staticBaseUrl)
+
+
 app :: AppConf -> Application
 app conf = serve api $
         Holborn.API.Internal.server conf
@@ -101,7 +110,5 @@ main = do
     conf@Config{..} <- loadConfig
     print "Using config:"
     print conf
-    conn <- connect (defaultConnectInfo  { connectDatabase = pgDb, connectUser = pgUser, connectPort = pgPort })
-    httpManager <- newManager defaultManagerSettings
-    let conf = AppConf conn "test-secret-todo-read-from-env" httpManager (fromString baseUrl) (fromString staticBaseUrl)
-    Warp.runSettings (warpSettings _port) ((cors devCors) (app conf))
+    conf <- loadAppConf
+    Warp.runSettings (warpSettings _port) (cors devCors (app conf))
