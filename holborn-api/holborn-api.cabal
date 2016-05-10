@@ -11,6 +11,7 @@ library
                      , Holborn.API.Internal
                      , Holborn.Docs
                      , Holborn.Errors
+                     , Holborn.API.Config
                      , Holborn.API.Browse
                      , Holborn.API.Auth
                      , Holborn.API.Settings.SSHKeys
@@ -32,6 +33,7 @@ library
                      , transformers
                      , servant-docs >= 0.5
                      , wai
+                     , warp >= 3.1
                      , http-reverse-proxy
                      , http-client
                      , http-types
@@ -79,8 +81,6 @@ executable holborn-api-server
                      , wai >= 3.0
                      , warp >= 3.1
                      , envparse >= 0.2
-                     , postgresql-simple
-                     , http-client
                      , holborn-api
                      , holborn-common-types
                      , wai-cors

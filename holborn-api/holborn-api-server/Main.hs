@@ -9,9 +9,6 @@ import BasicPrelude
 import qualified Env
 import Network.Wai (Application)
 import qualified Network.Wai.Handler.Warp as Warp
-import Database.PostgreSQL.Simple (connect, ConnectInfo(..), defaultConnectInfo)
-import GHC.Word (Word16)
-import Holborn.API.Types (AppConf(..))
 import Servant (serve, (:<|>)(..))
 import Data.Proxy (Proxy(..))
 import Network.Wai.Middleware.Cors (cors, CorsResourcePolicy(..), simpleCorsResourcePolicy, simpleHeaders)
@@ -20,19 +17,11 @@ import qualified Holborn.Docs
 import qualified Holborn.API.Api
 import qualified Holborn.API.Internal
 import qualified Holborn.API.Browse
+import Holborn.API.Config (Config(..), loadAppConf)
 import qualified Holborn.API.Settings.SSHKeys
 import qualified Holborn.API.Settings.Profile
+import Holborn.API.Types (AppConf)
 import qualified Holborn.Logging as Log
-import Network.HTTP.Client (newManager, defaultManagerSettings)
-
-
-data Config = Config { _port :: Warp.Port
-                     , pgDb :: String
-                     , pgUser :: String
-                     , pgPort :: Word16
-                     , baseUrl :: String
-                     , staticBaseUrl :: String
-                     } deriving Show
 
 
 loadConfig :: IO Config
@@ -81,16 +70,6 @@ api = Proxy
 devCors _ = Just (simpleCorsResourcePolicy { corsRequestHeaders = (simpleHeaders ++ ["Authorization"]) })
 
 
-loadAppConf :: Config -> IO AppConf
-loadAppConf =
-  AppConf
-    <$> connect (defaultConnectInfo  { connectDatabase = pgDb, connectUser = pgUser, connectPort = pgPort })
-    <*> pure "test-secret-todo-read-from-env"
-    <*> newManager defaultManagerSettings
-    <*> pure (fromString baseUrl)
-    <*> pure (fromString staticBaseUrl)
-
-
 app :: AppConf -> Application
 app conf = serve api $
         Holborn.API.Internal.server conf
@@ -106,9 +85,10 @@ app conf = serve api $
    :<|> Holborn.API.Api.server conf
 
 
+main :: IO ()
 main = do
     conf@Config{..} <- loadConfig
     print "Using config:"
     print conf
-    conf <- loadAppConf
-    Warp.runSettings (warpSettings _port) (cors devCors (app conf))
+    appConf <- loadAppConf conf
+    Warp.runSettings (warpSettings port) (cors devCors (app appConf))
