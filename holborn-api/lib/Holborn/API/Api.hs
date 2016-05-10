@@ -26,10 +26,7 @@ import Holborn.API.Types (ApiError(..), newEmail, newPassword, newUsername, chec
 import Holborn.JSON.User (SigninData(..), SigninOK(..))
 import qualified Holborn.API.User as U
 import Holborn.Auth (webPermissions, createAuthToken)
-import Network.Wai (Application, responseLBS)
-import Network.HTTP.Types.Status (status200)
-import Text.Blaze.Renderer.Utf8 (renderMarkup)
-import Holborn.ServantTypes (RenderedJson)
+
 
 data SignupData = SignupData
     { username :: Text
