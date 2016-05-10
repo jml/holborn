@@ -26,7 +26,8 @@ import Servant ((:>), (:<|>)(..), Post, ReqBody, JSON, ServantErr, Server)
 import qualified Data.Attoparsec.Text as AT
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Holborn.API.Types (AppConf(..), KeyType(..))
+import Holborn.API.Config (AppConf(..))
+import Holborn.API.Types (KeyType(..))
 import Holborn.JSON.SSHRepoCommunication (RepoCall(..))
 import qualified Holborn.Logging as Log
 

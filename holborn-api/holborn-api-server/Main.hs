@@ -17,10 +17,9 @@ import qualified Holborn.Docs
 import qualified Holborn.API.Api
 import qualified Holborn.API.Internal
 import qualified Holborn.API.Browse
-import Holborn.API.Config (Config(..), loadAppConf)
+import Holborn.API.Config (AppConf, Config(..), loadAppConf)
 import qualified Holborn.API.Settings.SSHKeys
 import qualified Holborn.API.Settings.Profile
-import Holborn.API.Types (AppConf)
 import qualified Holborn.Logging as Log
 
 

@@ -19,7 +19,7 @@ import BasicPrelude
 import Data.Aeson (object, (.=), FromJSON, decode')
 import Servant
 
-import Holborn.API.Types (AppConf(..))
+import Holborn.API.Config (AppConf(..))
 import Holborn.Auth (AuthToken(..))
 import Holborn.Errors (JSONCodeableError(..), APIError(..), jsonErrorHandler)
 import Network.Wai (Application, responseLBS)

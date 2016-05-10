@@ -5,7 +5,7 @@ module Holborn.API.Auth
 import BasicPrelude
 
 import Holborn.Errors (APIError(..))
-import Holborn.API.Types (AppConf(..))
+import Holborn.API.Config (AppConf(..))
 import Holborn.Auth (AuthToken(..), Permissions(..), userFromToken)
 import Control.Monad.Trans.Except (ExceptT, throwE)
 

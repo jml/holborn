@@ -18,7 +18,8 @@ import Control.Monad.Trans.Except (ExceptT, throwE)
 import Data.Aeson (object, (.=))
 import Servant
 
-import Holborn.API.Types (AppConf(..), Username, parseSSHKey)
+import Holborn.API.Config (AppConf(..))
+import Holborn.API.Types (Username, parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
 import Holborn.Auth (AuthToken(..), Permission(..), hasPermission)
 import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
