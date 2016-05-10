@@ -22,7 +22,7 @@ import           Pipes.Network.TCP.Safe (serve, fromSocket, toSocket)
 import qualified Pipes.Parse as PP
 import           Pipes.Safe (runSafeT)
 import           Pipes.Aeson (decode)
-import           Holborn.Repo.Config (Config, buildRepoPath)
+import           Holborn.Repo.Config (Config, buildRepoPath, rawPort)
 import           Holborn.Repo.Process (streamIO, proc)
 import qualified Holborn.Logging as Log
 import           Holborn.JSON.SSHRepoCommunication (RepoCall(..))
@@ -71,4 +71,4 @@ accept config (sock, _) = do
     return ()
 
 serveRaw :: Config -> IO ()
-serveRaw config = runSafeT (serve HostAny "8081" (accept config))
+serveRaw config = runSafeT (serve HostAny (fromShow . rawPort $ config) (accept config))
