@@ -15,11 +15,12 @@ module Holborn.API.Types
 import BasicPrelude hiding (empty)
 import Control.Applicative (Alternative(..))
 import qualified Crypto.BCrypt as BCrypt
+import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultError(ConversionFailed))
+import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(Escape))
 import qualified Prelude
 import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), object, (.=))
 import Data.Aeson.Types (typeMismatch)
-import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultError(ConversionFailed))
 import System.Process (runInteractiveCommand)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
 import qualified Data.ByteString as BS
@@ -83,8 +84,37 @@ instance FromJSON Email where
     parseJSON x = typeMismatch "Email" x
 
 
+-- | SSH key type
+data KeyType = RSA | DSA deriving (Show, Eq, Ord)
+
+
+parseKeyType :: (Alternative m, Eq s, IsString s) => s -> m KeyType
+parseKeyType "ssh-rsa" = pure RSA
+parseKeyType "ssh-dsa" = pure DSA
+parseKeyType _ = empty
+
+
+unparseKeyType :: IsString s => KeyType -> s
+unparseKeyType RSA = "ssh-rsa"
+unparseKeyType DSA = "ssh-dsa"
+
+
+instance FromJSON KeyType where
+    parseJSON "RSA" = pure RSA
+    parseJSON "DSA" = pure DSA
+    parseJSON _ = mzero
+
+
+data SSHKey = SSHKey { _sshKeyType :: KeyType
+                     , _sshKeyData :: ByteString
+                     , _sshKeyComment :: Maybe ByteString
+                     , _sshKeyFingerPrint :: ByteString
+                     } deriving Show
+
+
 instance ToJSON SSHKey where
-    toJSON (SSHKey _ key fingerprint) = object ["key" .= decodeUtf8 key, "fingerprint" .= decodeUtf8 fingerprint]
+    -- TODO: Maybe include comment in JSON output?
+    toJSON (SSHKey _ key _comment fingerprint) = object ["key" .= decodeUtf8 key, "fingerprint" .= decodeUtf8 fingerprint]
 
 
 instance FromField SSHKey where
@@ -93,32 +123,28 @@ instance FromField SSHKey where
         _ -> returnError ConversionFailed f "Could not parse ssh key"
     fromField _ _ = terror "FromField SSHKey should always decode correctly"
 
+
 instance ToField SSHKey where
-    -- Serialize the parsed key (the one we usually use for comparisons etc.)
-    toField (SSHKey RSA key _) = Escape ("ssh-rsa " <> key)
-    toField (SSHKey DSA key _) = Escape ("ssh-dsa " <> key)
-
-data KeyType = RSA | DSA deriving (Show, Eq, Ord)
-
-instance FromJSON KeyType where
-    parseJSON "RSA" = pure RSA
-    parseJSON "DSA" = pure DSA
-    parseJSON _ = mzero
-
-data SSHKey = SSHKey KeyType ByteString ByteString deriving Show
+    toField = Escape . unparseSSHKey
 
 
-parseSSHKey :: Alternative m => ByteString -> m SSHKey
-parseSSHKey keyData =
-  parsedKey <*> fingerprint keyData
+instance FromRow SSHKey where
+    fromRow = field
+
+
+-- TODO: parse & unparse are obvious candidates for tests
+parseSSHKey :: MonadPlus m => ByteString -> m SSHKey
+parseSSHKey keyData = do
+  -- keys look like "ssh-rsa AAAAB... ... La2Aw== tom@bla"
+  -- but onlyy the middle bit "AAAB ... La2Aw==" is used during checking so we extract that.
+  -- TODO: We could totally do this with just applicatives but it'd be way too
+  -- cumbersome. Just switch to attoparsec instead
+  (keyType, key, comment) <- case BS8.split ' ' keyData of
+                               [kt, k, c] -> pure (kt, k, Just c)
+                               [kt, k] -> pure (kt, k, Nothing)
+                               _ -> empty
+  SSHKey <$> parseKeyType keyType <*> pure key <*> pure comment <*> fingerprint keyData
   where
-    -- keys look like "ssh-rsa AAAAB... ... La2Aw== tom@bla"
-    -- but onlyy the middle bit "AAAB ... La2Aw==" is used during checking so we extract that.
-    parsedKey =
-      case BS8.split ' ' keyData of
-        ["ssh-rsa", k, _] -> pure (SSHKey RSA k)
-        ["ssh-rsa", k] -> pure  (SSHKey RSA k)
-        _ -> empty
 
     -- Using unsafeperformIO because fingerprinting is morally a pure
     -- action but we 're using ssh-keygen for now.
@@ -131,3 +157,9 @@ parseSSHKey keyData =
         return $ case f of
             "" -> empty
             x -> pure x
+
+
+-- | Serialize the parsed key (the one we usually use for comparisons etc.)
+unparseSSHKey :: SSHKey -> ByteString
+unparseSSHKey (SSHKey keyType key comment _) =
+  unparseKeyType keyType <> " " <> key <> maybe mempty (" " <>) comment
