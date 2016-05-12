@@ -15,7 +15,9 @@ data Config = Config
       -- ^ path to a set of bare repositories with the subdirectory
       -- shape ./org/repo
     , port :: Port
-      -- ^ port to listen on
+      -- ^ port to listen on for web API requests
+    , rawPort :: Port
+      -- ^ port to listen on for raw Git requests
     }
 
 -- | Build a full repository path

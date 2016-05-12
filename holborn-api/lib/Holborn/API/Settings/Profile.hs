@@ -17,7 +17,8 @@ import Control.Monad.Trans.Except (ExceptT, throwE)
 import Data.Aeson (object, (.=))
 import Servant
 
-import Holborn.API.Types (AppConf(..), Username)
+import Holborn.API.Config (AppConf(..))
+import Holborn.API.Types (Username)
 import Holborn.JSON.Settings.Profile (ProfileData(..))
 import Holborn.Auth (AuthToken(..))
 import Holborn.API.Auth (getAuthFromToken)

@@ -7,7 +7,6 @@ module Holborn.API.Types
        , Email
        , Password
        , ApiError(..)
-       , AppConf(..)
        , SSHKey
        , KeyType(..)
        , parseSSHKey
@@ -16,12 +15,10 @@ module Holborn.API.Types
 import BasicPrelude
 import qualified Crypto.BCrypt as BCrypt
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(Escape))
-import Database.PostgreSQL.Simple (Connection)
 import qualified Prelude
 import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), object, (.=))
 import Data.Aeson.Types (typeMismatch)
 import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultError(ConversionFailed))
-import Network.HTTP.Client (Manager)
 import System.Process (runInteractiveCommand)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
 import Data.ByteString as BS
@@ -31,15 +28,6 @@ import System.IO (hClose)
 newtype Username = Username Text deriving (Eq, Ord, Show, ToField)
 newtype Email = Email Text deriving (Eq, Ord, Show, ToField)
 newtype Password = Password ByteString deriving (ToField)
-
-
-data AppConf = AppConf
-  { conn :: Connection
-  , jwtSecret :: Text
-  , httpManager :: Manager
-  , baseUrl :: Text -- e.g. https://holborn-example.com/
-  , staticBaseUrl :: Text -- e.g. https://holborn-example.com/
-  }
 
 
 -- TODO: Validate username
@@ -53,7 +41,7 @@ newEmail = Email
 -- database. Needs to live in IO for randomness.
 newPassword :: Text -> IO Password
 newPassword p = do
-    pwd <- (BCrypt.hashPasswordUsingPolicy BCrypt.fastBcryptHashingPolicy (encodeUtf8 p))
+    pwd <- BCrypt.hashPasswordUsingPolicy BCrypt.fastBcryptHashingPolicy (encodeUtf8 p)
     return (Password (fromMaybe (terror "bcrypt returned NULL") pwd))
 
 checkPassword :: Password -> ByteString -> Bool

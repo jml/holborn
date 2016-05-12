@@ -7,13 +7,18 @@ let
   holborn-ssh = callPackage ../nix/holborn-ssh.nix {};
   hcl = haskell.lib.dontHaddock (haskellPackages.callPackage ../hcl {});
 
+  repoPort = "8080";
+  rawRepoPort = "8081";
+  apiPort = "8082";
+  sshPort = "3333";
+
   holborn-ssh-testconfig = writeText "testconfig" ''
     UsePrivilegeSeparation=no
     HostKey=${holborn-ssh}/etc/ssh_host_rsa_key
     HostKey=${holborn-ssh}/etc/ssh_host_dsa_key
-    Port=3333
+    Port=${sshPort}
     PidFile=/dev/null
-    HolbornApiEndpoint=http://127.0.0.1:8082
+    HolbornApiEndpoint=http://127.0.0.1:${apiPort}
   '';
 
   # ssh tries to create an ~/.ssh directory if it's not given a config file,
@@ -89,20 +94,24 @@ stdenv.mkDerivation {
 
       # Run ssh + repo server
       ${holborn-ssh}/bin/sshd -D -e -f ${holborn-ssh-testconfig} &
-      PORT=8082 ${holborn-api}/bin/holborn-api-server &
+      export HOLBORN_REPO_HOSTNAME=127.0.0.1
+      export HOLBORN_REPO_PORT=${repoPort}
+      export HOLBORN_REPO_RAW_HOSTNAME=127.0.0.1
+      export HOLBORN_REPO_RAW_PORT=${rawRepoPort}
+      PORT=${apiPort} ${holborn-api}/bin/holborn-api-server &
       echo "REPO_ROOT ${test-repos}"
-      REPO_ROOT=${test-repos} ${holborn-repo}/bin/holborn-repo &
+      PORT=${repoPort} RAW_PORT=${rawRepoPort} REPO_ROOT=${test-repos} ${holborn-repo}/bin/holborn-repo &
 
       # Wait for server to become ready
-      hcl-wait-for-port 3333 --timeout 5
-      hcl-wait-for-port 8080 --timeout 5
-      hcl-wait-for-port 8081 --timeout 5
-      hcl-wait-for-port 8082 --timeout 5
+      hcl-wait-for-port ${sshPort} --timeout 5
+      hcl-wait-for-port ${repoPort} --timeout 5
+      hcl-wait-for-port ${rawRepoPort} --timeout 5
+      hcl-wait-for-port ${apiPort} --timeout 5
 
       # Clone the test repository
       mkdir $out
       pushd $out
-      git clone --verbose ssh://127.0.0.1:3333/org/hello >> $out/integration-test-log
+      git clone --verbose ssh://127.0.0.1:${sshPort}/org/hello >> $out/integration-test-log
       popd
 
       # The same content?

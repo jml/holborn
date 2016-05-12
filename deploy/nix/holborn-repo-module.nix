@@ -12,6 +12,18 @@ in
         default = null;
         description = "the package";
       };
+
+      port = mkOption {
+        type = types.int;
+        default = 8080;
+        description = "port to listen on for web service";
+      };
+
+      rawPort = mkOption {
+        type = types.int;
+        default = 8081;
+        description = "port to listen on for raw service";
+      };
     };
   };
 
@@ -30,7 +42,8 @@ in
 
       environment = {
           REPO_ROOT = "/tmp";
-          PORT = "8080";
+          PORT = "${toString cfg.port}";
+          RAW_PORT = "${toString cfg.rawPort}"
       };
 
       serviceConfig.DevicePolicy = "closed";

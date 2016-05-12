@@ -9,32 +9,18 @@ import BasicPrelude
 import qualified Env
 import Network.Wai (Application)
 import qualified Network.Wai.Handler.Warp as Warp
-import Database.PostgreSQL.Simple (connect, ConnectInfo(..), defaultConnectInfo)
-import GHC.Word (Word16)
-import Holborn.API.Types (AppConf(..))
 import Servant (serve, (:<|>)(..))
 import Data.Proxy (Proxy(..))
 import Network.Wai.Middleware.Cors (cors, CorsResourcePolicy(..), simpleCorsResourcePolicy, simpleHeaders)
--- import Network.HTTP.Types.Header (HeaderName)
-
 
 import qualified Holborn.Docs
 import qualified Holborn.API.Api
 import qualified Holborn.API.Internal
 import qualified Holborn.API.Browse
+import Holborn.API.Config (AppConf, Config(..), loadAppConf)
 import qualified Holborn.API.Settings.SSHKeys
 import qualified Holborn.API.Settings.Profile
 import qualified Holborn.Logging as Log
-import Network.HTTP.Client (newManager, defaultManagerSettings)
-
-
-data Config = Config { _port :: Warp.Port
-                     , pgDb :: String
-                     , pgUser :: String
-                     , pgPort :: Word16
-                     , baseUrl :: String
-                     , staticBaseUrl :: String
-                     } deriving Show
 
 
 loadConfig :: IO Config
@@ -53,6 +39,14 @@ loadConfig =
       "HOLBORN_BASE_URL" (Env.def "http://127.0.0.1:8002" <> Env.help "e.g. http://127.0.0.1:8002")
   <*> Env.var (Env.str Env.<=< Env.nonempty)
       "HOLBORN_STATIC_BASE_URL" (Env.def "http://127.0.0.1:1337" <> Env.help "e.g. http://127.0.0.1:1337")
+  <*> Env.var (Env.str Env.<=< Env.nonempty)
+      "HOLBORN_REPO_HOSTNAME" (Env.def "127.0.0.1" <> Env.help "Where the holborn-repo server is running. e.g. 127.0.0.1")
+  <*> Env.var Env.auto
+      "HOLBORN_REPO_PORT" (Env.def 8080 <> Env.help "What port the holborn-repo server is listening on. e.g. 8080")
+  <*> Env.var (Env.str Env.<=< Env.nonempty)
+      "HOLBORN_REPO_RAW_HOSTNAME" (Env.def "127.0.0.1" <> Env.help "Where the holborn-repo raw server is running. e.g. 127.0.0.1")
+  <*> Env.var Env.auto
+      "HOLBORN_REPO_RAW_PORT" (Env.def 8081 <> Env.help "What port the holborn-repo raw server is listening on. e.g. 8081")
 
 
 -- XXX: Duplicated & modified from Holborn.Repo.Config
@@ -82,6 +76,7 @@ api = Proxy
 
 devCors _ = Just (simpleCorsResourcePolicy { corsRequestHeaders = (simpleHeaders ++ ["Authorization"]) })
 
+
 app :: AppConf -> Application
 app conf = serve api $
         Holborn.API.Internal.server conf
@@ -97,11 +92,10 @@ app conf = serve api $
    :<|> Holborn.API.Api.server conf
 
 
+main :: IO ()
 main = do
     conf@Config{..} <- loadConfig
     print "Using config:"
     print conf
-    conn <- connect (defaultConnectInfo  { connectDatabase = pgDb, connectUser = pgUser, connectPort = pgPort })
-    httpManager <- newManager defaultManagerSettings
-    let conf = AppConf conn "test-secret-todo-read-from-env" httpManager (fromString baseUrl) (fromString staticBaseUrl)
-    Warp.runSettings (warpSettings _port) ((cors devCors) (app conf))
+    appConf <- loadAppConf conf
+    Warp.runSettings (warpSettings port) (cors devCors (app appConf))

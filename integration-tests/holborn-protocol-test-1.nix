@@ -5,6 +5,8 @@ let
 
   test-repos = callPackage ./test-repo.nix {};
 
+  repoPort = "8080";
+
 in
 stdenv.mkDerivation {
   name = "integration-protocol-test-1";
@@ -19,18 +21,18 @@ stdenv.mkDerivation {
       export PATH=$PATH:${git}/bin
 
       # Run server
-      REPO_ROOT=${test-repos} ${holborn-repo}/bin/holborn-repo &
+      PORT=${repoPort} REPO_ROOT=${test-repos} ${holborn-repo}/bin/holborn-repo &
 
       # Kill server when test is done
       trap 'kill $(jobs -p)' EXIT
 
       # Wait for HTTP server to become ready
-      ${hcl}/bin/hcl-wait-for-port 8080 --timeout 5
+      ${hcl}/bin/hcl-wait-for-port ${repoPort} --timeout 5
 
       # Clone the test repository
       mkdir $out
       pushd $out
-      git clone --verbose http://127.0.0.1:8080/v1/repos/org/hello >> $out/integration-test-log
+      git clone --verbose http://127.0.0.1:${repoPort}/v1/repos/org/hello >> $out/integration-test-log
       popd
 
       # The same content?
