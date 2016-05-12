@@ -12,7 +12,8 @@ module Holborn.API.Types
        , parseSSHKey
        ) where
 
-import BasicPrelude
+import BasicPrelude hiding (empty)
+import Control.Applicative (Alternative(..))
 import qualified Crypto.BCrypt as BCrypt
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(Escape))
 import qualified Prelude
@@ -21,8 +22,8 @@ import Data.Aeson.Types (typeMismatch)
 import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultError(ConversionFailed))
 import System.Process (runInteractiveCommand)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
-import Data.ByteString as BS
-import Data.ByteString.Char8 as BS8
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
 import System.IO (hClose)
 
 newtype Username = Username Text deriving (Eq, Ord, Show, ToField)
@@ -106,16 +107,19 @@ instance FromJSON KeyType where
 
 data SSHKey = SSHKey KeyType ByteString ByteString deriving Show
 
-parseSSHKey :: ByteString -> Maybe SSHKey
-parseSSHKey keyData = do
-    fp <- fingerprint keyData
+
+parseSSHKey :: Alternative m => ByteString -> m SSHKey
+parseSSHKey keyData =
+  parsedKey <*> fingerprint keyData
+  where
     -- keys look like "ssh-rsa AAAAB... ... La2Aw== tom@bla"
     -- but onlyy the middle bit "AAAB ... La2Aw==" is used during checking so we extract that.
-    case BS8.split ' ' keyData of
-        ["ssh-rsa", k, _] -> Just (SSHKey RSA k fp)
-        ["ssh-rsa", k] -> Just  (SSHKey RSA k fp)
-        _ -> Nothing
-  where
+    parsedKey =
+      case BS8.split ' ' keyData of
+        ["ssh-rsa", k, _] -> pure (SSHKey RSA k)
+        ["ssh-rsa", k] -> pure  (SSHKey RSA k)
+        _ -> empty
+
     -- Using unsafeperformIO because fingerprinting is morally a pure
     -- action but we 're using ssh-keygen for now.
     fingerprint keyData' = unsafePerformIO $ do
@@ -125,5 +129,5 @@ parseSSHKey keyData = do
         hClose i
         f <- BS.hGetContents o
         return $ case f of
-            "" -> Nothing
-            x -> Just x
+            "" -> empty
+            x -> pure x
