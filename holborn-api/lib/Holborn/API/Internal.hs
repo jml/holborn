@@ -22,12 +22,12 @@ import Control.Error (rightZ)
 import Control.Monad.Trans.Except (ExceptT)
 import Data.ByteString.Lazy (toStrict)
 import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, withText, encode)
-import Servant ((:>), (:<|>)(..), Post, ReqBody, JSON, ServantErr, Server)
+import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, ServantErr, Server)
 import qualified Data.Attoparsec.Text as AT
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Types (KeyType(..))
+import Holborn.API.Types (KeyType(..), SSHKey, Username)
 import Holborn.JSON.SSHRepoCommunication (RepoCall(..))
 import Network.Wai.Handler.Warp (Port)
 import qualified Holborn.Logging as Log
@@ -41,7 +41,17 @@ type API =
        :> Post '[JSON] CheckKeyResponse
        :<|> "check-repo-access"
        :> ReqBody '[JSON] CheckRepoAccessRequest
-       :> Post '[JSON] CheckRepoAccessResponse)
+       :> Post '[JSON] CheckRepoAccessResponse
+       :<|> Capture "user" Username
+       :> "keys"
+       :> Get '[JSON] [SSHKey]
+       )
+
+
+server :: AppConf -> Server API
+server conf = checkKey conf
+    :<|> checkRepoAccess conf
+    :<|> listKeys conf
 
 
 -- | Implementation
@@ -66,6 +76,20 @@ checkKey AppConf{conn} request@CheckKeyRequest{..} = do
        -- allowed to access the system.
        [(keyId, False)] -> CheckKeyResponse (Just keyId)
        _ -> terror "TODO return error for checkKey"
+
+
+listKeys :: AppConf -> Username -> ExceptT ServantErr IO [SSHKey]
+listKeys AppConf{conn} username = do
+    Log.debug ("listing keys for" :: Text, username)
+    liftIO $ query conn keysQuery (Only username)
+  where
+    -- TODO: Filter these to only include verified keys.
+    keysQuery =
+      [sql|select submitted_pubkey
+           from public_key, user
+           where owner_id = user.id
+           and user.username = ?
+          |]
 
 
 data SSHCommandLine =
@@ -151,11 +175,6 @@ checkRepoAccess AppConf{conn, rawRepoHostname, rawRepoPort} request = do
             reportError ("SSH key with id " <> show (keyId :: Int) <> " is readonly")
         (GitUploadPack _ _, [(_, _, True)]) -> accessGranted rawRepoHostname rawRepoPort cmd
         (_, [(_, _, False)]) -> reportError "SSH key not verified"
-
-
-server :: AppConf -> Server API
-server conf = checkKey conf
-    :<|> checkRepoAccess conf
 
 
 -- Serialization bla bla
