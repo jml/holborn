@@ -26,9 +26,9 @@ import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
 
 
 type API =
-         "v1" :> "users" :> Capture "username" Username :> Get '[JSON] ProfileData
-    :<|> "v1" :> Header "Authorization" AuthToken :> "user" :> Get '[JSON] ProfileData
-    :<|> "v1" :> Header "Authorization" AuthToken :> "user" :> ReqBody '[JSON] ProfileData :> Post '[JSON] ()
+         "users" :> Capture "username" Username :> Get '[JSON] ProfileData
+    :<|> Header "Authorization" AuthToken :> "user" :> Get '[JSON] ProfileData
+    :<|> Header "Authorization" AuthToken :> "user" :> ReqBody '[JSON] ProfileData :> Post '[JSON] ()
 
 
 data Error = InvalidUrl | UserNotFound Text | UserNotInDb

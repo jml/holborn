@@ -62,11 +62,12 @@ warpSettings port =
 
 
 type FullAPI =
-         Holborn.API.Internal.API
-    :<|> Holborn.API.Settings.SSHKeys.API
-    :<|> Holborn.API.Settings.Profile.API
-    :<|> Holborn.API.Browse.API
-    :<|> Holborn.Docs.API
+         "internal" :> Holborn.API.Internal.API
+    :<|> "docs" :> Holborn.Docs.API
+    :<|> "v1" :> ( Holborn.API.Settings.SSHKeys.API
+                   :<|> Holborn.API.Settings.Profile.API )
+    :<|> "v1" :> "repos" :> Holborn.API.Browse.API
+    -- XXX: Serves things from both "v1/signin" and "users/signup"
     :<|> Holborn.API.Api.API
 
 

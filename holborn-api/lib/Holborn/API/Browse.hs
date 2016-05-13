@@ -40,25 +40,21 @@ type Owner = Text
 type Repo = Text
 
 type API =
-    "v1" :> "repos"
-         :> Header "Authorization" AuthToken
+         Header "Authorization" AuthToken
          :> Capture "owner" Owner
          :> Capture "repo" Repo
          :> Get '[JSON] BrowseMetaResponse
-    :<|> "v1" :> "repos"
-         :> Header "Authorization" AuthToken
+    :<|> Header "Authorization" AuthToken
          :> Capture "owner" Owner
          :> Capture "repo" Repo
          :> "git" :> "trees"
          :> Raw
-    :<|> "v1" :> "repos"
-         :> Header "Authorization" AuthToken
+    :<|> Header "Authorization" AuthToken
          :> Capture "owner" Owner
          :> Capture "repo" Repo
          :> "git" :> "blobs"
          :> Raw
-    :<|> "v1" :> "repos"
-         :> Header "Authorization" AuthToken
+    :<|> Header "Authorization" AuthToken
          :> Capture "owner" Owner
          :> Capture "repo" Repo
          :> "git" :> "commits"

@@ -35,7 +35,7 @@ import qualified Holborn.Logging as Log
 
 -- | Main internal API (only used by our openssh version ATM).
 type API =
-    "internal" :> "ssh" :> (
+    "ssh" :> (
        "check-key"
        :> ReqBody '[JSON] CheckKeyRequest
        :> Post '[JSON] CheckKeyResponse
