@@ -88,18 +88,18 @@ instance MimeRender PlainText SSHKeys where
   mimeRender _ = fromChunks . map ((<> "\n") . unparseSSHKey) . unSSHKeys
 
 
+-- | List all the verified SSH keys for a user.
 listKeys :: AppConf -> Username -> ExceptT ServantErr IO SSHKeys
 listKeys AppConf{conn} username = do
     Log.debug ("listing keys for" :: Text, username)
     keys <- liftIO $ query conn keysQuery (Only username)
     return $ SSHKeys keys
   where
-    -- TODO: Filter these to only include verified keys.
     keysQuery =
       [sql|select submitted_pubkey
-           from public_key, user
-           where owner_id = user.id
-           and user.username = ?
+           from public_key
+           join "user" as u on u.id = owner_id and u.username = ?
+           where public_key.verified
           |]
 
 
