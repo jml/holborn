@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
@@ -20,14 +21,14 @@ import BasicPrelude
 import GHC.Generics (Generic)
 import Control.Error (rightZ)
 import Control.Monad.Trans.Except (ExceptT)
-import Data.ByteString.Lazy (toStrict)
+import Data.ByteString.Lazy (fromChunks, toStrict)
 import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, withText, encode)
-import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, ServantErr, Server)
+import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(..), PlainText, ServantErr, Server)
 import qualified Data.Attoparsec.Text as AT
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Types (KeyType(..), SSHKey, Username)
+import Holborn.API.Types (KeyType(..), SSHKey, unparseSSHKey, Username)
 import Holborn.JSON.SSHRepoCommunication (RepoCall(..))
 import Network.Wai.Handler.Warp (Port)
 import qualified Holborn.Logging as Log
@@ -44,7 +45,7 @@ type API =
        :> Post '[JSON] CheckRepoAccessResponse
        :<|> Capture "user" Username
        :> "keys"
-       :> Get '[JSON] [SSHKey]
+       :> Get '[JSON, PlainText] SSHKeys
        )
 
 
@@ -52,6 +53,9 @@ server :: AppConf -> Server API
 server conf = checkKey conf
     :<|> checkRepoAccess conf
     :<|> listKeys conf
+
+
+newtype SSHKeys = SSHKeys { unSSHKeys :: [SSHKey] } deriving (ToJSON, Show)
 
 
 -- | Implementation
@@ -78,10 +82,17 @@ checkKey AppConf{conn} request@CheckKeyRequest{..} = do
        _ -> terror "TODO return error for checkKey"
 
 
-listKeys :: AppConf -> Username -> ExceptT ServantErr IO [SSHKey]
+instance MimeRender PlainText SSHKeys where
+  -- | Turn a list of SSH keys into a line-separated plaintext dump that would
+  -- serve as an authorized_keys file.
+  mimeRender _ = fromChunks . map ((<> "\n") . unparseSSHKey) . unSSHKeys
+
+
+listKeys :: AppConf -> Username -> ExceptT ServantErr IO SSHKeys
 listKeys AppConf{conn} username = do
     Log.debug ("listing keys for" :: Text, username)
-    liftIO $ query conn keysQuery (Only username)
+    keys <- liftIO $ query conn keysQuery (Only username)
+    return $ SSHKeys keys
   where
     -- TODO: Filter these to only include verified keys.
     keysQuery =
@@ -96,8 +107,6 @@ data SSHCommandLine =
       GitReceivePack { _orgOrUser :: Text, _repo :: Text }
     | GitUploadPack { _orgOrUser :: Text, _repo :: Text }
     deriving Show
-
-
 
 
 -- | Emit the Holborn side of the SSH command

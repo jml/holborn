@@ -10,6 +10,7 @@ module Holborn.API.Types
        , SSHKey
        , KeyType(..)
        , parseSSHKey
+       , unparseSSHKey
        ) where
 
 import BasicPrelude hiding (empty)
