@@ -28,8 +28,12 @@ import qualified Data.Attoparsec.Text as AT
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Types (KeyType(..), SSHKey, unparseSSHKey, Username)
-import Holborn.JSON.SSHRepoCommunication (RepoCall(..))
+import Holborn.API.Types (Username)
+import Holborn.JSON.SSHRepoCommunication ( RepoCall(..)
+                                         , KeyType(..)
+                                         , SSHKey
+                                         , unparseSSHKey,
+                                         )
 import Network.Wai.Handler.Warp (Port)
 import qualified Holborn.Logging as Log
 

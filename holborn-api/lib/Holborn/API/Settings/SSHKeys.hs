@@ -19,7 +19,8 @@ import Data.Aeson (object, (.=))
 import Servant
 
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Types (Username, parseSSHKey)
+import Holborn.API.Types (Username)
+import Holborn.JSON.SSHRepoCommunication (parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
 import Holborn.Auth (AuthToken(..), Permission(..), hasPermission)
 import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))

@@ -12,7 +12,8 @@ import Data.Aeson.Types (Options(fieldLabelModifier))
 import Data.Time.LocalTime (LocalTime)
 import GHC.Generics (Generic)
 
-import Holborn.API.Types (SSHKey)
+import Holborn.JSON.SSHRepoCommunication (SSHKey)
+
 
 data ListKeysRow = ListKeysRow
     { _ListKeysRow_id :: Int
