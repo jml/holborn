@@ -57,6 +57,11 @@ server conf = checkKey conf
 
 newtype SSHKeys = SSHKeys { unSSHKeys :: [SSHKey] } deriving (ToJSON, Show)
 
+instance MimeRender PlainText SSHKeys where
+  -- | Turn a list of SSH keys into a line-separated plaintext dump that would
+  -- serve as an authorized_keys file.
+  mimeRender _ = fromChunks . map ((<> "\n") . unparseSSHKey) . unSSHKeys
+
 
 -- | Implementation
 checkKey :: AppConf -> CheckKeyRequest -> ExceptT ServantErr IO CheckKeyResponse
@@ -80,12 +85,6 @@ checkKey AppConf{conn} request@CheckKeyRequest{..} = do
        -- allowed to access the system.
        [(keyId, False)] -> CheckKeyResponse (Just keyId)
        _ -> terror "TODO return error for checkKey"
-
-
-instance MimeRender PlainText SSHKeys where
-  -- | Turn a list of SSH keys into a line-separated plaintext dump that would
-  -- serve as an authorized_keys file.
-  mimeRender _ = fromChunks . map ((<> "\n") . unparseSSHKey) . unSSHKeys
 
 
 -- | List all the verified SSH keys for a user.

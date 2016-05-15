@@ -16,6 +16,7 @@ data RepoCall =
     | ImplicitRepoCall { _command :: Text, _org :: Text, _repo :: Text, _owner :: Text }
     deriving (Show, Generic)
 
+
 instance FromJSON RepoCall where
   parseJSON = genericParseJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
 
