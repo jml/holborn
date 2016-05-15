@@ -19,20 +19,19 @@ module Holborn.API.SSH
 import BasicPrelude
 
 import GHC.Generics (Generic)
-import Control.Error (rightZ)
 import Control.Monad.Trans.Except (ExceptT)
 import Data.ByteString.Lazy (fromChunks, toStrict)
-import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, withText, encode)
+import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, encode)
 import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(..), PlainText, ServantErr, Server)
-import qualified Data.Attoparsec.Text as AT
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
 import Holborn.API.Types (Username)
 import Holborn.JSON.SSHRepoCommunication ( RepoCall(..)
                                          , KeyType(..)
+                                         , SSHCommandLine(..)
                                          , SSHKey
-                                         , unparseSSHKey,
+                                         , unparseSSHKey
                                          )
 import Network.Wai.Handler.Warp (Port)
 import qualified Holborn.Logging as Log
@@ -106,12 +105,6 @@ listKeys AppConf{conn} username = do
           |]
 
 
-data SSHCommandLine =
-      GitReceivePack { _orgOrUser :: Text, _repo :: Text }
-    | GitUploadPack { _orgOrUser :: Text, _repo :: Text }
-    deriving Show
-
-
 -- | Emit the Holborn side of the SSH command
 accessGranted :: Text -> Port -> SSHCommandLine -> Text
 accessGranted hostname port commandLine =
@@ -127,38 +120,6 @@ accessGranted hostname port commandLine =
       case commandLine of
         GitReceivePack org repo -> WritableRepoCall "git-receive-pack" org repo
         GitUploadPack org repo -> WritableRepoCall "git-upload-pack" org repo
-
-
--- There are two acceptable commands:
---   "git-upload-pack '/org/hello'"
---   "git-receive-pack '/org/hello'"
--- For all other commands we can send back futurama quotes.
---
--- PUPPY - this is a security sensitive piece (gatekeeper for a
--- remote ssh trying to run random commands) and as such it needs
--- quickchecking!
-parseSSHCommand :: AT.Parser SSHCommandLine
-parseSSHCommand =
-    upload <|> receive
-  where
-    upload = do
-        void $ AT.string "git-upload-pack '"
-        uncurry GitUploadPack <$> repoPath
-    receive = do
-        void $ AT.string "git-receive-pack '"
-        uncurry GitReceivePack <$> repoPath
-    repoPath = do
-        AT.skipWhile (== '/') -- skip optional leading /
-        org <- AT.takeWhile1 (/= '/')
-        void $ AT.char '/'
-        user <- AT.takeWhile1 (/= '\'')
-        void $ AT.char '\''
-        AT.endOfInput
-        return (org, user)
-
-
-instance FromJSON SSHCommandLine where
-  parseJSON = withText "SSH command must be text" (rightZ . AT.parseOnly parseSSHCommand)
 
 
 checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> ExceptT ServantErr IO CheckRepoAccessResponse

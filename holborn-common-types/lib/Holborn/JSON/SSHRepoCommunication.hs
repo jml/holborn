@@ -8,13 +8,16 @@ module Holborn.JSON.SSHRepoCommunication
        , KeyType(..)
        , parseSSHKey
        , unparseSSHKey
+       , SSHCommandLine(..)
        ) where
 
 import BasicPrelude hiding (empty)
 
 import Control.Applicative (Alternative(..))
-import Data.Aeson (FromJSON(..), ToJSON(..), genericParseJSON, genericToJSON, object, (.=))
+import Control.Error (rightZ)
+import Data.Aeson (FromJSON(..), ToJSON(..), genericParseJSON, genericToJSON, object, withText, (.=))
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
+import qualified Data.Attoparsec.Text as AT
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultError(ConversionFailed))
@@ -26,15 +29,50 @@ import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure
 import System.Process (runInteractiveCommand)
 
 
+data SSHCommandLine =
+      GitReceivePack { _orgOrUser :: Text, _sshCommandLineRepo :: Text }
+    | GitUploadPack { _orgOrUser :: Text, _sshCommandLineRepo :: Text }
+    deriving Show
+
+instance FromJSON SSHCommandLine where
+  parseJSON = withText "SSH command must be text" (rightZ . AT.parseOnly parseSSHCommand)
+
+
+-- There are two acceptable commands:
+--   "git-upload-pack '/org/hello'"
+--   "git-receive-pack '/org/hello'"
+-- For all other commands we can send back futurama quotes.
+--
+-- PUPPY - this is a security sensitive piece (gatekeeper for a
+-- remote ssh trying to run random commands) and as such it needs
+-- quickchecking!
+parseSSHCommand :: AT.Parser SSHCommandLine
+parseSSHCommand =
+    upload <|> receive
+  where
+    upload = do
+        void $ AT.string "git-upload-pack '"
+        uncurry GitUploadPack <$> repoPath
+    receive = do
+        void $ AT.string "git-receive-pack '"
+        uncurry GitReceivePack <$> repoPath
+    repoPath = do
+        AT.skipWhile (== '/') -- skip optional leading /
+        org <- AT.takeWhile1 (/= '/')
+        void $ AT.char '/'
+        user <- AT.takeWhile1 (/= '\'')
+        void $ AT.char '\''
+        AT.endOfInput
+        return (org, user)
+
+
 data RepoCall =
       WritableRepoCall { _command :: Text, _org :: Text, _repo :: Text }
     | ImplicitRepoCall { _command :: Text, _org :: Text, _repo :: Text, _owner :: Text }
     deriving (Show, Generic)
 
-
 instance FromJSON RepoCall where
   parseJSON = genericParseJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
-
 
 instance ToJSON RepoCall where
   toJSON = genericToJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
@@ -67,11 +105,9 @@ data SSHKey = SSHKey { _sshKeyType :: KeyType
                      , _sshKeyFingerPrint :: ByteString
                      } deriving Show
 
-
 instance ToJSON SSHKey where
     -- TODO: Maybe include comment in JSON output?
     toJSON (SSHKey _ key _comment fingerprint) = object ["key" .= decodeUtf8 key, "fingerprint" .= decodeUtf8 fingerprint]
-
 
 instance FromField SSHKey where
     fromField f (Just bs) = case parseSSHKey bs of
@@ -79,10 +115,8 @@ instance FromField SSHKey where
         _ -> returnError ConversionFailed f "Could not parse ssh key"
     fromField _ _ = terror "FromField SSHKey should always decode correctly"
 
-
 instance ToField SSHKey where
     toField = Escape . unparseSSHKey
-
 
 instance FromRow SSHKey where
     fromRow = field
