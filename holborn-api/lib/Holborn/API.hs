@@ -13,7 +13,7 @@ import Data.Proxy (Proxy(..))
 
 import qualified Holborn.Docs
 import qualified Holborn.API.Api
-import qualified Holborn.API.Internal
+import qualified Holborn.API.SSH
 import qualified Holborn.API.Browse
 import Holborn.API.Config (AppConf)
 import qualified Holborn.API.Settings.SSHKeys
@@ -21,7 +21,7 @@ import qualified Holborn.API.Settings.Profile
 
 
 type FullAPI =
-         "internal" :> Holborn.API.Internal.API
+         "internal" :> Holborn.API.SSH.API
     :<|> "docs" :> Holborn.Docs.API
     :<|> "v1" :> ( Holborn.API.Settings.SSHKeys.API
                    :<|> Holborn.API.Settings.Profile.API )
@@ -35,7 +35,7 @@ api = Proxy
 
 
 server :: AppConf -> Server FullAPI
-server conf = Holborn.API.Internal.server conf
+server conf = Holborn.API.SSH.server conf
               :<|> Holborn.Docs.server
               :<|> (Holborn.API.Settings.SSHKeys.server conf
                     :<|> Holborn.API.Settings.Profile.server conf)
