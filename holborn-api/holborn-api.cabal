@@ -11,6 +11,7 @@ library
                      , Holborn.API.Internal
                      , Holborn.Docs
                      , Holborn.Errors
+                     , Holborn.API
                      , Holborn.API.Config
                      , Holborn.API.Browse
                      , Holborn.API.Auth
