@@ -9,6 +9,7 @@ module Holborn.JSON.SSHRepoCommunication
        , parseSSHKey
        , unparseSSHKey
        , SSHCommandLine(..)
+       , RepoAccess(..)
        ) where
 
 import BasicPrelude hiding (empty)
@@ -29,6 +30,7 @@ import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure
 import System.Process (runInteractiveCommand)
 
 
+-- | A user-generated request to interact with a git repository.
 data SSHCommandLine =
       GitReceivePack { _orgOrUser :: Text, _sshCommandLineRepo :: Text }
     | GitUploadPack { _orgOrUser :: Text, _sshCommandLineRepo :: Text }
@@ -73,6 +75,7 @@ unparseSSHCommand (GitReceivePack owner repo) = "git-receive-pack '" <> owner <>
 unparseSSHCommand (GitUploadPack owner repo) = "git-upload-pack '" <> owner <> "/" <> repo <> "'"
 
 
+-- | Permission to interact with a git repository.
 data RepoCall =
       WritableRepoCall { _command :: SSHCommandLine }
     | ImplicitRepoCall { _command :: SSHCommandLine, _owner :: Text }
@@ -83,6 +86,13 @@ instance FromJSON RepoCall where
 
 instance ToJSON RepoCall where
   toJSON = genericToJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
+
+
+-- | Routing to a git repository.
+data RepoAccess = AccessGranted Hostname Port RepoCall deriving (Show)
+
+type Hostname = Text
+type Port = Int
 
 
 -- | SSH key type

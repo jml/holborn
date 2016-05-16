@@ -19,7 +19,7 @@ module Holborn.API.SSH
 import BasicPrelude
 
 import GHC.Generics (Generic)
-import Control.Monad.Trans.Except (ExceptT)
+import Control.Monad.Trans.Except (ExceptT, throwE, runExceptT)
 import Data.ByteString.Lazy (fromChunks, toStrict)
 import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, encode)
 import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(..), PlainText, ServantErr, Server)
@@ -31,9 +31,9 @@ import Holborn.JSON.SSHRepoCommunication ( RepoCall(..)
                                          , KeyType(..)
                                          , SSHCommandLine(..)
                                          , SSHKey
+                                         , RepoAccess(..)
                                          , unparseSSHKey
                                          )
-import Network.Wai.Handler.Warp (Port)
 import qualified Holborn.Logging as Log
 
 
@@ -105,9 +105,35 @@ listKeys AppConf{conn} username = do
           |]
 
 
+-- | Determine whether the request can access a repo.
+checkRepoAccess' :: AppConf -> CheckRepoAccessRequest -> ExceptT Text IO RepoCall
+checkRepoAccess' AppConf{conn} CheckRepoAccessRequest{key_id, command} = do
+    rows <- liftIO $ query conn [sql|
+                   select id, pk.readonly, pk.verified
+                   from "public_key" as pk where id = ?
+               |] (Only key_id)
+    Log.debug (key_id, command, rows)
+    case (command, rows) of
+        (_, []) -> throwE "No SSH key"
+        (_, _:_:_) -> throwE "Multiple SSH keys"
+        (GitReceivePack _ _, [(_, False, True)]) -> return $ WritableRepoCall command
+        (GitReceivePack _ _, [(keyId, True, True)]) ->
+            throwE ("SSH key with id " <> show (keyId :: Int) <> " is readonly")
+        (GitUploadPack _ _, [(_, _, True)]) -> return $ WritableRepoCall command
+        (_, [(_, _, False)]) -> throwE "SSH key not verified"
+
+
+-- | Either route a git request to the correct repo, or give an error saying
+-- why not.
+routeRepoRequest :: AppConf -> CheckRepoAccessRequest -> ExceptT Text IO RepoAccess
+routeRepoRequest conf@AppConf{rawRepoHostname, rawRepoPort} request =
+    AccessGranted rawRepoHostname rawRepoPort <$> checkRepoAccess' conf request
+
+
 -- | Emit the Holborn side of the SSH command
-accessGranted :: Text -> Port -> RepoCall -> Text
-accessGranted hostname port repoCall =
+renderAccess :: Either Text RepoAccess -> Text
+renderAccess (Left err) = ">&2 echo '" <> err <> "' && exit 1"
+renderAccess (Right (AccessGranted hostname port repoCall)) =
   concat ["(echo -n '"
          , decodeUtf8 (toStrict (encode repoCall))
          , "' && cat) | nc "
@@ -118,31 +144,9 @@ accessGranted hostname port repoCall =
 
 
 checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> ExceptT ServantErr IO CheckRepoAccessResponse
-checkRepoAccess AppConf{conn, rawRepoHostname, rawRepoPort} request = do
-    Log.debug request
-    rows <- liftIO $ query conn [sql|
-                   select id, pk.readonly, pk.verified
-                   from "public_key" as pk where id = ?
-               |] (Only (key_id request))
-
-    -- OpenSSH runs the command we send in bash, so we can use common
-    -- shell muckery to first send the metadata and then do a
-    -- bidirectional pipe.
-    let cmd = command request
-    Log.debug (cmd, rows)
-    return . CheckRepoAccessResponse . Just $ determineAccess cmd rows
-  where
-    reportError err = ">&2 echo '" <> err <> "' && exit 1"
-
-    determineAccess cmd rows =
-      case (cmd, rows) of
-        (_, []) -> reportError "No SSH key"
-        (_, _:_:_) -> reportError "Multiple SSH keys"
-        (GitReceivePack _ _, [(_, False, True)]) -> accessGranted rawRepoHostname rawRepoPort (WritableRepoCall cmd)
-        (GitReceivePack _ _, [(keyId, True, True)]) ->
-            reportError ("SSH key with id " <> show (keyId :: Int) <> " is readonly")
-        (GitUploadPack _ _, [(_, _, True)]) -> accessGranted rawRepoHostname rawRepoPort (WritableRepoCall cmd)
-        (_, [(_, _, False)]) -> reportError "SSH key not verified"
+checkRepoAccess conf request = do
+    route <- liftIO $ runExceptT (routeRepoRequest conf request)
+    return . CheckRepoAccessResponse . Just . renderAccess $ route
 
 
 -- Serialization bla bla
