@@ -37,6 +37,9 @@ data SSHCommandLine =
 instance FromJSON SSHCommandLine where
   parseJSON = withText "SSH command must be text" (rightZ . AT.parseOnly parseSSHCommand)
 
+instance ToJSON SSHCommandLine where
+  toJSON = toJSON . unparseSSHCommand
+
 
 -- There are two acceptable commands:
 --   "git-upload-pack '/org/hello'"
@@ -65,10 +68,14 @@ parseSSHCommand =
         AT.endOfInput
         return (org, user)
 
+unparseSSHCommand :: SSHCommandLine -> Text
+unparseSSHCommand (GitReceivePack owner repo) = "git-receive-pack '" <> owner <> "/" <> repo <> "'"
+unparseSSHCommand (GitUploadPack owner repo) = "git-upload-pack '" <> owner <> "/" <> repo <> "'"
+
 
 data RepoCall =
-      WritableRepoCall { _command :: Text, _org :: Text, _repo :: Text }
-    | ImplicitRepoCall { _command :: Text, _org :: Text, _repo :: Text, _owner :: Text }
+      WritableRepoCall { _command :: SSHCommandLine }
+    | ImplicitRepoCall { _command :: SSHCommandLine, _owner :: Text }
     deriving (Show, Generic)
 
 instance FromJSON RepoCall where

@@ -116,10 +116,7 @@ accessGranted hostname port commandLine =
          , fromShow port
          ]
   where
-    repoCall =
-      case commandLine of
-        GitReceivePack org repo -> WritableRepoCall "git-receive-pack" org repo
-        GitUploadPack org repo -> WritableRepoCall "git-upload-pack" org repo
+    repoCall = WritableRepoCall commandLine
 
 
 checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> ExceptT ServantErr IO CheckRepoAccessResponse

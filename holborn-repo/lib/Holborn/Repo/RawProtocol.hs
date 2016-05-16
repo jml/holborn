@@ -25,7 +25,7 @@ import           Pipes.Aeson (decode)
 import           Holborn.Repo.Config (Config, buildRepoPath, rawPort)
 import           Holborn.Repo.Process (streamIO, proc)
 import qualified Holborn.Logging as Log
-import           Holborn.JSON.SSHRepoCommunication (RepoCall(..))
+import           Holborn.JSON.SSHRepoCommunication (RepoCall(..), SSHCommandLine(..))
 
 
 gitPack :: String -> Config -> Text -> Text -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
@@ -63,9 +63,9 @@ accept config (sock, _) = do
     (header, fromRest) <- runStateT getRepoParser from
     Log.debug header
     void $ case header of
-        Just (WritableRepoCall "git-upload-pack" org repo) ->
+        Just (WritableRepoCall (GitUploadPack org repo)) ->
             gitUploadPack config org repo fromRest to
-        Just (WritableRepoCall "git-receive-pack" org repo) ->
+        Just (WritableRepoCall (GitReceivePack org repo)) ->
             gitReceivePack config org repo fromRest to
         _ -> terror "if the data is properly cleaned this doesn't happen"
     return ()
