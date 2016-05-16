@@ -106,8 +106,8 @@ listKeys AppConf{conn} username = do
 
 
 -- | Emit the Holborn side of the SSH command
-accessGranted :: Text -> Port -> SSHCommandLine -> Text
-accessGranted hostname port commandLine =
+accessGranted :: Text -> Port -> RepoCall -> Text
+accessGranted hostname port repoCall =
   concat ["(echo -n '"
          , decodeUtf8 (toStrict (encode repoCall))
          , "' && cat) | nc "
@@ -115,8 +115,6 @@ accessGranted hostname port commandLine =
          , " "
          , fromShow port
          ]
-  where
-    repoCall = WritableRepoCall commandLine
 
 
 checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> ExceptT ServantErr IO CheckRepoAccessResponse
@@ -140,10 +138,10 @@ checkRepoAccess AppConf{conn, rawRepoHostname, rawRepoPort} request = do
       case (cmd, rows) of
         (_, []) -> reportError "No SSH key"
         (_, _:_:_) -> reportError "Multiple SSH keys"
-        (GitReceivePack _ _, [(_, False, True)]) -> accessGranted rawRepoHostname rawRepoPort cmd
+        (GitReceivePack _ _, [(_, False, True)]) -> accessGranted rawRepoHostname rawRepoPort (WritableRepoCall cmd)
         (GitReceivePack _ _, [(keyId, True, True)]) ->
             reportError ("SSH key with id " <> show (keyId :: Int) <> " is readonly")
-        (GitUploadPack _ _, [(_, _, True)]) -> accessGranted rawRepoHostname rawRepoPort cmd
+        (GitUploadPack _ _, [(_, _, True)]) -> accessGranted rawRepoHostname rawRepoPort (WritableRepoCall cmd)
         (_, [(_, _, False)]) -> reportError "SSH key not verified"
 
 
