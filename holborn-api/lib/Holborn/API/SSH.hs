@@ -19,18 +19,21 @@ module Holborn.API.SSH
 import BasicPrelude
 
 import GHC.Generics (Generic)
-import Control.Error (rightZ)
-import Control.Monad.Trans.Except (ExceptT)
+import Control.Monad.Trans.Except (ExceptT, throwE, runExceptT)
 import Data.ByteString.Lazy (fromChunks, toStrict)
-import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, withText, encode)
+import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, encode)
 import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(..), PlainText, ServantErr, Server)
-import qualified Data.Attoparsec.Text as AT
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Types (KeyType(..), SSHKey, unparseSSHKey, Username)
-import Holborn.JSON.SSHRepoCommunication (RepoCall(..))
-import Network.Wai.Handler.Warp (Port)
+import Holborn.API.Types (Username)
+import Holborn.JSON.SSHRepoCommunication ( RepoCall(..)
+                                         , KeyType(..)
+                                         , SSHCommandLine(..)
+                                         , SSHKey
+                                         , RepoAccess(..)
+                                         , unparseSSHKey
+                                         )
 import qualified Holborn.Logging as Log
 
 
@@ -57,6 +60,11 @@ server conf = checkKey conf
 
 newtype SSHKeys = SSHKeys { unSSHKeys :: [SSHKey] } deriving (ToJSON, Show)
 
+instance MimeRender PlainText SSHKeys where
+  -- | Turn a list of SSH keys into a line-separated plaintext dump that would
+  -- serve as an authorized_keys file.
+  mimeRender _ = fromChunks . map ((<> "\n") . unparseSSHKey) . unSSHKeys
+
 
 -- | Implementation
 checkKey :: AppConf -> CheckKeyRequest -> ExceptT ServantErr IO CheckKeyResponse
@@ -82,12 +90,6 @@ checkKey AppConf{conn} request@CheckKeyRequest{..} = do
        _ -> terror "TODO return error for checkKey"
 
 
-instance MimeRender PlainText SSHKeys where
-  -- | Turn a list of SSH keys into a line-separated plaintext dump that would
-  -- serve as an authorized_keys file.
-  mimeRender _ = fromChunks . map ((<> "\n") . unparseSSHKey) . unSSHKeys
-
-
 -- | List all the verified SSH keys for a user.
 listKeys :: AppConf -> Username -> ExceptT ServantErr IO SSHKeys
 listKeys AppConf{conn} username = do
@@ -103,15 +105,35 @@ listKeys AppConf{conn} username = do
           |]
 
 
-data SSHCommandLine =
-      GitReceivePack { _orgOrUser :: Text, _repo :: Text }
-    | GitUploadPack { _orgOrUser :: Text, _repo :: Text }
-    deriving Show
+-- | Determine whether the user identified by their SSH key can access a repo.
+checkRepoAccess' :: AppConf -> CheckRepoAccessRequest -> ExceptT Text IO RepoCall
+checkRepoAccess' AppConf{conn} CheckRepoAccessRequest{key_id, command} = do
+    rows <- liftIO $ query conn [sql|
+                   select id, pk.readonly, pk.verified
+                   from "public_key" as pk where id = ?
+               |] (Only key_id)
+    Log.debug (key_id, command, rows)
+    case (command, rows) of
+        (_, []) -> throwE "No SSH key"
+        (_, _:_:_) -> throwE "Multiple SSH keys"
+        (GitReceivePack _ _, [(_, False, True)]) -> return $ WritableRepoCall command
+        (GitReceivePack _ _, [(keyId, True, True)]) ->
+            throwE ("SSH key with id " <> show (keyId :: Int) <> " is readonly")
+        (GitUploadPack _ _, [(_, _, True)]) -> return $ WritableRepoCall command
+        (_, [(_, _, False)]) -> throwE "SSH key not verified"
+
+
+-- | Either route a git request to the correct repo, or give an error saying
+-- why not.
+routeRepoRequest :: AppConf -> CheckRepoAccessRequest -> ExceptT Text IO RepoAccess
+routeRepoRequest conf@AppConf{rawRepoHostname, rawRepoPort} request =
+    AccessGranted rawRepoHostname rawRepoPort <$> checkRepoAccess' conf request
 
 
 -- | Emit the Holborn side of the SSH command
-accessGranted :: Text -> Port -> SSHCommandLine -> Text
-accessGranted hostname port commandLine =
+renderAccess :: Either Text RepoAccess -> Text
+renderAccess (Left err) = ">&2 echo '" <> err <> "' && exit 1"
+renderAccess (Right (AccessGranted hostname port repoCall)) =
   concat ["(echo -n '"
          , decodeUtf8 (toStrict (encode repoCall))
          , "' && cat) | nc "
@@ -119,71 +141,12 @@ accessGranted hostname port commandLine =
          , " "
          , fromShow port
          ]
-  where
-    repoCall =
-      case commandLine of
-        GitReceivePack org repo -> WritableRepoCall "git-receive-pack" org repo
-        GitUploadPack org repo -> WritableRepoCall "git-upload-pack" org repo
-
-
--- There are two acceptable commands:
---   "git-upload-pack '/org/hello'"
---   "git-receive-pack '/org/hello'"
--- For all other commands we can send back futurama quotes.
---
--- PUPPY - this is a security sensitive piece (gatekeeper for a
--- remote ssh trying to run random commands) and as such it needs
--- quickchecking!
-parseSSHCommand :: AT.Parser SSHCommandLine
-parseSSHCommand =
-    upload <|> receive
-  where
-    upload = do
-        void $ AT.string "git-upload-pack '"
-        uncurry GitUploadPack <$> repoPath
-    receive = do
-        void $ AT.string "git-receive-pack '"
-        uncurry GitReceivePack <$> repoPath
-    repoPath = do
-        AT.skipWhile (== '/') -- skip optional leading /
-        org <- AT.takeWhile1 (/= '/')
-        void $ AT.char '/'
-        user <- AT.takeWhile1 (/= '\'')
-        void $ AT.char '\''
-        AT.endOfInput
-        return (org, user)
-
-
-instance FromJSON SSHCommandLine where
-  parseJSON = withText "SSH command must be text" (rightZ . AT.parseOnly parseSSHCommand)
 
 
 checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> ExceptT ServantErr IO CheckRepoAccessResponse
-checkRepoAccess AppConf{conn, rawRepoHostname, rawRepoPort} request = do
-    Log.debug request
-    rows <- liftIO $ query conn [sql|
-                   select id, pk.readonly, pk.verified
-                   from "public_key" as pk where id = ?
-               |] (Only (key_id request))
-
-    -- OpenSSH runs the command we send in bash, so we can use common
-    -- shell muckery to first send the metadata and then do a
-    -- bidirectional pipe.
-    let cmd = command request
-    Log.debug (cmd, rows)
-    return . CheckRepoAccessResponse . Just $ determineAccess cmd rows
-  where
-    reportError err = ">&2 echo '" <> err <> "' && exit 1"
-
-    determineAccess cmd rows =
-      case (cmd, rows) of
-        (_, []) -> reportError "No SSH key"
-        (_, _:_:_) -> reportError "Multiple SSH keys"
-        (GitReceivePack _ _, [(_, False, True)]) -> accessGranted rawRepoHostname rawRepoPort cmd
-        (GitReceivePack _ _, [(keyId, True, True)]) ->
-            reportError ("SSH key with id " <> show (keyId :: Int) <> " is readonly")
-        (GitUploadPack _ _, [(_, _, True)]) -> accessGranted rawRepoHostname rawRepoPort cmd
-        (_, [(_, _, False)]) -> reportError "SSH key not verified"
+checkRepoAccess conf request = do
+    route <- liftIO $ runExceptT (routeRepoRequest conf request)
+    return . CheckRepoAccessResponse . Just . renderAccess $ route
 
 
 -- Serialization bla bla
