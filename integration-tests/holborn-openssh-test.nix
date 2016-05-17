@@ -49,6 +49,11 @@ let
   insertTestKeySql =
     let pubkey = builtins.readFile "${testKey}/testkey.pub";
     in writeText "insertTestKey.sql" ''
+    insert into "user" (username, signup_email, password) values
+         ( 'alice'
+         , 'alice@example.com'
+         , '$2y$04$iTvtwfwFymYDEk9EmC4rkeDD5VD21KgdAfC7Fseqh7CyWXaSIhR8u'
+         );
     insert into public_key (name, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly) values
          ( 'testkey'
          , '${pubkey}'
