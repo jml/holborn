@@ -2,24 +2,18 @@
 {-# LANGUAGE TypeFamilies  #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Main where
+module Main (main) where
 
 import BasicPrelude
 
 import qualified Env
 import Network.Wai (Application)
 import qualified Network.Wai.Handler.Warp as Warp
-import Servant (serve, (:<|>)(..))
-import Data.Proxy (Proxy(..))
+import Servant (serve)
 import Network.Wai.Middleware.Cors (cors, CorsResourcePolicy(..), simpleCorsResourcePolicy, simpleHeaders)
 
-import qualified Holborn.Docs
-import qualified Holborn.API.Api
-import qualified Holborn.API.Internal
-import qualified Holborn.API.Browse
+import Holborn.API (api, server)
 import Holborn.API.Config (AppConf, Config(..), loadAppConf)
-import qualified Holborn.API.Settings.SSHKeys
-import qualified Holborn.API.Settings.Profile
 import qualified Holborn.Logging as Log
 
 
@@ -61,35 +55,11 @@ warpSettings port =
     port' = port
 
 
-type FullAPI =
-         Holborn.API.Internal.API
-    :<|> Holborn.API.Settings.SSHKeys.API
-    :<|> Holborn.API.Settings.Profile.API
-    :<|> Holborn.API.Browse.API
-    :<|> Holborn.Docs.API
-    :<|> Holborn.API.Api.API
-
-
-api :: Proxy FullAPI
-api = Proxy
-
-
 devCors _ = Just (simpleCorsResourcePolicy { corsRequestHeaders = (simpleHeaders ++ ["Authorization"]) })
 
 
 app :: AppConf -> Application
-app conf = serve api $
-        Holborn.API.Internal.server conf
-   :<|> Holborn.API.Settings.SSHKeys.server conf
-   :<|> Holborn.API.Settings.Profile.server conf
-   :<|> Holborn.API.Browse.server conf
-   :<|> Holborn.Docs.server
-
-   -- NB that Api.server has a catch-all at the end so we can catch
-   -- routes like /settings/ssh-keys that only have a meaning client
-   -- side for now. As a consequence `Holborn.API.Api.server` MUST BE
-   -- LAST in the :<|> combinator.
-   :<|> Holborn.API.Api.server conf
+app conf = serve api (server conf)
 
 
 main :: IO ()

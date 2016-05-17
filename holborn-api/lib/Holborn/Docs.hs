@@ -21,8 +21,7 @@ import qualified Holborn.JSON.Settings.SSHKeys
 import qualified Holborn.API.Types
 
 
-type API =
-    "docs" :> Get '[PlainText] Text
+type API = Get '[PlainText] Text
 
 
 docsKeys :: Servant.Docs.API
