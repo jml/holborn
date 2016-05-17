@@ -11,7 +11,7 @@
 -- This API is highly specific to our current openssh implementation
 -- and has absolutely no stability guarantees.
 
-module Holborn.API.Internal
+module Holborn.API.SSH
        ( API
        , server
        ) where
