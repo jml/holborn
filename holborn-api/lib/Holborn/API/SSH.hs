@@ -105,7 +105,7 @@ listKeys AppConf{conn} username = do
           |]
 
 
--- | Determine whether the request can access a repo.
+-- | Determine whether the user identified by their SSH key can access a repo.
 checkRepoAccess' :: AppConf -> CheckRepoAccessRequest -> ExceptT Text IO RepoCall
 checkRepoAccess' AppConf{conn} CheckRepoAccessRequest{key_id, command} = do
     rows <- liftIO $ query conn [sql|
