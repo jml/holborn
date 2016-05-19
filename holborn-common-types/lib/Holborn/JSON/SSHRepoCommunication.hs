@@ -6,6 +6,8 @@ module Holborn.JSON.SSHRepoCommunication
        ( RepoCall(..)
        , SSHKey
        , KeyType(..)
+       , parseSSHCommand
+       , unparseSSHCommand
        , parseSSHKey
        , unparseSSHKey
        , SSHCommandLine(..)
@@ -34,7 +36,7 @@ import System.Process (runInteractiveCommand)
 data SSHCommandLine =
       GitReceivePack { _orgOrUser :: Text, _sshCommandLineRepo :: Text }
     | GitUploadPack { _orgOrUser :: Text, _sshCommandLineRepo :: Text }
-    deriving Show
+    deriving (Show, Eq)
 
 instance FromJSON SSHCommandLine where
   parseJSON = withText "SSH command must be text" (rightZ . AT.parseOnly parseSSHCommand)
