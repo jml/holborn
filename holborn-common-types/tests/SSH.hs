@@ -3,8 +3,6 @@
 module SSH (tests) where
 
 import BasicPrelude
-import Control.Error (rightZ)
-import Data.Attoparsec.Text (parseOnly)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck ((===), Arbitrary(..), elements, testProperty, Gen, listOf1)
 
@@ -33,15 +31,11 @@ instance Arbitrary SSHCommandLine where
     where constructor = elements [ GitReceivePack, GitUploadPack ]
 
 
-parseSSHCommand' :: MonadPlus m => Text -> m SSHCommandLine
-parseSSHCommand' = rightZ . parseOnly parseSSHCommand
-
-
 tests :: TestTree
 tests =
   testGroup "Holborn.JSON.SSHRepoCommunication"
   [ testProperty "a is a" $ \x -> x == (x :: Int)
   , testGroup "SSHCommand properties"
-    [ testProperty "unparsed then parsed" $ \x -> Just x === parseSSHCommand' (unparseSSHCommand x)
+    [ testProperty "unparsed then parsed" $ \x -> Just x === parseSSHCommand (unparseSSHCommand x)
     ]
   ]

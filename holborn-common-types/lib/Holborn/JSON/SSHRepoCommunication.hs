@@ -39,7 +39,7 @@ data SSHCommandLine =
     deriving (Show, Eq)
 
 instance FromJSON SSHCommandLine where
-  parseJSON = withText "SSH command must be text" (rightZ . AT.parseOnly parseSSHCommand)
+  parseJSON = withText "SSH command must be text" parseSSHCommand
 
 instance ToJSON SSHCommandLine where
   toJSON = toJSON . unparseSSHCommand
@@ -53,8 +53,8 @@ instance ToJSON SSHCommandLine where
 -- PUPPY - this is a security sensitive piece (gatekeeper for a
 -- remote ssh trying to run random commands) and as such it needs
 -- quickchecking!
-parseSSHCommand :: AT.Parser SSHCommandLine
-parseSSHCommand =
+sshCommand :: AT.Parser SSHCommandLine
+sshCommand =
     upload <|> receive
   where
     upload = do
@@ -71,6 +71,10 @@ parseSSHCommand =
         void $ AT.char '\''
         AT.endOfInput
         return (org, user)
+
+
+parseSSHCommand :: MonadPlus m => Text -> m SSHCommandLine
+parseSSHCommand = rightZ . AT.parseOnly sshCommand
 
 unparseSSHCommand :: SSHCommandLine -> Text
 unparseSSHCommand (GitReceivePack owner repo) = "git-receive-pack '" <> owner <> "/" <> repo <> "'"
