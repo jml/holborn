@@ -31,6 +31,15 @@ import System.IO (hClose)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
 import System.Process (runInteractiveCommand)
 
+import Test.QuickCheck
+  ( Arbitrary(..)
+  , Gen
+  , elements
+  , listOf1
+  , oneof
+  )
+
+
 
 -- | A user-generated request to interact with a git repository.
 data SSHCommandLine =
@@ -81,6 +90,21 @@ unparseSSHCommand (GitReceivePack owner repo) = "git-receive-pack '" <> owner <>
 unparseSSHCommand (GitUploadPack owner repo) = "git-upload-pack '" <> owner <> "/" <> repo <> "'"
 
 
+instance Arbitrary SSHCommandLine where
+  arbitrary =
+    constructor <*> pathSegment <*> pathSegment
+    where
+      constructor = elements [ GitReceivePack, GitUploadPack ]
+
+-- | Used to generate arbitrary valid owners and repository names.
+-- TODO: Encode this assumption in the types of owner, repo, etc.
+pathSegment :: Gen Text
+pathSegment =
+  fromString <$> listOf1 (elements alphabet)
+  where
+    alphabet = ['A'..'Z'] <> ['a'..'z'] <> ['0'..'9'] <> "-_."
+
+
 -- | Permission to interact with a git repository.
 data RepoCall =
       WritableRepoCall { _command :: SSHCommandLine }
@@ -92,6 +116,12 @@ instance FromJSON RepoCall where
 
 instance ToJSON RepoCall where
   toJSON = genericToJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
+
+instance Arbitrary RepoCall where
+  arbitrary =
+    oneof [ WritableRepoCall <$> arbitrary
+          , ImplicitRepoCall <$> arbitrary <*> pathSegment
+          ]
 
 
 -- | Routing to a git repository.

@@ -1,8 +1,8 @@
 { mkDerivation, aeson, attoparsec, base, basic-prelude, bcrypt
 , bytestring, containers, entropy, errors, http-api-data
-, http-client, http-media, postgresql-simple, process, servant
-, servant-server, stdenv, tasty, tasty-hunit, tasty-quickcheck
-, time
+, http-client, http-media, postgresql-simple, process, QuickCheck
+, servant, servant-server, stdenv, tasty, tasty-hunit
+, tasty-quickcheck, time
 }:
 mkDerivation {
   pname = "holborn-common-types";
@@ -11,7 +11,7 @@ mkDerivation {
   libraryHaskellDepends = [
     aeson attoparsec base basic-prelude bcrypt bytestring containers
     entropy errors http-api-data http-client http-media
-    postgresql-simple process servant servant-server time
+    postgresql-simple process QuickCheck servant servant-server time
   ];
   testHaskellDepends = [
     aeson base basic-prelude tasty tasty-hunit tasty-quickcheck

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 module SSH (tests) where
 
 import BasicPrelude
@@ -11,13 +9,8 @@ import Test.Tasty.HUnit
   )
 import Test.Tasty.QuickCheck
   ( (===)
-  , Arbitrary(..)
   , Property
-  , elements
-  , listOf1
-  , oneof
   , testProperty
-  , Gen
   )
 
 import Holborn.JSON.SSHRepoCommunication
@@ -26,30 +19,6 @@ import Holborn.JSON.SSHRepoCommunication
   , unparseSSHCommand
   , parseSSHCommand
   )
-
-
-instance Arbitrary Text where
-  arbitrary = fromString <$> arbitrary
-
-
--- | Generate a valid path segment. Used for generating valid owners and repo
--- names.
-pathSegment :: Gen Text
-pathSegment = fromString <$> listOf1 (elements alphabet)
-  where
-    alphabet = ['A'..'Z'] <> ['a'..'z'] <> ['0'..'9'] <> "-_."
-
-
-instance Arbitrary SSHCommandLine where
-  arbitrary =
-    constructor <*> pathSegment <*> pathSegment
-    where constructor = elements [ GitReceivePack, GitUploadPack ]
-
-
-instance Arbitrary RepoCall where
-  arbitrary = oneof [ WritableRepoCall <$> arbitrary
-                    , ImplicitRepoCall <$> arbitrary <*> arbitrary
-                    ]
 
 
 jsonIdentity :: (Eq a, Show a, FromJSON a, ToJSON a) => a -> Property
