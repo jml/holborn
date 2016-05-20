@@ -67,7 +67,9 @@ accept config (sock, _) = do
             gitUploadPack config org repo fromRest to
         Just (WritableRepoCall (GitReceivePack org repo)) ->
             gitReceivePack config org repo fromRest to
-        _ -> terror "if the data is properly cleaned this doesn't happen"
+            -- TODO: This doesn't appear to abort the connection, which is
+            -- what we want it to do.
+        _ -> terror $ "Bad header: " <> show header
     return ()
 
 serveRaw :: Config -> IO ()

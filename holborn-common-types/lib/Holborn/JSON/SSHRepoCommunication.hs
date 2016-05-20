@@ -85,7 +85,7 @@ unparseSSHCommand (GitUploadPack owner repo) = "git-upload-pack '" <> owner <> "
 data RepoCall =
       WritableRepoCall { _command :: SSHCommandLine }
     | ImplicitRepoCall { _command :: SSHCommandLine, _owner :: Text }
-    deriving (Show, Generic)
+    deriving (Eq, Show, Generic)
 
 instance FromJSON RepoCall where
   parseJSON = genericParseJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
