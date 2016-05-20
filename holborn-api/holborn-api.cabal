@@ -59,8 +59,10 @@ Test-Suite holborn-api-tests
                      , basic-prelude >= 0.3.13
                      , holborn-api
                      , QuickCheck
-                     , postgresql-simple
+                     , aeson
+                     , bytestring
                      , errors
+                     , process
                      , holborn-common-types
 
   hs-source-dirs:      tests

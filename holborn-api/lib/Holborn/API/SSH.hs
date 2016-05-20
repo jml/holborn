@@ -14,12 +14,16 @@
 module Holborn.API.SSH
        ( API
        , server
+       -- | Exported for testing
+       , shellEncode
+       , shellQuote
        ) where
 
 import BasicPrelude
 
 import GHC.Generics (Generic)
 import Control.Monad.Trans.Except (ExceptT, throwE, runExceptT)
+import qualified Data.Text as Text
 import Data.ByteString.Lazy (fromChunks, toStrict)
 import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, encode)
 import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(..), PlainText, ServantErr, Server)
@@ -130,13 +134,40 @@ routeRepoRequest conf@AppConf{rawRepoHostname, rawRepoPort} request =
     AccessGranted rawRepoHostname rawRepoPort <$> checkRepoAccess' conf request
 
 
+-- | Encode a JSON object so that it can be echoed on the shell.
+--
+-- We want this because our customized SSH server operates by executing a
+-- command returned from this API server in the shell.
+shellEncode :: (ToJSON a) => a -> Text
+shellEncode = shellQuote . decodeUtf8 . toStrict . encode
+
+
+-- | Surround 'str' in single quotes, and wrap every literal single quote
+-- in a double quotes that are outside the single quotes.
+--
+-- e.g. the literal:
+--     foo 'bar' baz
+--
+-- becomes:
+--     'foo '"'"'bar'"'"' baz'
+--
+-- which would be echoed as:
+--     foo 'bar' baz
+shellQuote :: Text -> Text
+shellQuote str = "'" <> escape str <> "'"
+  where
+    escape = escapeBackslashes . escapeSingleQuotes
+    escapeSingleQuotes = Text.replace "'" "'\"'\"'"
+    escapeBackslashes = Text.replace "\\" "\\\\"
+
+
 -- | Emit the Holborn side of the SSH command
 renderAccess :: Either Text RepoAccess -> Text
 renderAccess (Left err) = ">&2 echo '" <> err <> "' && exit 1"
 renderAccess (Right (AccessGranted hostname port repoCall)) =
-  concat ["(echo -n '"
-         , decodeUtf8 (toStrict (encode repoCall))
-         , "' && cat) | nc "
+  concat ["(echo -n "
+         , shellEncode repoCall
+         , " && cat) | nc "
          , hostname
          , " "
          , fromShow port
