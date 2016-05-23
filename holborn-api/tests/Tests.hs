@@ -11,7 +11,7 @@ import Test.Tasty.HUnit hiding (assert)
 import Test.Tasty.QuickCheck
 import Holborn.API.Types (newPassword)
 
-import Holborn.API.SSH (shellEncode, shellQuote)
+import Holborn.API.SSH (shellEncode)
 import Holborn.JSON.SSHRepoCommunication (RepoCall)
 import System.Process (shell, readCreateProcess)
 import Test.QuickCheck.Monadic (PropertyM, assert, monadicIO, monitor, run)
@@ -50,7 +50,4 @@ tests =
         show pwd @?= "*hidden-password*"
   , testProperty "repo call roundtrips through shell" $ \x ->
         monadicIO $ prop_roundTripsViaShell (x :: RepoCall)
-  , testProperty "shellQuote roundtrips through shell" $ \x -> ('\NUL' `notElem` x) ==>  monadicIO $ do
-        output <- roundtripViaShell (textToString (shellQuote (fromString x)))
-        assert (output == x)
   ]
