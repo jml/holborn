@@ -59,8 +59,12 @@ spec = T.simpleSpec performAction render
 
     performAction SignIn props state k = do
       k $ \state -> state { loading = true }
-      runAff (\err -> traceAnyM err >>= \_ -> k id) k (runSignin state)
+      runAff (\err -> traceAnyM err >>= \_ -> k handleSigninError) k (runSignin state)
     performAction (UpdateFormData x) props state k = k $ \state -> state { formData = x }
+
+    -- TODO show an error if we get a network error.
+    handleSigninError :: State -> State
+    handleSigninError state = state { loading = false }
 
     runSignin :: forall eff'. State -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff') (State -> State)
     runSignin state = do
