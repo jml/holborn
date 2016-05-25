@@ -33,6 +33,7 @@ import Holborn.Auth as Auth
 import Debug.Trace (traceAnyM, spy)
 import Holborn.ManualEncoding.Profile as ManualCodingProfile
 import Holborn.DomHelpers (scroll)
+import Network.HTTP.StatusCode (StatusCode(..))
 
 
 data UserMeta = SignedIn { username :: String, about :: String } | NotLoaded | Anonymous
@@ -81,9 +82,17 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
         Nothing -> pure (set userMeta Anonymous state)
         Just _ -> do
           r <- Auth.get (makeUrl "/v1/user")
+
+          -- Delete cookie if we get unauthorized for this cookie
+          -- (might be expired or maybe never was valid).
+          case r.status of
+            StatusCode 401 -> liftEff (C.deleteCookie "auth-token")
+            _ -> pure unit
+
           case decodeJson r.response of
             Left err ->
               pure (set routeLens (SigninRoute Signin.initialState) state)
+
             Right (ManualCodingProfile.Profile json) ->
               pure (set userMeta (SignedIn {username: json.username, about: json.about}) state)
 
