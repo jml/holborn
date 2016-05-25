@@ -16,6 +16,7 @@ library
                      , Holborn.JSON.Response
                      , Holborn.JSON.Browse
                      , Holborn.JSON.RepoMeta
+                     , Holborn.JSON.NewRepo
                      , Holborn.JSON.Settings.SSHKeys
                      , Holborn.JSON.Settings.Profile
                      , Holborn.JSON.SSHRepoCommunication
@@ -42,6 +43,7 @@ library
                      , servant-server
                      , http-media
                      , QuickCheck
+                     , text
 
   hs-source-dirs:      lib
   ghc-options:         -Wall

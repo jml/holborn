@@ -75,7 +75,8 @@ server conf =
 
 
 -- | We're calling repo to get a JSON fragment which we then
--- incorporate into a larger JSON response. We
+-- incorporate into a larger JSON response. This should probably some
+-- better RPC mechanism.
 poorMansJsonGet :: (FromJSON a) => Manager -> Text -> IO (Maybe a)
 poorMansJsonGet manager endpoint = do
     r <- parseUrl (T.unpack endpoint)

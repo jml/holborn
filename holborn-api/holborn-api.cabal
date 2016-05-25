@@ -7,16 +7,17 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Holborn.API.User
+                     , Holborn.API
                      , Holborn.API.Api
+                     , Holborn.API.Auth
+                     , Holborn.API.Browse
+                     , Holborn.API.Config
+                     , Holborn.API.NewRepo
                      , Holborn.API.SSH
+                     , Holborn.API.Settings.Profile
+                     , Holborn.API.Settings.SSHKeys
                      , Holborn.Docs
                      , Holborn.Errors
-                     , Holborn.API
-                     , Holborn.API.Config
-                     , Holborn.API.Browse
-                     , Holborn.API.Auth
-                     , Holborn.API.Settings.SSHKeys
-                     , Holborn.API.Settings.Profile
   build-depends:       base >=4.8 && <5
                      , postgresql-simple
                      , text
@@ -48,6 +49,7 @@ library
                      , NamedFieldPuns
                      , RecordWildCards
                      , GeneralizedNewtypeDeriving
+                     , ScopedTypeVariables
 
 Test-Suite holborn-api-tests
   type:                exitcode-stdio-1.0
