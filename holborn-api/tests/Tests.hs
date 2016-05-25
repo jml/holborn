@@ -1,4 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Main (main) where
 
@@ -16,13 +17,16 @@ import Holborn.JSON.SSHRepoCommunication (RepoCall)
 import System.Process (shell, readCreateProcess)
 import Test.QuickCheck.Monadic (PropertyM, assert, monadicIO, monitor, run)
 import Test.Tasty.Hspec (testSpec, describe, it)
-import Test.Hspec.Wai (with, get, shouldRespondWith)
+import Test.Hspec.Wai (with, request, shouldRespondWith, ResponseMatcher(..))
+import Test.Hspec.Wai.JSON (json)
 
 import Holborn.API.Config (AppConf, Config(..), loadAppConf)
 import Network.Wai (Application)
 import Holborn.API (api, server)
 import Servant (serve)
 import System.Process (callCommand)
+
+import qualified Network.HTTP.Types.Method as Method
 
 
 main :: IO ()
@@ -36,6 +40,8 @@ testApp = do
     callCommand "createuser holborn-test-user || true"
     callCommand "dropdb holborn-test-db || true"
     callCommand "createdb -O holborn-test-user holborn-test-db"
+    callCommand "psql -f sql/initial.sql holborn-test-db -U holborn-test-user"
+    callCommand "psql -f sql/sample-data.sql holborn-test-db -U holborn-test-user"
     let conf = Config
           { port = 9999
           , pgDb = "holborn-test-db"
@@ -48,19 +54,23 @@ testApp = do
           , configRawRepoHostname = ""
           , configRawRepoPort = 0
           }
-    print "Using config:"
-    print conf
     appConf <- loadAppConf conf
 
     pure (serve api (server appConf))
 
 
+authenticatedPost path body = request Method.methodPost path [("Authorization", "test-token"), ("content-type", "application/json")] body
+
 waiTest :: IO TestTree
 waiTest =
   testSpec "wai-tests" $ with (testApp) $ do
-    describe "GET /" $ do
-        it "responds with 200" $ do
-            get "/" `shouldRespondWith` 200
+    describe "new-repo" $ do
+        it "can-create" $ do
+            authenticatedPost "/v1/new-repo"
+              [json|{owner: "alice", name: "name", description: "", private: false, initialize: false}|]
+              `shouldRespondWith`
+              [json|{number_objects:0,size:0,owner:"alice",repo:"name",number_commits:0}|]
+              {matchStatus = 200}
 
 
 stringToBytes :: String -> LByteString

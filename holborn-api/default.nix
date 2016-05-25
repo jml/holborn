@@ -1,10 +1,10 @@
 { mkDerivation, aeson, attoparsec, base, basic-prelude, blaze-html
 , blaze-markup, bytestring, either, envparse, errors
-, holborn-common-types, hspec-wai, http-client, http-reverse-proxy
-, http-types, jwt, postgresql-simple, process, QuickCheck
-, servant-docs, servant-server, stdenv, tasty, tasty-hspec
-, tasty-hunit, tasty-quickcheck, text, time, transformers, wai
-, wai-cors, warp
+, holborn-common-types, hspec-wai, hspec-wai-json, http-client
+, http-reverse-proxy, http-types, jwt, postgresql-simple, process
+, QuickCheck, servant-docs, servant-server, stdenv, tasty
+, tasty-hspec, tasty-hunit, tasty-quickcheck, text, time
+, transformers, wai, wai-cors, warp
 }:
 mkDerivation {
   pname = "holborn-api";
@@ -24,8 +24,8 @@ mkDerivation {
   ];
   testHaskellDepends = [
     aeson base basic-prelude bytestring errors holborn-common-types
-    hspec-wai process QuickCheck tasty tasty-hspec tasty-hunit
-    tasty-quickcheck
+    hspec-wai hspec-wai-json http-types process QuickCheck
+    servant-server tasty tasty-hspec tasty-hunit tasty-quickcheck wai
   ];
   license = stdenv.lib.licenses.unfree;
 }
