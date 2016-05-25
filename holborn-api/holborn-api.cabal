@@ -58,6 +58,8 @@ Test-Suite holborn-api-tests
                      , tasty >= 0.10
                      , tasty-hunit >= 0.9.0
                      , tasty-quickcheck >= 0.8
+                     , tasty-hspec >= 1.1.0
+                     , hspec-wai >= 0.6.5
                      , basic-prelude >= 0.3.13
                      , holborn-api
                      , QuickCheck
@@ -66,6 +68,9 @@ Test-Suite holborn-api-tests
                      , errors
                      , process
                      , holborn-common-types
+                     , servant-server
+                     , wai
+                     , process
 
   hs-source-dirs:      tests
   default-language:    Haskell2010
