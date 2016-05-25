@@ -61,8 +61,11 @@ type UserId = Int
 
 
 instance FromField Permissions where
-    fromField _ (Just bs) = return (read (decodeUtf8 bs))
+    fromField _ (Just bs) = case readMay (decodeUtf8 bs) of
+        Just p -> pure p
+        Nothing -> terror ("Could not parse permissions, probably due to changed data type. Update oauth_token table: " <> (decodeUtf8 bs))
     fromField _ Nothing = terror "FromField Permissions should always decode correctly"
+
 
 instance ToField AuthToken where
     toField (AuthToken a) = Escape a
