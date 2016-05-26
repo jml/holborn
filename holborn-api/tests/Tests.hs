@@ -7,26 +7,23 @@ import BasicPrelude
 
 import Data.Aeson (FromJSON, ToJSON, decode)
 import Data.ByteString.Lazy (fromStrict)
-import Test.Tasty (defaultMain, TestTree, testGroup, withResource)
-import Test.Tasty.HUnit hiding (assert)
-import Test.Tasty.QuickCheck
-import Holborn.API.Types (newPassword)
-
-import Holborn.API.SSH (shellEncode)
-import Holborn.JSON.SSHRepoCommunication (RepoCall)
-import System.Process (shell, readCreateProcess)
-import Test.QuickCheck.Monadic (PropertyM, assert, monadicIO, monitor, run)
-import Test.Tasty.Hspec (testSpec, describe, it)
-import Test.Hspec.Wai (with, request, shouldRespondWith, ResponseMatcher(..))
-import Test.Hspec.Wai.JSON (json)
-
-import Holborn.API.Config (AppConf, Config(..), loadAppConf)
-import Network.Wai (Application)
 import Holborn.API (api, server)
+import Holborn.API.Config (AppConf, Config(..), loadAppConf)
+import Holborn.API.SSH (shellEncode)
+import Holborn.API.Types (newPassword)
+import Holborn.JSON.SSHRepoCommunication (RepoCall)
+import qualified Network.HTTP.Types.Method as Method
+import Network.Wai (Application)
 import Servant (serve)
 import System.Process (callCommand)
-
-import qualified Network.HTTP.Types.Method as Method
+import System.Process (shell, readCreateProcess)
+import Test.Hspec.Wai (with, request, shouldRespondWith, ResponseMatcher(..))
+import Test.Hspec.Wai.JSON (json)
+import Test.QuickCheck.Monadic (PropertyM, assert, monadicIO, monitor, run)
+import Test.Tasty (defaultMain, TestTree, testGroup, withResource)
+import Test.Tasty.HUnit hiding (assert)
+import Test.Tasty.Hspec (testSpec, describe, it)
+import Test.Tasty.QuickCheck
 
 
 main :: IO ()
@@ -35,11 +32,15 @@ main = do
     defaultMain (testGroup "all" [waiTests, tests])
 
 
-testApp :: IO Application
-testApp = do
+resetDB :: IO ()
+resetDB = do
     callCommand "createuser holborn-test-user || true"
     callCommand "dropdb holborn-test-db || true"
     callCommand "createdb -O holborn-test-user holborn-test-db"
+
+
+testApp :: IO Application
+testApp = do
     callCommand "psql -f sql/initial.sql holborn-test-db -U holborn-test-user"
     callCommand "psql -f sql/sample-data.sql holborn-test-db -U holborn-test-user"
     let conf = Config
@@ -55,15 +56,16 @@ testApp = do
           , configRawRepoPort = 0
           }
     appConf <- loadAppConf conf
-
     pure (serve api (server appConf))
 
 
 authenticatedPost path body = request Method.methodPost path [("Authorization", "test-token"), ("content-type", "application/json")] body
+invalidAuthPost path body = request Method.methodPost path [("Authorization", "invalid-token"), ("content-type", "application/json")] body
 
 waiTest :: IO TestTree
-waiTest =
-  testSpec "wai-tests" $ with (testApp) $ do
+waiTest = do
+  resetDB
+  testSpec "wai-tests" $ with testApp $ do
     describe "new-repo" $ do
         it "can-create" $ do
             authenticatedPost "/v1/new-repo"
@@ -71,6 +73,10 @@ waiTest =
               `shouldRespondWith`
               [json|{number_objects:0,size:0,owner:"alice",repo:"name",number_commits:0}|]
               {matchStatus = 200}
+        it "checks-auth" $ do
+            invalidAuthPost "/v1/new-repo"
+              [json|{owner: "alice", name: "name", description: "", private: false, initialize: false}|]
+              `shouldRespondWith` 401
 
 
 stringToBytes :: String -> LByteString
