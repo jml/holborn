@@ -9,5 +9,5 @@ in
   buildEverything = callPackage ./build-everything.nix { haskellPackages = hp; };
   # TODO openssh integration test is broken until we can guarantee a user with
   # shell access when building on NixOS.
-  #openssh = callPackage ./holborn-openssh-test.nix { haskellPackages = hp; };
+  openssh = callPackage ./holborn-openssh-test.nix { haskellPackages = hp; };
 }

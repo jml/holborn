@@ -19,6 +19,7 @@ let
     Port=${sshPort}
     PidFile=/dev/null
     HolbornApiEndpoint=http://127.0.0.1:${apiPort}
+    LogLevel=DEBUG1
   '';
 
   # ssh tries to create an ~/.ssh directory if it's not given a config file,

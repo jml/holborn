@@ -34,6 +34,7 @@ import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
 import Holborn.Repo.Config (Config, buildRepoPath)
 import Holborn.Repo.GitLayer (makeRepository)
+import Holborn.JSON.RepoMeta (newValidRepoName)
 
 -- | The git pull & push repository API. The URL schema is borrowed
 -- from github, i.e. `/user/repo` or `/org/repo`.
@@ -53,8 +54,11 @@ repoServer :: Config -> Server RepoAPI
 repoServer config owner repoName =
     codeBrowser repo :<|> gitProtocolAPI repoPath
     where
-      repo = makeRepository owner repoName repoPath
-      repoPath = buildRepoPath config owner repoName
+      validRepoName = case newValidRepoName repoName of
+        Just x -> x
+        Nothing -> terror "invalid repository name"
+      repo = makeRepository owner validRepoName repoPath
+      repoPath = buildRepoPath config owner validRepoName
 
 
 -- | The core git protocol for a single repository.

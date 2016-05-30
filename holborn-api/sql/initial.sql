@@ -50,7 +50,10 @@ create table "team_member"
 create table "user_repo"
     ( id serial primary key
     , name varchar(128) not null
+    , description text not null
     , user_id int references "user" (id) not null
+    -- hosted_on points to the server this repo currently lives on,  e.g. 127.0.0.1:8080
+    , hosted_on varchar(128) not null
     , created timestamp without time zone default (now() at time zone 'utc') not null
     );
 
@@ -58,7 +61,10 @@ create table "user_repo"
 create table "org_repo"
     ( id serial primary key
     , name varchar(128) not null
+    , description text not null
     , org_id int references "org" (id) not null
+    -- hosted_on points to the server this repo currently lives on,  e.g. 127.0.0.1:8080
+    , hosted_on varchar(128) not null
     , created timestamp without time zone default (now() at time zone 'utc') not null
     );
 
