@@ -4,12 +4,12 @@
 , http-reverse-proxy, http-types, jwt, postgresql-simple, process
 , QuickCheck, servant-docs, servant-server, stdenv, tasty
 , tasty-hspec, tasty-hunit, tasty-quickcheck, text, time
-, transformers, wai, wai-cors, warp
+, transformers, wai, wai-cors, warp, lib
 }:
 mkDerivation {
   pname = "holborn-api";
   version = "0.1.0.0";
-  src = ./.;
+  src = lib.sourceFilesBySuffices ./. [".cabal" ".hs"];
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
