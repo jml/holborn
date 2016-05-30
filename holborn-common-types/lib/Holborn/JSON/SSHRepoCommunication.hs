@@ -32,6 +32,7 @@ import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure
 import System.Process (runInteractiveCommand)
 import Holborn.JSON.RepoMeta (ValidRepoName, newValidRepoName)
 
+
 import Test.QuickCheck
   ( Arbitrary(..)
   , Gen
