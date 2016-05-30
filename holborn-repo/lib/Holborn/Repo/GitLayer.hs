@@ -51,14 +51,14 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 -- XXX: Get the instances. Need to move all HTML formatting stuff to a
 -- separate module, and leave this just about using Git.
 import Holborn.Repo.HtmlFormatTokens ()
-import Holborn.JSON.RepoMeta (RepoMeta(..))
+import Holborn.JSON.RepoMeta (RepoMeta(..), ValidRepoName)
 import Holborn.Syntax (annotateCode)
 import Holborn.ServantTypes (RenderedJson)
 
 -- | A git repository
 data Repository =
   Repo { _repoOwner :: Text
-       , _repoName :: Text
+       , _repoName :: ValidRepoName
        , _repoPath :: FilePath
        } deriving (Eq, Show)
 
@@ -72,7 +72,7 @@ type GitM m = ReaderT GitRepo m
 type GitException = Git.GitException
 
 
-makeRepository :: Text -> Text -> FilePath -> Repository
+makeRepository :: Text -> ValidRepoName -> FilePath -> Repository
 makeRepository = Repo
 
 
@@ -376,7 +376,7 @@ urlWithinTree :: Tree -> Text -> TreeEntryMeta -> Text
 urlWithinTree Tree{treeRepository = Repo{_repoName, _repoOwner}, treeRevision} basePath TreeEntryMeta{..} =
   intercalate "/"
     [ _repoOwner
-    , _repoName
+    , show _repoName
     , case _TreeEntryMeta_type_ of
           "tree" -> "git/trees"
           "blob" -> "git/blobs"
@@ -417,4 +417,4 @@ fillRepoMeta Repo{..} =
 instance ToMarkup RepoMeta where
   toMarkup RepoMeta{..} = do
     H.h1 $ "debug rendering for root metadata"
-    H.a ! A.href (H.toValue ("/v1/repos/" <> _RepoMeta_owner <> "/" <> _RepoMeta_repo <> "/tree/master")) $ "tree-root"
+    H.a ! A.href (H.toValue ("/v1/repos/" <> _RepoMeta_owner <> "/" <> (show _RepoMeta_repo) <> "/tree/master")) $ "tree-root"

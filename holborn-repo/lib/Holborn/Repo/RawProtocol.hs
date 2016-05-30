@@ -26,17 +26,18 @@ import           Holborn.Repo.Config (Config, buildRepoPath, rawPort)
 import           Holborn.Repo.Process (streamIO, proc)
 import qualified Holborn.Logging as Log
 import           Holborn.JSON.SSHRepoCommunication (RepoCall(..), SSHCommandLine(..))
+import Holborn.JSON.RepoMeta (newValidRepoName, ValidRepoName)
 
 
-gitPack :: String -> Config -> Text -> Text -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
+gitPack :: String -> Config -> Text -> ValidRepoName -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
 gitPack packCommand config org repo from to = do
     void $ streamIO (proc packCommand [buildRepoPath config org repo]) from to
     return ()
 
-gitUploadPack :: Config -> Text -> Text -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
+gitUploadPack :: Config -> Text -> ValidRepoName -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
 gitUploadPack = gitPack "git-upload-pack"
 
-gitReceivePack :: Config -> Text -> Text -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
+gitReceivePack :: Config -> Text -> ValidRepoName -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
 gitReceivePack = gitPack "git-receive-pack"
 
 

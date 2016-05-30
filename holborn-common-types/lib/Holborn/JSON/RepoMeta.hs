@@ -17,9 +17,25 @@ import Data.Char (isDigit, isAsciiUpper, isAsciiLower)
 import qualified Data.Text
 import Database.PostgreSQL.Simple.FromField (FromField(..))
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(..))
+import Test.QuickCheck (Arbitrary(..), elements, listOf1)
+import Text.Show (Show(..))
+import qualified Data.Text as T
+
+newtype ValidRepoName = ValidRepoName Text deriving (Eq, Ord)
+
+-- The way to "escape" ValidRepoName when e.g. building a path segment
+-- is via `show` so we need to show the underlying text, not
+-- `ValidRepoName x`.
+instance Show ValidRepoName where
+    show (ValidRepoName x) = T.unpack x
 
 
-newtype ValidRepoName = ValidRepoName Text deriving (Show, Eq, Ord)
+instance Arbitrary ValidRepoName where
+    arbitrary =
+      (\a b -> ValidRepoName (fromString (a : b))) <$> (elements startAlphabet) <*> listOf1 (elements alphabet)
+      where
+        startAlphabet = ['A'..'Z'] <> ['a'..'z'] <> ['0'..'9']
+        alphabet = startAlphabet <> "-_"
 
 
 validRepoNameParser :: AT.Parser Text

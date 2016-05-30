@@ -30,6 +30,7 @@ import GHC.Generics (Generic)
 import System.IO (hClose)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
 import System.Process (runInteractiveCommand)
+import Holborn.JSON.RepoMeta (ValidRepoName, newValidRepoName)
 
 import Test.QuickCheck
   ( Arbitrary(..)
@@ -43,8 +44,8 @@ import Test.QuickCheck
 
 -- | A user-generated request to interact with a git repository.
 data SSHCommandLine =
-      GitReceivePack { _orgOrUser :: Text, _sshCommandLineRepo :: Text }
-    | GitUploadPack { _orgOrUser :: Text, _sshCommandLineRepo :: Text }
+      GitReceivePack { _orgOrUser :: Text, _sshCommandLineRepo :: ValidRepoName }
+    | GitUploadPack { _orgOrUser :: Text, _sshCommandLineRepo :: ValidRepoName }
     deriving (Show, Eq)
 
 instance FromJSON SSHCommandLine where
@@ -76,23 +77,26 @@ sshCommand =
         AT.skipWhile (== '/') -- skip optional leading /
         org <- AT.takeWhile1 (/= '/')
         void $ AT.char '/'
-        user <- AT.takeWhile1 (/= '\'')
+        repoName <- AT.takeWhile1 (/= '\'')
         void $ AT.char '\''
         AT.endOfInput
-        return (org, user)
+
+        case newValidRepoName repoName of
+          Nothing -> fail "Invalid repository name"
+          Just x -> pure (org, x)
 
 
 parseSSHCommand :: MonadPlus m => Text -> m SSHCommandLine
 parseSSHCommand = rightZ . AT.parseOnly sshCommand
 
 unparseSSHCommand :: SSHCommandLine -> Text
-unparseSSHCommand (GitReceivePack owner repo) = "git-receive-pack '" <> owner <> "/" <> repo <> "'"
-unparseSSHCommand (GitUploadPack owner repo) = "git-upload-pack '" <> owner <> "/" <> repo <> "'"
+unparseSSHCommand (GitReceivePack owner repo) = "git-receive-pack '" <> owner <> "/" <> show repo <> "'"
+unparseSSHCommand (GitUploadPack owner repo) = "git-upload-pack '" <> owner <> "/" <> show repo <> "'"
 
 
 instance Arbitrary SSHCommandLine where
   arbitrary =
-    constructor <*> pathSegment <*> pathSegment
+    constructor <*> pathSegment <*> arbitrary
     where
       constructor = elements [ GitReceivePack, GitUploadPack ]
 

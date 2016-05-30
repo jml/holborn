@@ -8,6 +8,7 @@ import BasicPrelude
 import Data.Text (unpack)
 import Network.Wai.Handler.Warp (Port, Settings, setPort, defaultSettings, setBeforeMainLoop)
 import qualified Holborn.Logging as Log
+import Holborn.JSON.RepoMeta (ValidRepoName)
 
 
 data Config = Config
@@ -23,13 +24,13 @@ data Config = Config
 -- | Build a full repository path
 -- TODO - find a better way to represent repos and conversions from /
 -- to file system paths.
-buildRepoPath :: Config -> Text -> Text -> String
+buildRepoPath :: Config -> Text -> ValidRepoName -> String
 buildRepoPath config userOrOrg repo =
     concat [ repoRoot config
            , "/"
            , unpack userOrOrg
            , "/"
-           , unpack repo
+           , unpack (show repo)
            ]
 
 

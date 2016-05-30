@@ -19,11 +19,11 @@ import Holborn.JSON.SSHRepoCommunication
   , unparseSSHCommand
   , parseSSHCommand
   )
+import Holborn.JSON.RepoMeta (newValidRepoName)
 
 
 jsonIdentity :: (Eq a, Show a, FromJSON a, ToJSON a) => a -> Property
 jsonIdentity x = Just x === decode (encode x)
-
 
 tests :: TestTree
 tests =
@@ -33,11 +33,13 @@ tests =
     [ testProperty "unparsed then parsed" $ \x -> Just x === parseSSHCommand (unparseSSHCommand x)
     , testProperty "to JSON and back" $ \x -> jsonIdentity (x :: SSHCommandLine)
     , testCase "standard unparse example" $
-      "git-upload-pack 'org/hello'" @=? unparseSSHCommand (GitUploadPack "org" "hello")
+      "git-upload-pack 'org/hello'" @=? unparseSSHCommand (GitUploadPack "org" validRepoName)
     , testCase "standard parse example" $
-      Just (GitUploadPack "org" "hello") @=? parseSSHCommand "git-upload-pack 'org/hello'"
+      Just (GitUploadPack "org" validRepoName) @=? parseSSHCommand "git-upload-pack 'org/hello'"
     ]
   , testGroup "RepoCall"
     [ testProperty "to JSON and back" $ \x -> jsonIdentity (x :: RepoCall)
     ]
   ]
+  where
+    Just validRepoName = newValidRepoName "hello"
