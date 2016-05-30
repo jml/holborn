@@ -41,8 +41,8 @@ resetDB = do
 
 testApp :: IO Application
 testApp = do
-    callCommand "psql -f sql/initial.sql holborn-test-db -U holborn-test-user"
-    callCommand "psql -f sql/sample-data.sql holborn-test-db -U holborn-test-user"
+    callCommand "psql -q -f sql/initial.sql holborn-test-db -U holborn-test-user"
+    callCommand "psql -q -f sql/sample-data.sql holborn-test-db -U holborn-test-user"
     let conf = Config
           { port = 9999
           , pgDb = "holborn-test-db"

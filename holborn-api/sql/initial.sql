@@ -1,5 +1,10 @@
 -- psql holborn -f sql/initial.sql
 
+-- We don't care about non-errors like cascading deletes, they gum up
+-- our test output:
+set client_min_messages to WARNING;
+
+
 drop table if exists "user" cascade;
 drop table if exists "org" cascade;
 drop table if exists "team" cascade;
