@@ -18,17 +18,16 @@ import Data.Aeson (object, (.=))
 import Servant
 
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Types (Username)
 import Holborn.JSON.Settings.Profile (ProfileData(..))
-import Holborn.Auth (AuthToken(..))
-import Holborn.API.Auth (getAuthFromToken)
+import Holborn.API.Types (Username)
+import Holborn.API.Auth (getUserId)
 import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
 
 
 type API =
          "users" :> Capture "username" Username :> Get '[JSON] ProfileData
-    :<|> Header "Authorization" AuthToken :> "user" :> Get '[JSON] ProfileData
-    :<|> Header "Authorization" AuthToken :> "user" :> ReqBody '[JSON] ProfileData :> Post '[JSON] ()
+    :<|> Header "GAP-Auth" Username :> "user" :> Get '[JSON] ProfileData
+    :<|> Header "GAP-Auth" Username :> "user" :> ReqBody '[JSON] ProfileData :> Post '[JSON] ()
 
 
 data Error = InvalidUrl | UserNotFound Text | UserNotInDb
@@ -62,9 +61,9 @@ getUser AppConf{conn} username = do
 
 -- TODO The function to fetch the current user should go somewhere
 -- other than profile settings?
-getAuthorizedUser :: AppConf -> Maybe AuthToken -> ExceptT (APIError Error) IO ProfileData
-getAuthorizedUser conf@AppConf{conn} token = do
-    (userId, _permissions) <- getAuthFromToken conf token
+getAuthorizedUser :: AppConf -> Maybe Username -> ExceptT (APIError Error) IO ProfileData
+getAuthorizedUser conf@AppConf{conn} username = do
+    userId <- getUserId conf username
     r <- liftIO $ query conn [sql|
                    select username, created
                    from "user" where id = ?
@@ -74,5 +73,5 @@ getAuthorizedUser conf@AppConf{conn} token = do
         _ -> throwE (SubAPIError UserNotInDb) -- TODO more informative error by encrypting context and sending it to the user
 
 
-postAuthorizedUser :: AppConf -> Maybe AuthToken -> ProfileData -> ExceptT (APIError Error) IO ()
-postAuthorizedUser _conf _token _newProfile = undefined
+postAuthorizedUser :: AppConf -> Maybe Username -> ProfileData -> ExceptT (APIError Error) IO ()
+postAuthorizedUser _conf _username _newProfile = undefined

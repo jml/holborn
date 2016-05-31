@@ -18,9 +18,9 @@ drop table if exists "oauth_token" cascade;
 
 create table "user"
     ( id serial primary key
+    -- username and email are from the gap-auth header.
     , username varchar(32) unique not null
-    , signup_email varchar(1024) not null
-    , password varchar(256) not null
+    , email varchar(1024) not null
     , created timestamp without time zone default (now() at time zone 'utc') not null
     );
 
@@ -99,14 +99,4 @@ create table "public_key"
     , verified boolean not null
     , readonly boolean not null
     , created timestamp without time zone default (now() at time zone 'utc') not null
-    );
-
-
-create table "oauth_token"
-    ( id serial primary key
-    , description varchar(256) not null
-    , owner_id int references "user" (id) not null
-    , token varchar(256) not null
-    , created timestamp without time zone default (now() at time zone 'utc') not null
-    , permissions varchar(1024) not null -- set of haskell values serialized with read/show
     );

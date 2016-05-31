@@ -19,20 +19,19 @@ import Data.Aeson (object, (.=))
 import Servant
 
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Types (Username)
 import Holborn.JSON.SSHRepoCommunication (parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
-import Holborn.Auth (AuthToken(..), Permission(..), hasPermission)
 import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
-import Holborn.API.Auth (getAuthFromToken)
+import Holborn.API.Auth (getUserId)
 import qualified Holborn.Logging as Log
+import Holborn.API.Types (Username)
 
 
 type API =
          "users" :> Capture "username" Username :> "keys" :> Get '[JSON] [ListKeysRow]
     :<|> "user" :> "keys" :> Capture "id" Int :> Get '[JSON] ListKeysRow
-    :<|> Header "Authorization" AuthToken :> "user" :> "keys" :> Capture "id" Int :> Delete '[JSON] ()
-    :<|> Header "Authorization" AuthToken :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> PostCreated '[JSON] ListKeysRow
+    :<|> Header "GAP-Auth" Username :> "user" :> "keys" :> Capture "id" Int :> Delete '[JSON] ()
+    :<|> Header "GAP-Auth" Username :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> PostCreated '[JSON] ListKeysRow
 
 
 -- TODO Tom would really rather have an applicative validator that can
@@ -67,10 +66,9 @@ getKey :: AppConf -> Int -> ExceptT (APIError KeyError) IO ListKeysRow
 getKey _conf _keyId = undefined
 
 
-deleteKey :: AppConf -> Maybe AuthToken -> Int -> ExceptT (APIError KeyError) IO ()
-deleteKey appconf@AppConf{conn=conn} token keyId = do
-    (userId, permissions) <- getAuthFromToken appconf token
-    unless (hasPermission permissions Web) (throwE InsufficientPermissions)
+deleteKey :: AppConf -> Maybe Username -> Int -> ExceptT (APIError KeyError) IO ()
+deleteKey appconf@AppConf{conn=conn} username keyId = do
+    userId <- getUserId appconf username
 
     count <- liftIO $ execute conn [sql|
             delete from "public_key" where id = ? and owner_id = ?
@@ -79,13 +77,12 @@ deleteKey appconf@AppConf{conn=conn} token keyId = do
     return ()
 
 
-addKey :: AppConf -> Maybe AuthToken -> AddKeyData -> ExceptT (APIError KeyError) IO ListKeysRow
-addKey appconf@AppConf{conn=conn} token AddKeyData{..} = do
+addKey :: AppConf -> Maybe Username -> AddKeyData -> ExceptT (APIError KeyError) IO ListKeysRow
+addKey appconf@AppConf{conn=conn} username AddKeyData{..} = do
     let sshKey = parseSSHKey (encodeUtf8 _AddKeyData_key)
     when (isNothing sshKey) (throwE (SubAPIError InvalidSSHKey))
     when (_AddKeyData_title == "") (throwE (SubAPIError EmptyTitle))
-    (userId, permissions) <- getAuthFromToken appconf token
-    unless (hasPermission permissions Web) (throwE InsufficientPermissions)
+    userId <- getUserId appconf username
 
     [Only id_] <- liftIO $ query conn [sql|
             insert into "public_key" (id, name, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly, created)

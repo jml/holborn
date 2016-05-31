@@ -16,17 +16,17 @@ import Servant
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
-import Holborn.Auth (AuthToken(..))
 import Holborn.Errors (JSONCodeableError(..), APIError(..), jsonErrorHandler)
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Holborn.JSON.NewRepo (NewRepoRequest(..))
 import Holborn.JSON.RepoMeta (RepoMeta(..))
-import Holborn.API.Auth (getAuthFromToken)
+import Holborn.API.Auth (getUserId)
+import Holborn.API.Types (Username)
 
 
 type API =
     "new-repo"
-    :> Header "Authorization" AuthToken
+    :> Header "GAP-Auth" Username
     :> ReqBody '[JSON] NewRepoRequest
     :> Post '[JSON] RepoMeta
 
@@ -44,9 +44,9 @@ server conf =
   enter jsonErrorHandler (newRepo conf)
 
 
-newRepo :: AppConf -> Maybe AuthToken -> NewRepoRequest -> ExceptT (APIError NewRepoError) IO RepoMeta
-newRepo appconf@AppConf{conn} token NewRepoRequest{..} = do
-    (userId, permissions) <- getAuthFromToken appconf token
+newRepo :: AppConf -> Maybe Username -> NewRepoRequest -> ExceptT (APIError NewRepoError) IO RepoMeta
+newRepo appconf@AppConf{conn} username NewRepoRequest{..} = do
+    userId <- getUserId appconf username
 
     -- TODO user permissions and userId to check whether user is
     -- allowed to create repo.

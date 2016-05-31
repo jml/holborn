@@ -8,7 +8,6 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Holborn.API.User
                      , Holborn.API
-                     , Holborn.API.Api
                      , Holborn.API.Auth
                      , Holborn.API.Browse
                      , Holborn.API.Config
