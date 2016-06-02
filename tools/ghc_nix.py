@@ -8,24 +8,19 @@ import subprocess
 import sys
 
 
-def run_nix_command(shell_nix, command):
-    """Run command inside the nix shell at shell.nix."""
-    return _run_command(["nix-shell", "--run", command, shell_nix])
-
-
 def _run_command(args):
     try:
-        return subprocess.check_output(args)
+        return subprocess.check_output(args, shell=True)
     except TypeError as e:
         raise TypeError('%s: %r' % (e, args))
 
 
-def get_ghc_path(shell_nix):
-    return run_nix_command(shell_nix, "which ghc").strip()
+def get_ghc_path():
+    return _run_command("which ghc").strip()
 
 
-def get_packages_databases(shell_nix):
-    ghc_pkg_output = run_nix_command(shell_nix, "ghc-pkg list")
+def get_packages_databases():
+    ghc_pkg_output = _run_command("ghc-pkg list")
     return find_package_databases(ghc_pkg_output)
 
 
@@ -91,9 +86,8 @@ def make_dir_locals(ghc_path, package_dbs):
 
 
 def main(args):
-    shell_nix = find_dominating_file(os.getcwd(), "shell.nix")
-    ghc_path = get_ghc_path(shell_nix)
-    package_dbs = get_packages_databases(shell_nix)
+    ghc_path = get_ghc_path()
+    package_dbs = get_packages_databases()
     print make_dir_locals(ghc_path, package_dbs)
     return 0
 
