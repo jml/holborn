@@ -6,12 +6,13 @@ module Holborn.API.Auth
 
 import BasicPrelude
 
-import Holborn.Errors (APIError(..))
-import Holborn.API.Config (AppConf(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
-import Holborn.API.Types (Username)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Database.PostgreSQL.Simple (Connection, Only (..), query)
+
+import Holborn.API.Config (AppConf(..))
+import Holborn.API.Internal (APIError(..))
+import Holborn.API.Types (Username)
 
 
 type UserId = Int

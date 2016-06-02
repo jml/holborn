@@ -17,7 +17,6 @@ library
                      , Holborn.API.Settings.Profile
                      , Holborn.API.Settings.SSHKeys
                      , Holborn.Docs
-                     , Holborn.Errors
   build-depends:       base >=4.8 && <5
                      , postgresql-simple
                      , text

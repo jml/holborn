@@ -14,15 +14,14 @@ import BasicPrelude
 
 import Database.PostgreSQL.Simple (Only (..), execute, query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Control.Monad.Trans.Except (ExceptT, throwE)
+import Control.Monad.Trans.Except (ExceptT)
 import Data.Aeson (object, (.=))
 import Servant
 
 import Holborn.API.Config (AppConf(..))
 import Holborn.JSON.SSHRepoCommunication (parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
-import Holborn.Errors (APIError(..))
-import Holborn.API.Internal (JSONCodeableError(..), toServantHandler)
+import Holborn.API.Internal (APIError, JSONCodeableError(..), toServantHandler, handlerError)
 import Holborn.API.Auth (getUserId)
 import qualified Holborn.Logging as Log
 import Holborn.API.Types (Username)
@@ -81,8 +80,8 @@ deleteKey appconf@AppConf{conn=conn} username keyId = do
 addKey :: AppConf -> Maybe Username -> AddKeyData -> ExceptT (APIError KeyError) IO ListKeysRow
 addKey appconf@AppConf{conn=conn} username AddKeyData{..} = do
     let sshKey = parseSSHKey (encodeUtf8 _AddKeyData_key)
-    when (isNothing sshKey) (throwE (SubAPIError InvalidSSHKey))
-    when (_AddKeyData_title == "") (throwE (SubAPIError EmptyTitle))
+    when (isNothing sshKey) (handlerError InvalidSSHKey)
+    when (_AddKeyData_title == "") (handlerError EmptyTitle)
     userId <- getUserId appconf username
 
     [Only id_] <- liftIO $ query conn [sql|

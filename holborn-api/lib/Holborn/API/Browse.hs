@@ -21,13 +21,12 @@ import Servant
 
 import Holborn.API.Config (AppConf(..))
 import Holborn.API.Types (Username)
-import Holborn.Errors (APIError(..))
-import Holborn.API.Internal (JSONCodeableError(..), toServantHandler)
+import Holborn.API.Internal (APIError, JSONCodeableError(..), toServantHandler, handlerError)
 import Network.Wai (Application, responseLBS)
 import Network.HTTP.ReverseProxy (waiProxyTo, defaultOnExc, WaiProxyResponse(WPRModifiedRequest, WPRResponse), ProxyDest(..))
 import Network.HTTP.Types.Status (status404)
 import Holborn.JSON.Browse (BrowseMetaResponse(..))
-import Control.Monad.Trans.Except (ExceptT, throwE)
+import Control.Monad.Trans.Except (ExceptT)
 import Network.HTTP.Client (parseUrl, withResponse, Manager, requestHeaders, responseBody)
 import Network.HTTP.Types.Header (hAccept)
 import Data.ByteString.Lazy (fromStrict)
@@ -93,7 +92,7 @@ browse AppConf{httpManager, repoHostname, repoPort} _maybeUsername owner repo = 
     r <- liftIO $ poorMansJsonGet httpManager ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> owner <> "/" <> repo)
     repoMeta <- case r of
         Just x -> pure x
-        Nothing -> throwE (SubAPIError NotFound)
+        Nothing -> handlerError NotFound
     return BrowseMetaResponse
       { _BrowseMetaResponse_repo_meta = repoMeta
       , _BrowseMetaResponse_description = "fake description"
