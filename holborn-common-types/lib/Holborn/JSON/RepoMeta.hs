@@ -18,21 +18,21 @@ import qualified Data.Text
 import Database.PostgreSQL.Simple.FromField (FromField(..))
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(..))
 import Test.QuickCheck (Arbitrary(..), elements, listOf1)
-import Text.Show (Show(..))
-import qualified Data.Text as T
+import Web.HttpApiData (ToHttpApiData(..))
 
-newtype ValidRepoName = ValidRepoName Text deriving (Eq, Ord)
+
+newtype ValidRepoName = ValidRepoName Text deriving (Eq, Ord, Show)
 
 -- The way to "escape" ValidRepoName when e.g. building a path segment
 -- is via `show` so we need to show the underlying text, not
 -- `ValidRepoName x`.
-instance Show ValidRepoName where
-    show (ValidRepoName x) = T.unpack x
+instance ToHttpApiData ValidRepoName where
+    toUrlPiece (ValidRepoName x) = x
 
 
 instance Arbitrary ValidRepoName where
     arbitrary =
-      (\a b -> ValidRepoName (fromString (a : b))) <$> (elements startAlphabet) <*> listOf1 (elements alphabet)
+      (\a b -> ValidRepoName (fromString (a : b))) <$> elements startAlphabet <*> listOf1 (elements alphabet)
       where
         startAlphabet = ['A'..'Z'] <> ['a'..'z'] <> ['0'..'9']
         alphabet = startAlphabet <> "-_"
@@ -56,7 +56,7 @@ newValidRepoName s = case AT.parseOnly validRepoNameParser s of
 -- Just (ValidRepoName "repo-name")
 instance FromJSON ValidRepoName where
     parseJSON (String s) = case newValidRepoName s of
-        Nothing -> fail ("Not a valid repository name: " ++ (Data.Text.unpack s))
+        Nothing -> fail ("Not a valid repository name: " ++ Data.Text.unpack s)
         Just x -> pure x
     parseJSON x = typeMismatch "Not a valid repo type" x
 
@@ -68,7 +68,7 @@ instance ToJSON ValidRepoName where
 instance FromField ValidRepoName where
     fromField _ (Just bs) = case newValidRepoName (decodeUtf8 bs) of
         Just x -> pure x
-        Nothing -> terror ("Could not parse valid repo name. " <> (decodeUtf8 bs))
+        Nothing -> terror ("Could not parse valid repo name. " <> decodeUtf8 bs)
     fromField _ Nothing = terror "FromField Permissions should always decode correctly"
 
 
