@@ -21,7 +21,7 @@ import Servant
 
 import Holborn.API.Config (AppConf(..))
 import Holborn.API.Types (Username)
-import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, handlerError)
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, toServantHandler, handlerError)
 import Network.Wai (Application, responseLBS)
 import Network.HTTP.ReverseProxy (waiProxyTo, defaultOnExc, WaiProxyResponse(WPRModifiedRequest, WPRResponse), ProxyDest(..))
 import Network.HTTP.Types.Status (status404)
@@ -67,7 +67,7 @@ instance JSONCodeableError BrowseError where
 
 server :: AppConf -> Server API
 server conf =
-  enter toServantHandler (browse conf)
+  enter (toServantHandler conf) browse
   :<|> treeCommitBlob conf
   :<|> treeCommitBlob conf
   :<|> treeCommitBlob conf
@@ -86,8 +86,9 @@ poorMansJsonGet manager endpoint = do
     pure resp
 
 
-browse :: AppConf -> Maybe Username -> Owner -> Repo -> ApiHandler BrowseError BrowseMetaResponse
-browse AppConf{httpManager, repoHostname, repoPort} _maybeUsername owner repo = do
+browse :: Maybe Username -> Owner -> Repo -> APIHandler BrowseError BrowseMetaResponse
+browse _maybeUsername owner repo = do
+    AppConf{httpManager, repoHostname, repoPort} <- getConfig
     r <- liftIO $ poorMansJsonGet httpManager ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> owner <> "/" <> repo)
     repoMeta <- case r of
         Just x -> pure x

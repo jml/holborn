@@ -3,8 +3,13 @@
 -- | Internal logic for how API requests work.
 module Holborn.API.Internal
   ( APIHandler
+  , getConfig
+  -- | Manipulate the database
+  , query
+  , execute
   , JSONCodeableError(..)
   , toServantHandler
+  , apiError
   , handlerError
   -- | Used in support code. Handlers should use the above instead.
   , APIError(..)
@@ -13,8 +18,12 @@ module Holborn.API.Internal
 import BasicPrelude
 import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Except (ExceptT, throwE)
+import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
 import Data.Aeson (Value, encode, object)
+import qualified Database.PostgreSQL.Simple as PostgreSQL
 import Servant (ServantErr(..), (:~>)(Nat))
+
+import Holborn.API.Config (AppConf(..))
 
 
 type HttpCode = Int
@@ -66,17 +75,43 @@ instance (JSONCodeableError a) => JSONCodeableError (APIError a) where
 
 
 -- | Indicate that a handler has failed for a reason specific to that handler.
-handlerError :: (Monad m, JSONCodeableError err) => err -> ExceptT (APIError err) m a
-handlerError = throwE . SubAPIError
+handlerError :: (JSONCodeableError err) => err -> APIHandler err a
+handlerError = apiError . SubAPIError
+
+
+-- | Raise a general API error.
+apiError :: APIError err -> APIHandler err a
+apiError = lift . throwE
 
 
 -- | Basic type for all of the handlers of Holborn.API.
-type APIHandler err = ExceptT (APIError err) IO
+type APIHandler err = ReaderT AppConf (ExceptT (APIError err) IO)
 
+
+-- | Load the application configuration
+getConfig :: APIHandler err AppConf
+getConfig = ask
+
+
+-- | Query the database
+query :: (PostgreSQL.ToRow values, PostgreSQL.FromRow row) => PostgreSQL.Query -> values -> APIHandler err [row]
+query sql values = do
+  AppConf{conn} <- getConfig
+  liftIO $ PostgreSQL.query conn sql values
+
+-- | Execute an operation on the database, returning the number of rows affected.
+execute :: PostgreSQL.ToRow values => PostgreSQL.Query -> values -> APIHandler err Int64
+execute sql values = do
+  AppConf{conn} <- getConfig
+  liftIO $ PostgreSQL.execute conn sql values
 
 
 -- | Turn a Holborn.API-specific handler into a generic Servant handler.
 --
 -- Use with 'enter'.
-toServantHandler :: JSONCodeableError err => APIHandler err :~> ExceptT ServantErr IO
-toServantHandler = Nat (bimapExceptT toServantErr id)
+toServantHandler :: JSONCodeableError err => AppConf -> APIHandler err :~> ExceptT ServantErr IO
+toServantHandler appConf = Nat (toServantHandler' appConf)
+
+
+toServantHandler' :: JSONCodeableError err => AppConf -> APIHandler err a -> ExceptT ServantErr IO a
+toServantHandler' appConf handler = bimapExceptT toServantErr id (runReaderT handler appConf)
