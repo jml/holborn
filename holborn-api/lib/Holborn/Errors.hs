@@ -7,14 +7,13 @@
 -- encode themselves as JSON.
 
 module Holborn.Errors
-       ( HTTPCode
-       , JSONCodeableError(..)
+       ( JSONCodeableError(..)
        , APIError(..)
        ) where
 
 import Data.Aeson (object)
 
-import Holborn.API.Internal (HTTPCode, JSONCodeableError(..))
+import Holborn.API.Internal (JSONCodeableError(..))
 
 
 data APIError a =

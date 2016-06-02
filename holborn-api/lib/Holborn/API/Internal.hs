@@ -2,8 +2,7 @@
 
 -- | Internal logic for how API requests work.
 module Holborn.API.Internal
-  ( HTTPCode
-  , JSONCodeableError(..)
+  ( JSONCodeableError(..)
   , toServantHandler
   ) where
 
@@ -14,11 +13,11 @@ import Data.Aeson (Value, encode)
 import Servant (ServantErr(..), (:~>)(Nat))
 
 
-type HTTPCode = Int
+type HttpCode = Int
 
 
 class JSONCodeableError a where
-    toJSON :: a -> (HTTPCode, Value)
+    toJSON :: a -> (HttpCode, Value)
 
 
 -- | Convert a JSONCodeableError into a ServantErr
