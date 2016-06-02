@@ -2,12 +2,12 @@
 , bytestring, containers, entropy, errors, http-api-data
 , http-client, http-media, postgresql-simple, process, QuickCheck
 , servant, servant-server, stdenv, tasty, tasty-hunit
-, tasty-quickcheck, time
+, tasty-quickcheck, time, lib
 }:
 mkDerivation {
   pname = "holborn-common-types";
   version = "0.1.3.0";
-  src = ./.;
+  src = lib.sourceFilesBySuffices ./. [".cabal" ".hs"];
   libraryHaskellDepends = [
     aeson attoparsec base basic-prelude bcrypt bytestring containers
     entropy errors http-api-data http-client http-media

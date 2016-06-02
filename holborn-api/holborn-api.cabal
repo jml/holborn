@@ -8,7 +8,6 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Holborn.API.User
                      , Holborn.API
-                     , Holborn.API.Api
                      , Holborn.API.Auth
                      , Holborn.API.Browse
                      , Holborn.API.Config
@@ -58,6 +57,9 @@ Test-Suite holborn-api-tests
                      , tasty >= 0.10
                      , tasty-hunit >= 0.9.0
                      , tasty-quickcheck >= 0.8
+                     , tasty-hspec >= 1.1.0
+                     , hspec-wai >= 0.6.5
+                     , hspec-wai-json >= 0.6.0
                      , basic-prelude >= 0.3.13
                      , holborn-api
                      , QuickCheck
@@ -66,6 +68,10 @@ Test-Suite holborn-api-tests
                      , errors
                      , process
                      , holborn-common-types
+                     , servant-server
+                     , wai
+                     , process
+                     , http-types
 
   hs-source-dirs:      tests
   default-language:    Haskell2010

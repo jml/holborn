@@ -5,12 +5,12 @@
 , mtl, network, pipes, pipes-aeson, pipes-bytestring, pipes-network
 , pipes-parse, pipes-safe, pipes-shell, pipes-zlib, process
 , servant-blaze, servant-server, stdenv, tagged, text, transformers
-, wai, warp
+, wai, warp, lib
 }:
 mkDerivation {
   pname = "holborn-repo";
   version = "0.1.0.0";
-  src = ./.;
+  src = lib.sourceFilesBySuffices ./. [".cabal" ".hs"];
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
