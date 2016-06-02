@@ -1,6 +1,12 @@
 # Override haskell packages to pretend that our own libraries and
 # binaries are part of standard hackage package set.
-{ haskellPackages, haskell }:
+{ haskellPackages, haskell, lib }:
+let
+  generateDirLocals = ''
+    python ../tools/ghc_nix.py > .dir-locals.el
+    echo "Regenerated .dir-locals.el to set flycheck GHC paths"
+  '';
+in
 haskellPackages.override {
     overrides = self: super: {
 
@@ -13,7 +19,12 @@ haskellPackages.override {
       # workflow. 2nd best solution is to delete ./dist before
       # compiling.
       mkDerivation = { pname, ... }@args:
-        super.mkDerivation (if builtins.substring 0 7 pname == "holborn" then (args // { preCompileBuildDriver = "rm -rf ./dist";}) else args);
+        super.mkDerivation (
+          if builtins.substring 0 7 pname == "holborn"
+          then (args // { src = lib.sourceFilesBySuffices args.src [".cabal" ".hs"];
+                          shellHook = generateDirLocals; })
+          else args
+        );
 
       hcl = self.callPackage ../hcl {};
       holborn-api = self.callPackage ../holborn-api {};
