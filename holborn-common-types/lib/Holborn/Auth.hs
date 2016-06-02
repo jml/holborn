@@ -11,27 +11,16 @@
 module Holborn.Auth
        ( Permission(..)
        , Permissions(..)
-       , AuthToken(..)
-       , userFromToken
        , hasPermission
        , webPermissions
-       , createAuthToken
        ) where
 
 import BasicPrelude
 
 import qualified Data.Set as Set
-import Database.PostgreSQL.Simple (Connection, Only (..), query)
 import Database.PostgreSQL.Simple.FromField (FromField(..))
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(..))
-import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Data.Aeson (ToJSON(..), Value(..))
-import System.Entropy (getEntropy)
-import qualified Data.ByteString.Builder
-import Data.ByteString.Lazy (toStrict)
-import Web.HttpApiData (FromHttpApiData(..))
 
-data AuthToken = AuthToken ByteString deriving Show
 
 -- Borrowed fom the github permission system. Not super clear what
 -- each one entails ATM.
@@ -72,39 +61,12 @@ instance FromField Permissions where
     fromField _ Nothing = terror "FromField Permissions should always decode correctly"
 
 
-instance ToField AuthToken where
-    toField (AuthToken a) = Escape a
-
 instance ToField Permissions where
     toField  = Escape . encodeUtf8 . show
+
 
 webPermissions :: Permissions
 webPermissions = Permissions (Set.fromList [Web])
 
 hasPermission :: Permissions -> Permission -> Bool
 hasPermission (Permissions x) p = Set.member p x
-
-userFromToken :: Connection -> AuthToken -> IO (Maybe (UserId, Permissions))
-userFromToken c token = do
-    r <- query c [sql|
-        select owner_id, permissions
-        from oauth_token where token = ?
-        |] (Only token) :: IO [(UserId, Permissions)]
-
-    return $ case r of
-      [one] -> Just one
-      _ -> Nothing
-
--- hex-encoded token
-createAuthToken :: IO AuthToken
-createAuthToken = fmap tok (getEntropy 12)
-  where
-    tok x = (AuthToken . toStrict . Data.ByteString.Builder.toLazyByteString) (Data.ByteString.Builder.byteStringHex x)
-
-
-instance ToJSON AuthToken where
-    toJSON (AuthToken x) = String (decodeUtf8 x)
-
-
-instance FromHttpApiData AuthToken where
-    parseUrlPiece token = pure (AuthToken (encodeUtf8 token))

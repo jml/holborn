@@ -59,8 +59,7 @@ testApp = do
     pure (serve api (server appConf))
 
 
-authenticatedPost path body = request Method.methodPost path [("Authorization", "test-token"), ("content-type", "application/json")] body
-invalidAuthPost path body = request Method.methodPost path [("Authorization", "invalid-token"), ("content-type", "application/json")] body
+authenticatedPost path body = request Method.methodPost path [("GAP-Auth", "alice"), ("content-type", "application/json")] body
 
 waiTest :: IO TestTree
 waiTest = do
@@ -73,10 +72,6 @@ waiTest = do
               `shouldRespondWith`
               [json|{number_objects:0,size:0,owner:"alice",repo:"name",number_commits:0}|]
               {matchStatus = 200}
-        it "checks-auth" $ do
-            invalidAuthPost "/v1/new-repo"
-              [json|{owner: "alice", name: "name", description: "", private: false, initialize: false}|]
-              `shouldRespondWith` 401
 
 
 stringToBytes :: String -> LByteString

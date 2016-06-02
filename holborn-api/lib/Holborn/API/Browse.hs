@@ -20,7 +20,7 @@ import Data.Aeson (object, (.=), FromJSON, decode')
 import Servant
 
 import Holborn.API.Config (AppConf(..))
-import Holborn.Auth (AuthToken(..))
+import Holborn.API.Types (Username)
 import Holborn.Errors (JSONCodeableError(..), APIError(..), jsonErrorHandler)
 import Network.Wai (Application, responseLBS)
 import Network.HTTP.ReverseProxy (waiProxyTo, defaultOnExc, WaiProxyResponse(WPRModifiedRequest, WPRResponse), ProxyDest(..))
@@ -40,21 +40,21 @@ type Owner = Text
 type Repo = Text
 
 type API =
-         Header "Authorization" AuthToken
+         Header "GAP-Auth" Username
          :> Capture "owner" Owner
          :> Capture "repo" Repo
          :> Get '[JSON] BrowseMetaResponse
-    :<|> Header "Authorization" AuthToken
+    :<|> Header "GAP-Auth" Username
          :> Capture "owner" Owner
          :> Capture "repo" Repo
          :> "git" :> "trees"
          :> Raw
-    :<|> Header "Authorization" AuthToken
+    :<|> Header "GAP-Auth" Username
          :> Capture "owner" Owner
          :> Capture "repo" Repo
          :> "git" :> "blobs"
          :> Raw
-    :<|> Header "Authorization" AuthToken
+    :<|> Header "GAP-Auth" Username
          :> Capture "owner" Owner
          :> Capture "repo" Repo
          :> "git" :> "commits"
@@ -87,8 +87,8 @@ poorMansJsonGet manager endpoint = do
     pure resp
 
 
-browse :: AppConf -> Maybe AuthToken -> Owner -> Repo -> ExceptT (APIError BrowseError) IO BrowseMetaResponse
-browse AppConf{httpManager, repoHostname, repoPort} _token owner repo = do
+browse :: AppConf -> Maybe Username -> Owner -> Repo -> ExceptT (APIError BrowseError) IO BrowseMetaResponse
+browse AppConf{httpManager, repoHostname, repoPort} _maybeUsername owner repo = do
     r <- liftIO $ poorMansJsonGet httpManager ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> owner <> "/" <> repo)
     repoMeta <- case r of
         Just x -> pure x
@@ -101,8 +101,8 @@ browse AppConf{httpManager, repoHostname, repoPort} _token owner repo = do
 
 -- Tree, commit & blob are passed straight through if they meet the
 -- authentication requirements.
-treeCommitBlob :: AppConf -> Maybe AuthToken -> Owner -> Repo -> Application
-treeCommitBlob AppConf{httpManager, repoHostname, repoPort} _token owner _repo =
+treeCommitBlob :: AppConf -> Maybe Username -> Owner -> Repo -> Application
+treeCommitBlob AppConf{httpManager, repoHostname, repoPort} _maybeUsername owner _repo =
     waiProxyTo proxy defaultOnExc httpManager
   where
     -- pass the raw request through if the user is authorized
