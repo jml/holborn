@@ -65,8 +65,8 @@ waiTest :: IO TestTree
 waiTest = do
   resetDB
   testSpec "wai-tests" $ with testApp $ do
-    describe "new-repo" $ do
-        it "can-create" $ do
+    describe "the new-repo endpoint" $ do
+        it "creates repo when posted to" $ do
             authenticatedPost "/v1/new-repo"
               [json|{owner: "alice", name: "name", description: "", private: false, initialize: false}|]
               `shouldRespondWith`
