@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeOperators      #-}
 -- | Servant doesn't do JSON errors out of the box but the API returns
 -- only JSON errors.
 --
@@ -14,16 +13,9 @@ module Holborn.Errors
        , jsonErrorHandler
        ) where
 
-import BasicPrelude
-import Control.Error (bimapExceptT)
-import Servant (ServantErr(..), (:~>)(Nat))
-import Control.Monad.Trans.Except (ExceptT)
-import Data.Aeson (Value(..), object, encode)
+import Data.Aeson (object)
 
-
-type HTTPCode = Int
-class JSONCodeableError a where
-    toJSON :: a -> (HTTPCode, Value)
+import Holborn.API.Internal (HTTPCode, JSONCodeableError(..), jsonErrorHandler)
 
 
 data APIError a =
@@ -40,12 +32,3 @@ instance (JSONCodeableError a) => JSONCodeableError (APIError a) where
     toJSON (SubAPIError x) = toJSON x
 
 
-jsonErrorHandler :: JSONCodeableError err => ExceptT err IO :~> ExceptT ServantErr IO
-jsonErrorHandler = Nat (bimapExceptT handleError id)
-  where
-    handleError err = let (code, json) = toJSON err in ServantErr
-      { errHTTPCode = code
-      , errReasonPhrase = "error"
-      , errHeaders = []
-      , errBody = encode json
-      }

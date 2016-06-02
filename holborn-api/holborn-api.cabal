@@ -11,6 +11,7 @@ library
                      , Holborn.API.Auth
                      , Holborn.API.Browse
                      , Holborn.API.Config
+                     , Holborn.API.Internal
                      , Holborn.API.NewRepo
                      , Holborn.API.SSH
                      , Holborn.API.Settings.Profile
