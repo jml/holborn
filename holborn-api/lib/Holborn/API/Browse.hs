@@ -8,6 +8,7 @@
 -- $ curl 127.0.0.1:8002/v1/browse -H "content-type: application/json" -d'{"repo": "jml/holborn", "path": ""}'
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE TypeOperators      #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Holborn.API.Browse
        ( API
@@ -19,6 +20,8 @@ import BasicPrelude
 import Data.Aeson (object, (.=))
 import Servant
 
+import Database.PostgreSQL.Simple (query)
+import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
 import Holborn.API.Types (Username)
 import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, toServantHandler, throwHandlerError, jsonGet')
@@ -26,6 +29,13 @@ import Network.Wai (Application, responseLBS)
 import Network.HTTP.ReverseProxy (waiProxyTo, defaultOnExc, WaiProxyResponse(WPRModifiedRequest, WPRResponse), ProxyDest(..))
 import Network.HTTP.Types.Status (status404)
 import Holborn.JSON.Browse (BrowseMetaResponse(..))
+import Network.HTTP.Client (parseUrl, withResponse, Manager, requestHeaders, responseBody)
+import Network.HTTP.Types.Header (hAccept)
+import Data.ByteString.Lazy (fromStrict)
+import Data.Text as T
+import Holborn.JSON.RepoMeta (RepoId)
+import Web.HttpApiData (ToHttpApiData(..))
+
 
 -- Following imports needed for RPC which we should do in a more
 -- clever way (e.g. cereal library will be 100x faster)
@@ -71,8 +81,19 @@ server conf =
 
 browse :: Maybe Username -> Owner -> Repo -> APIHandler BrowseError BrowseMetaResponse
 browse _maybeUsername owner repo = do
+<<<<<<< HEAD
     AppConf{repoHostname, repoPort} <- getConfig
     r <- jsonGet' ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> owner <> "/" <> repo)
+=======
+    AppConf{httpManager, repoHostname, repoPort} <- getConfig
+    [(_ :: String, repoId :: RepoId)] <- liftIO $ query conn [sql|
+               select 'org', id from "org" where orgname = ? and name = ?
+               UNION
+               select 'user',  id from "user" where username = ? and name = ?
+               |] (owner, repo, owner, repo)
+
+    r <- liftIO $ poorMansJsonGet httpManager ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> toUrlPiece repoId)
+>>>>>>> Move to repository id for disk storage.
     repoMeta <- case r of
         Just x -> pure x
         Nothing -> throwHandlerError NotFound

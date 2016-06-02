@@ -4,6 +4,7 @@ module Holborn.JSON.RepoMeta
        ( RepoMeta(..)
        , newValidRepoName
        , ValidRepoName
+       , RepoId
        )
        where
 
@@ -22,6 +23,9 @@ import Web.HttpApiData (ToHttpApiData(..))
 
 
 newtype ValidRepoName = ValidRepoName Text deriving (Eq, Ord, Show)
+
+
+type RepoId = Int
 
 -- The way to "escape" ValidRepoName when e.g. building a path segment
 -- is via `show` so we need to show the underlying text, not
@@ -78,8 +82,7 @@ instance ToField ValidRepoName where
 
 
 data RepoMeta = RepoMeta
-    { _RepoMeta_owner :: Text
-    , _RepoMeta_repo :: ValidRepoName
+    { _RepoMeta_id :: RepoId
     , _RepoMeta_number_commits :: Int -- git rev-list --count master
     , _RepoMeta_number_objects :: Int -- git count-objects
     , _RepoMeta_size :: Int -- git count-objects

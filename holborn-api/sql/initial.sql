@@ -14,6 +14,7 @@ drop table if exists "user_repo" cascade;
 drop table if exists "org_repo" cascade;
 drop table if exists "public_key" cascade;
 drop table if exists "oauth_token" cascade;
+drop sequence if exists "repo_id_sequence" cascade;
 
 
 create table "user"
@@ -50,10 +51,12 @@ create table "team_member"
     );
 
 
+create sequence repo_id_sequence;
+
 -- User and org repositories are different tables because they have
 -- different permissions etc attached to them.
 create table "user_repo"
-    ( id serial primary key
+    ( id int4 default nextval('repo_id_sequence') primary key
     , name varchar(128) not null
     , description text not null
     , user_id int references "user" (id) not null
@@ -64,7 +67,7 @@ create table "user_repo"
 
 
 create table "org_repo"
-    ( id serial primary key
+    ( id int4 default nextval('repo_id_sequence') primary key
     , name varchar(128) not null
     , description text not null
     , org_id int references "org" (id) not null

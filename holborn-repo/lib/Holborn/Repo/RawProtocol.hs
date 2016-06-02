@@ -26,18 +26,19 @@ import           Holborn.Repo.Config (Config, buildRepoPath, rawPort)
 import           Holborn.Repo.Process (streamIO, proc)
 import qualified Holborn.Logging as Log
 import           Holborn.JSON.SSHRepoCommunication (RepoCall(..), SSHCommandLine(..))
-import Holborn.JSON.RepoMeta (ValidRepoName)
+import Holborn.JSON.RepoMeta (newValidRepoName, ValidRepoName)
+import Holborn.JSON.RepoMeta (RepoId)
 
 
-gitPack :: String -> Config -> Text -> ValidRepoName -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
-gitPack packCommand config org repo from to = do
-    void $ streamIO (proc packCommand [buildRepoPath config org repo]) from to
+gitPack :: String -> Config -> RepoId -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
+gitPack packCommand config repoId from to = do
+    void $ streamIO (proc packCommand [buildRepoPath config repoId]) from to
     return ()
 
-gitUploadPack :: Config -> Text -> ValidRepoName -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
+gitUploadPack :: Config -> RepoId -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
 gitUploadPack = gitPack "git-upload-pack"
 
-gitReceivePack :: Config -> Text -> ValidRepoName -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
+gitReceivePack :: Config -> RepoId -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
 gitReceivePack = gitPack "git-receive-pack"
 
 
@@ -64,10 +65,10 @@ accept config (sock, _) = do
     (header, fromRest) <- runStateT getRepoParser from
     Log.debug header
     void $ case header of
-        Just (WritableRepoCall (GitUploadPack org repo)) ->
-            gitUploadPack config org repo fromRest to
-        Just (WritableRepoCall (GitReceivePack org repo)) ->
-            gitReceivePack config org repo fromRest to
+        Just (WritableRepoCall _ repoId) ->
+            gitUploadPack config repoId fromRest to
+        Just (WritableRepoCall _ repoId) ->
+            gitReceivePack config repoId fromRest to
             -- TODO: This doesn't appear to abort the connection, which is
             -- what we want it to do.
         _ -> terror $ "Bad header: " <> show header
