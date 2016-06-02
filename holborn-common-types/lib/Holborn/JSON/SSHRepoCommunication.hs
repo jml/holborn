@@ -31,6 +31,7 @@ import System.IO (hClose)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
 import System.Process (runInteractiveCommand)
 import Holborn.JSON.RepoMeta (ValidRepoName, newValidRepoName)
+import Web.HttpApiData (toUrlPiece)
 
 
 import Test.QuickCheck
@@ -91,8 +92,8 @@ parseSSHCommand :: MonadPlus m => Text -> m SSHCommandLine
 parseSSHCommand = rightZ . AT.parseOnly sshCommand
 
 unparseSSHCommand :: SSHCommandLine -> Text
-unparseSSHCommand (GitReceivePack owner repo) = "git-receive-pack '" <> owner <> "/" <> show repo <> "'"
-unparseSSHCommand (GitUploadPack owner repo) = "git-upload-pack '" <> owner <> "/" <> show repo <> "'"
+unparseSSHCommand (GitReceivePack owner repo) = "git-receive-pack '" <> owner <> "/" <> toUrlPiece repo <> "'"
+unparseSSHCommand (GitUploadPack owner repo) = "git-upload-pack '" <> owner <> "/" <> toUrlPiece repo <> "'"
 
 
 instance Arbitrary SSHCommandLine where
