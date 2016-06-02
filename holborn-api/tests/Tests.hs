@@ -27,7 +27,6 @@ import Test.Tasty.QuickCheck
 
 main :: IO ()
 main = do
-    waiTests <- waiTest
     defaultMain (testGroup "all" [tests])
 
 
@@ -62,6 +61,7 @@ authenticatedPost path body = request Method.methodPost path [("GAP-Auth", "alic
 
 waiTest :: IO TestTree
 waiTest = do
+  resetDB
   testSpec "wai-tests" $ with testApp $ do
     describe "the new-repo endpoint" $ do
         it "creates repo when posted to" $ do

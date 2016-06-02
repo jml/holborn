@@ -16,7 +16,7 @@ import Servant
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, handlerError, query)
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, throwHandlerError, query)
 import Holborn.JSON.NewRepo (NewRepoRequest(..))
 import Holborn.JSON.RepoMeta (RepoMeta(..))
 import Holborn.API.Auth (getUserId)
@@ -58,7 +58,7 @@ newRepo username NewRepoRequest{..} = do
     case result of
          [("org" :: String, orgId :: Int)] -> newOrgRepo orgId
          [("user" :: String, userId' :: Int)] -> newUserRepo userId'
-         [] -> handlerError OwnerNotFound
+         [] -> throwHandlerError OwnerNotFound
          _ -> terror "Unexpected number of rows in newRepo"
 
   where

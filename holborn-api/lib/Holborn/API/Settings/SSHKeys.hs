@@ -20,7 +20,7 @@ import Servant
 import Holborn.API.Config (AppConf(..))
 import Holborn.JSON.SSHRepoCommunication (parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
-import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, handlerError, execute, query)
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, throwHandlerError, execute, query)
 import Holborn.API.Auth (getUserId)
 import qualified Holborn.Logging as Log
 import Holborn.API.Types (Username)
@@ -78,8 +78,8 @@ deleteKey username keyId = do
 addKey :: Maybe Username -> AddKeyData -> APIHandler KeyError ListKeysRow
 addKey username AddKeyData{..} = do
     let sshKey = parseSSHKey (encodeUtf8 _AddKeyData_key)
-    when (isNothing sshKey) (handlerError InvalidSSHKey)
-    when (_AddKeyData_title == "") (handlerError EmptyTitle)
+    when (isNothing sshKey) (throwHandlerError InvalidSSHKey)
+    when (_AddKeyData_title == "") (throwHandlerError EmptyTitle)
     userId <- getUserId username
 
     [Only id_] <- query [sql|
