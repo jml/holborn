@@ -21,7 +21,8 @@ import Holborn.API.Config (AppConf(..))
 import Holborn.JSON.Settings.Profile (ProfileData(..))
 import Holborn.API.Types (Username)
 import Holborn.API.Auth (getUserId)
-import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
+import Holborn.API.Internal (JSONCodeableError(..), toServantHandler)
+import Holborn.Errors (APIError(..))
 
 
 type API =
@@ -40,7 +41,7 @@ instance JSONCodeableError Error where
 
 
 server :: AppConf -> Server API
-server conf = enter jsonErrorHandler $
+server conf = enter toServantHandler $
     getUser conf
     :<|> getAuthorizedUser conf
     :<|> postAuthorizedUser conf

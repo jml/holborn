@@ -4,7 +4,7 @@
 module Holborn.API.Internal
   ( HTTPCode
   , JSONCodeableError(..)
-  , jsonErrorHandler
+  , toServantHandler
   ) where
 
 import BasicPrelude
@@ -34,5 +34,8 @@ toServantErr err =
     (code, json) = toJSON err
 
 
-jsonErrorHandler :: JSONCodeableError err => ExceptT err IO :~> ExceptT ServantErr IO
-jsonErrorHandler = Nat (bimapExceptT toServantErr id)
+-- | Turn a Holborn.API-specific handler into a generic Servant handler.
+--
+-- Use with 'enter'.
+toServantHandler :: JSONCodeableError err => ExceptT err IO :~> ExceptT ServantErr IO
+toServantHandler = Nat (bimapExceptT toServantErr id)

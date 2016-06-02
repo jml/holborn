@@ -16,7 +16,8 @@ import Servant
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
-import Holborn.Errors (JSONCodeableError(..), APIError(..), jsonErrorHandler)
+import Holborn.Errors (APIError(..))
+import Holborn.API.Internal (JSONCodeableError(..), toServantHandler)
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Holborn.JSON.NewRepo (NewRepoRequest(..))
 import Holborn.JSON.RepoMeta (RepoMeta(..))
@@ -41,7 +42,7 @@ instance JSONCodeableError NewRepoError where
 
 server :: AppConf -> Server API
 server conf =
-  enter jsonErrorHandler (newRepo conf)
+  enter toServantHandler (newRepo conf)
 
 
 newRepo :: AppConf -> Maybe Username -> NewRepoRequest -> ExceptT (APIError NewRepoError) IO RepoMeta

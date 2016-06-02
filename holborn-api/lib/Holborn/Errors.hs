@@ -10,12 +10,11 @@ module Holborn.Errors
        ( HTTPCode
        , JSONCodeableError(..)
        , APIError(..)
-       , jsonErrorHandler
        ) where
 
 import Data.Aeson (object)
 
-import Holborn.API.Internal (HTTPCode, JSONCodeableError(..), jsonErrorHandler)
+import Holborn.API.Internal (HTTPCode, JSONCodeableError(..))
 
 
 data APIError a =

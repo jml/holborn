@@ -21,7 +21,8 @@ import Servant
 
 import Holborn.API.Config (AppConf(..))
 import Holborn.API.Types (Username)
-import Holborn.Errors (JSONCodeableError(..), APIError(..), jsonErrorHandler)
+import Holborn.Errors (APIError(..))
+import Holborn.API.Internal (JSONCodeableError(..), toServantHandler)
 import Network.Wai (Application, responseLBS)
 import Network.HTTP.ReverseProxy (waiProxyTo, defaultOnExc, WaiProxyResponse(WPRModifiedRequest, WPRResponse), ProxyDest(..))
 import Network.HTTP.Types.Status (status404)
@@ -68,7 +69,7 @@ instance JSONCodeableError BrowseError where
 
 server :: AppConf -> Server API
 server conf =
-  enter jsonErrorHandler (browse conf)
+  enter toServantHandler (browse conf)
   :<|> treeCommitBlob conf
   :<|> treeCommitBlob conf
   :<|> treeCommitBlob conf

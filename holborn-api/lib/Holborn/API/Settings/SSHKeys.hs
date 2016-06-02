@@ -21,7 +21,8 @@ import Servant
 import Holborn.API.Config (AppConf(..))
 import Holborn.JSON.SSHRepoCommunication (parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
-import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
+import Holborn.Errors (APIError(..))
+import Holborn.API.Internal (JSONCodeableError(..), toServantHandler)
 import Holborn.API.Auth (getUserId)
 import qualified Holborn.Logging as Log
 import Holborn.API.Types (Username)
@@ -46,7 +47,7 @@ instance JSONCodeableError KeyError where
 
 
 server :: AppConf -> Server API
-server conf = enter jsonErrorHandler $
+server conf = enter toServantHandler $
     listKeys conf
     :<|> getKey conf
     :<|> deleteKey conf
