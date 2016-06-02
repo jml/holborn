@@ -15,8 +15,7 @@ import Holborn.JSON.SSHRepoCommunication (RepoCall)
 import qualified Network.HTTP.Types.Method as Method
 import Network.Wai (Application)
 import Servant (serve)
-import System.Process (callCommand)
-import System.Process (shell, readCreateProcess)
+import System.Process (callCommand, shell, readCreateProcess)
 import Test.Hspec.Wai (with, request, shouldRespondWith, ResponseMatcher(..))
 import Test.Hspec.Wai.JSON (json)
 import Test.QuickCheck.Monadic (PropertyM, assert, monadicIO, monitor, run)
@@ -29,7 +28,7 @@ import Test.Tasty.QuickCheck
 main :: IO ()
 main = do
     waiTests <- waiTest
-    defaultMain (testGroup "all" [waiTests, tests])
+    defaultMain (testGroup "all" [tests])
 
 
 resetDB :: IO ()
@@ -63,7 +62,6 @@ authenticatedPost path body = request Method.methodPost path [("GAP-Auth", "alic
 
 waiTest :: IO TestTree
 waiTest = do
-  resetDB
   testSpec "wai-tests" $ with testApp $ do
     describe "the new-repo endpoint" $ do
         it "creates repo when posted to" $ do
