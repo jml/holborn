@@ -21,12 +21,18 @@ class JSONCodeableError a where
     toJSON :: a -> (HTTPCode, Value)
 
 
-jsonErrorHandler :: JSONCodeableError err => ExceptT err IO :~> ExceptT ServantErr IO
-jsonErrorHandler = Nat (bimapExceptT handleError id)
+-- | Convert a JSONCodeableError into a ServantErr
+toServantErr :: JSONCodeableError err => err -> ServantErr
+toServantErr err =
+  ServantErr
+  { errHTTPCode = code
+  , errReasonPhrase = "error"
+  , errHeaders = []
+  , errBody = encode json
+  }
   where
-    handleError err = let (code, json) = toJSON err in ServantErr
-      { errHTTPCode = code
-      , errReasonPhrase = "error"
-      , errHeaders = []
-      , errBody = encode json
-      }
+    (code, json) = toJSON err
+
+
+jsonErrorHandler :: JSONCodeableError err => ExceptT err IO :~> ExceptT ServantErr IO
+jsonErrorHandler = Nat (bimapExceptT toServantErr id)
