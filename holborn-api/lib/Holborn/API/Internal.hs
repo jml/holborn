@@ -2,7 +2,8 @@
 
 -- | Internal logic for how API requests work.
 module Holborn.API.Internal
-  ( JSONCodeableError(..)
+  ( APIHandler
+  , JSONCodeableError(..)
   , toServantHandler
   , handlerError
   -- | Used in support code. Handlers should use the above instead.
@@ -69,8 +70,13 @@ handlerError :: (Monad m, JSONCodeableError err) => err -> ExceptT (APIError err
 handlerError = throwE . SubAPIError
 
 
+-- | Basic type for all of the handlers of Holborn.API.
+type APIHandler err = ExceptT (APIError err) IO
+
+
+
 -- | Turn a Holborn.API-specific handler into a generic Servant handler.
 --
 -- Use with 'enter'.
-toServantHandler :: JSONCodeableError err => ExceptT err IO :~> ExceptT ServantErr IO
+toServantHandler :: JSONCodeableError err => APIHandler err :~> ExceptT ServantErr IO
 toServantHandler = Nat (bimapExceptT toServantErr id)

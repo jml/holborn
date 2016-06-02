@@ -13,7 +13,6 @@ import BasicPrelude
 
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Control.Monad.Trans.Except (ExceptT)
 import Data.Aeson (object, (.=))
 import Servant
 
@@ -21,7 +20,7 @@ import Holborn.API.Config (AppConf(..))
 import Holborn.JSON.Settings.Profile (ProfileData(..))
 import Holborn.API.Types (Username)
 import Holborn.API.Auth (getUserId)
-import Holborn.API.Internal (APIError, JSONCodeableError(..), toServantHandler, handlerError)
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, handlerError)
 
 
 type API =
@@ -46,7 +45,7 @@ server conf = enter toServantHandler $
     :<|> postAuthorizedUser conf
 
 
-getUser :: AppConf -> Username -> ExceptT (APIError Error) IO ProfileData
+getUser :: AppConf -> Username -> APIHandler Error ProfileData
 getUser AppConf{conn} username = do
     r <- liftIO $ query conn [sql|
                    select id, username, created
@@ -61,7 +60,7 @@ getUser AppConf{conn} username = do
 
 -- TODO The function to fetch the current user should go somewhere
 -- other than profile settings?
-getAuthorizedUser :: AppConf -> Maybe Username -> ExceptT (APIError Error) IO ProfileData
+getAuthorizedUser :: AppConf -> Maybe Username -> APIHandler Error ProfileData
 getAuthorizedUser conf@AppConf{conn} username = do
     userId <- getUserId conf username
     r <- liftIO $ query conn [sql|
@@ -73,5 +72,5 @@ getAuthorizedUser conf@AppConf{conn} username = do
         _ -> handlerError UserNotInDb -- TODO more informative error by encrypting context and sending it to the user
 
 
-postAuthorizedUser :: AppConf -> Maybe Username -> ProfileData -> ExceptT (APIError Error) IO ()
+postAuthorizedUser :: AppConf -> Maybe Username -> ProfileData -> APIHandler Error ()
 postAuthorizedUser _conf _username _newProfile = undefined

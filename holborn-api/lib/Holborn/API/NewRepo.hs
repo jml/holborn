@@ -16,8 +16,7 @@ import Servant
 import Database.PostgreSQL.Simple (Only (..), query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Internal (APIError, JSONCodeableError(..), toServantHandler, handlerError)
-import Control.Monad.Trans.Except (ExceptT)
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, handlerError)
 import Holborn.JSON.NewRepo (NewRepoRequest(..))
 import Holborn.JSON.RepoMeta (RepoMeta(..))
 import Holborn.API.Auth (getUserId)
@@ -44,7 +43,7 @@ server conf =
   enter toServantHandler (newRepo conf)
 
 
-newRepo :: AppConf -> Maybe Username -> NewRepoRequest -> ExceptT (APIError NewRepoError) IO RepoMeta
+newRepo :: AppConf -> Maybe Username -> NewRepoRequest -> APIHandler NewRepoError RepoMeta
 newRepo appconf@AppConf{conn} username NewRepoRequest{..} = do
     userId <- getUserId appconf username
 

@@ -14,14 +14,13 @@ import BasicPrelude
 
 import Database.PostgreSQL.Simple (Only (..), execute, query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Control.Monad.Trans.Except (ExceptT)
 import Data.Aeson (object, (.=))
 import Servant
 
 import Holborn.API.Config (AppConf(..))
 import Holborn.JSON.SSHRepoCommunication (parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
-import Holborn.API.Internal (APIError, JSONCodeableError(..), toServantHandler, handlerError)
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, handlerError)
 import Holborn.API.Auth (getUserId)
 import qualified Holborn.Logging as Log
 import Holborn.API.Types (Username)
@@ -53,7 +52,7 @@ server conf = enter toServantHandler $
     :<|> addKey conf
 
 
-listKeys :: AppConf -> Username -> ExceptT (APIError KeyError) IO [ListKeysRow]
+listKeys :: AppConf -> Username -> APIHandler KeyError [ListKeysRow]
 listKeys AppConf{conn=conn} username = do
     r <- liftIO $ query conn [sql|
                    select id, comparison_pubkey, name, verified, readonly, created
@@ -62,11 +61,11 @@ listKeys AppConf{conn=conn} username = do
     return r
 
 
-getKey :: AppConf -> Int -> ExceptT (APIError KeyError) IO ListKeysRow
+getKey :: AppConf -> Int -> APIHandler KeyError ListKeysRow
 getKey _conf _keyId = undefined
 
 
-deleteKey :: AppConf -> Maybe Username -> Int -> ExceptT (APIError KeyError) IO ()
+deleteKey :: AppConf -> Maybe Username -> Int -> APIHandler KeyError ()
 deleteKey appconf@AppConf{conn=conn} username keyId = do
     userId <- getUserId appconf username
 
@@ -77,7 +76,7 @@ deleteKey appconf@AppConf{conn=conn} username keyId = do
     return ()
 
 
-addKey :: AppConf -> Maybe Username -> AddKeyData -> ExceptT (APIError KeyError) IO ListKeysRow
+addKey :: AppConf -> Maybe Username -> AddKeyData -> APIHandler KeyError ListKeysRow
 addKey appconf@AppConf{conn=conn} username AddKeyData{..} = do
     let sshKey = parseSSHKey (encodeUtf8 _AddKeyData_key)
     when (isNothing sshKey) (handlerError InvalidSSHKey)

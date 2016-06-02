@@ -6,12 +6,12 @@ module Holborn.API.Auth
 
 import BasicPrelude
 
-import Control.Monad.Trans.Except (ExceptT, throwE)
+import Control.Monad.Trans.Except (throwE)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Database.PostgreSQL.Simple (Connection, Only (..), query)
 
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Internal (APIError(..))
+import Holborn.API.Internal (APIError(..), APIHandler)
 import Holborn.API.Types (Username)
 
 
@@ -30,7 +30,7 @@ userFromUsername c username = do
 
 
 -- ExceptT trying to auth the user
-getUserId :: AppConf -> Maybe Username -> ExceptT (APIError a) IO UserId
+getUserId :: AppConf -> Maybe Username -> APIHandler a UserId
 getUserId _ Nothing = throwE MissingAuthToken
 getUserId AppConf{conn} (Just username) = do
     maybeUser <- liftIO (userFromUsername conn username)
