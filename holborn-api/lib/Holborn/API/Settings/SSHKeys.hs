@@ -20,9 +20,16 @@ import Servant
 import Holborn.API.Config (AppConf(..))
 import Holborn.JSON.SSHRepoCommunication (parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
-import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, throwHandlerError, execute, query)
+import Holborn.API.Internal
+  ( APIHandler
+  , JSONCodeableError(..)
+  , toServantHandler
+  , throwHandlerError
+  , execute
+  , query
+  , logDebug
+  )
 import Holborn.API.Auth (getUserId)
-import qualified Holborn.Logging as Log
 import Holborn.API.Types (Username)
 
 
@@ -71,7 +78,7 @@ deleteKey username keyId = do
     count <- execute [sql|
             delete from "public_key" where id = ? and owner_id = ?
             |] (keyId, userId)
-    Log.debug count
+    logDebug count
     return ()
 
 

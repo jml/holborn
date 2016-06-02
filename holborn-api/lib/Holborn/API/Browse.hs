@@ -16,20 +16,16 @@ module Holborn.API.Browse
 
 import BasicPrelude
 
-import Data.Aeson (object, (.=), FromJSON, decode')
+import Data.Aeson (object, (.=))
 import Servant
 
 import Holborn.API.Config (AppConf(..))
 import Holborn.API.Types (Username)
-import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, toServantHandler, throwHandlerError)
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, toServantHandler, throwHandlerError, jsonGet')
 import Network.Wai (Application, responseLBS)
 import Network.HTTP.ReverseProxy (waiProxyTo, defaultOnExc, WaiProxyResponse(WPRModifiedRequest, WPRResponse), ProxyDest(..))
 import Network.HTTP.Types.Status (status404)
 import Holborn.JSON.Browse (BrowseMetaResponse(..))
-import Network.HTTP.Client (parseUrl, withResponse, Manager, requestHeaders, responseBody)
-import Network.HTTP.Types.Header (hAccept)
-import Data.ByteString.Lazy (fromStrict)
-import Data.Text as T
 
 -- Following imports needed for RPC which we should do in a more
 -- clever way (e.g. cereal library will be 100x faster)
@@ -73,23 +69,10 @@ server conf =
   :<|> treeCommitBlob conf
 
 
--- | We're calling repo to get a JSON fragment which we then
--- incorporate into a larger JSON response. This should probably some
--- better RPC mechanism.
-poorMansJsonGet :: (FromJSON a) => Manager -> Text -> IO (Maybe a)
-poorMansJsonGet manager endpoint = do
-    r <- parseUrl (T.unpack endpoint)
-    let rJson = r { requestHeaders = [(hAccept, "application/json")] }
-    resp <- withResponse rJson manager $ \response -> do
-      body <- fmap fromStrict (responseBody response)
-      return $ decode' body
-    pure resp
-
-
 browse :: Maybe Username -> Owner -> Repo -> APIHandler BrowseError BrowseMetaResponse
 browse _maybeUsername owner repo = do
-    AppConf{httpManager, repoHostname, repoPort} <- getConfig
-    r <- liftIO $ poorMansJsonGet httpManager ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> owner <> "/" <> repo)
+    AppConf{repoHostname, repoPort} <- getConfig
+    r <- jsonGet' ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> owner <> "/" <> repo)
     repoMeta <- case r of
         Just x -> pure x
         Nothing -> throwHandlerError NotFound

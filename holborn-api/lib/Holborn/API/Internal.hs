@@ -7,23 +7,33 @@ module Holborn.API.Internal
   -- | Manipulate the database
   , query
   , execute
-  , JSONCodeableError(..)
+  -- | Call backends
+  , jsonGet'
+  -- | Logging
+  , logDebug
+  -- | Integrate with Servant
   , toServantHandler
-  , throwAPIError
+  -- | Error handling
+  , JSONCodeableError(..)
   , throwHandlerError
-  -- | Used in support code. Handlers should use the above instead.
+  -- | Used in support code. Handlers should use throwHandlerError instead.
   , APIError(..)
+  , throwAPIError
   ) where
 
 import BasicPrelude
 import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
-import Data.Aeson (Value, encode, object)
+import Data.Aeson (FromJSON, Value, decode', encode, object)
+import Data.ByteString.Lazy (fromStrict)
 import qualified Database.PostgreSQL.Simple as PostgreSQL
+import Network.HTTP.Client (Request, parseUrl, withResponse, requestHeaders, responseBody)
+import Network.HTTP.Types.Header (hAccept)
 import Servant (ServantErr(..), (:~>)(Nat))
 
 import Holborn.API.Config (AppConf(..))
+import Holborn.Logging (debug)
 
 
 type HttpCode = Int
@@ -85,12 +95,18 @@ throwAPIError = APIHandler . lift . throwE
 
 
 -- | Basic type for all of the handlers of Holborn.API.
---
--- TODO: This really shouldn't derive MonadIO, but rather instead we should
--- export functions that do whatever we need IO for.
 newtype APIHandler err a =
   APIHandler { runAPIHandler :: ReaderT AppConf (ExceptT (APIError err) IO) a }
-  deriving (Functor, Applicative, Monad, MonadIO)
+  deriving (Functor, Applicative, Monad)
+
+-- | Turn a Holborn.API-specific handler into a generic Servant handler.
+--
+-- Use with 'enter'.
+toServantHandler :: JSONCodeableError err => AppConf -> APIHandler err :~> ExceptT ServantErr IO
+toServantHandler appConf = Nat (toServantHandler' appConf)
+
+toServantHandler' :: JSONCodeableError err => AppConf -> APIHandler err a -> ExceptT ServantErr IO a
+toServantHandler' appConf handler = bimapExceptT toServantErr id (runReaderT (runAPIHandler handler) appConf)
 
 
 -- | Load the application configuration
@@ -111,12 +127,27 @@ execute sql values = do
   APIHandler $ liftIO $ PostgreSQL.execute conn sql values
 
 
--- | Turn a Holborn.API-specific handler into a generic Servant handler.
+-- | Call a backend, asking for a JSON response.
 --
--- Use with 'enter'.
-toServantHandler :: JSONCodeableError err => AppConf -> APIHandler err :~> ExceptT ServantErr IO
-toServantHandler appConf = Nat (toServantHandler' appConf)
+-- Will eagerly load the entire response into memory and convert all of the
+-- JSON values to Haskell values.
+jsonGet' :: (FromJSON a) => Text -> APIHandler err (Maybe a)
+jsonGet' endpoint = do
+    AppConf{httpManager} <- getConfig
+    r <- parseUrl' endpoint
+    let rJson = r { requestHeaders = [(hAccept, "application/json")] }
+    APIHandler $ liftIO $ withResponse rJson httpManager $ \response -> do
+      body <- fmap fromStrict (responseBody response)
+      return $ decode' body
 
 
-toServantHandler' :: JSONCodeableError err => AppConf -> APIHandler err a -> ExceptT ServantErr IO a
-toServantHandler' appConf handler = bimapExceptT toServantErr id (runReaderT (runAPIHandler handler) appConf)
+    where
+      parseUrl' :: Text -> APIHandler err Request
+      -- XXX: This throws in IO, which sucks. Figure out how to catch it and
+      -- return an APIError instead.
+      parseUrl' = APIHandler . parseUrl . textToString
+
+
+-- | Log something for debugging
+logDebug :: Show s => s -> APIHandler err ()
+logDebug thing = APIHandler $ debug thing
