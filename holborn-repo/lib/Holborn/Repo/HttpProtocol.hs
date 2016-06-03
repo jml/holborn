@@ -30,11 +30,13 @@ import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import           Servant ((:>), (:<|>)(..), Capture, QueryParam, Proxy(..), Server, Raw)
 import           Text.Printf (printf)
 import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
+import Data.Text (unpack)
 
 import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
-import Holborn.Repo.Config (Config, buildRepoPath)
+import Holborn.Repo.Config (Config(..), buildRepoPath)
 import Holborn.Repo.GitLayer (makeRepository)
 import Holborn.JSON.RepoMeta (RepoId)
+import Holborn.Repo.LazyInit (lazyInit)
 
 
 -- | The git pull & push repository API. The URL schema is borrowed
@@ -49,10 +51,17 @@ type RepoAPI =
 repoAPI :: Proxy RepoAPI
 repoAPI = Proxy
 
+-- | Data type to describe where the repository lives on disk. Will
+-- probably be extended to handle implicit clones.
+data DiskLocation = DiskLocation { _repoRoot :: FilePath, _repoId :: RepoId }
+
+diskLocationToString :: DiskLocation -> String
+diskLocationToString DiskLocation{..} = _repoRoot <> "/" <> unpack (toUrlPiece _repoId)
+
 
 repoServer :: Config -> Server RepoAPI
-repoServer config repoId =
-    codeBrowser repo :<|> gitProtocolAPI repoPath
+repoServer config@Config{repoRoot} repoId =
+    codeBrowser repo :<|> gitProtocolAPI (DiskLocation repoRoot repoId)
     where
       repo = makeRepository repoId repoPath
       repoPath = buildRepoPath config repoId
@@ -71,7 +80,7 @@ type GitProtocolAPI =
 -- by moving it to:
 -- data GitCommand = GitReceivePack | GitUploadPack
 -- data SSHCommandLine = SSHCommandLine GitCommand Text ValidRepoName
-data GitService = GitUploadPack | GitReceivePack
+data GitService = GitUploadPack | GitReceivePack deriving (Show)
 
 stringyService :: IsString a => GitService -> a
 stringyService serviceType = case serviceType of
@@ -90,23 +99,30 @@ instance FromHttpApiData GitService where
 data GitResponse = Service | Advertisement
 
 
-gitProtocolAPI :: FilePath -> Server GitProtocolAPI
-gitProtocolAPI repoPath =
-  smartHandshake repoPath
-  :<|> gitServe GitUploadPack repoPath
-  :<|> gitServe GitReceivePack repoPath
+gitProtocolAPI :: DiskLocation -> Server GitProtocolAPI
+gitProtocolAPI diskLocation =
+  smartHandshake diskLocation
+  :<|> gitServe GitUploadPack diskLocation
+  :<|> gitServe GitReceivePack diskLocation
 
 
-smartHandshake :: FilePath -> Maybe GitService -> Application
-smartHandshake repoPath service =
+
+
+smartHandshake :: DiskLocation -> Maybe GitService -> Application
+smartHandshake diskLocation@DiskLocation{..} service =
     handshakeApp
   where
     handshakeApp :: Application
-    handshakeApp _req respond =
+    handshakeApp _req respond = do
+        -- NB we're lazy-initing on both push and pull, so we allow
+        -- cloning of empty repositories. The user will see:
+        -- "warning: You appear to have cloned an empty repository."
+        -- TODO: error logging
+        void (lazyInit _repoRoot _repoId)
         respond $ maybe backupResponse gitResponse service
 
     gitResponse :: GitService -> Response
-    gitResponse serviceType =
+    gitResponse serviceType = do
         responseStream
             ok200
             (gitHeaders serviceType Advertisement)
@@ -119,7 +135,7 @@ smartHandshake repoPath service =
     gitPack' serviceType moreData _flush =
         runShell $ (
             banner serviceName
-            >> (producerCmd (serviceName ++ " --stateless-rpc --advertise-refs " ++ repoPath) >-> filterStdErr)
+            >> (producerCmd (serviceName ++ " --stateless-rpc --advertise-refs " ++ (diskLocationToString diskLocation)) >-> filterStdErr)
             >> footer) >-> sendChunks moreData
       where
 
@@ -142,15 +158,15 @@ smartHandshake repoPath service =
     footer = yield ""
 
 
-gitServe :: GitService -> FilePath -> Application
-gitServe serviceType repoPath = localrespond
+gitServe :: GitService -> DiskLocation -> Application
+gitServe serviceType diskLocation = localrespond
   where
     localrespond :: Application
     localrespond req respond =
         respond $ responseStream
           ok200
           (gitHeaders serviceType Service)
-          (gitPack repoPath serviceType (producerRequestBody req))
+          (gitPack diskLocation serviceType (producerRequestBody req))
 
 
 gitHeaders :: GitService -> GitResponse -> RequestHeaders
@@ -167,10 +183,10 @@ gitHeaders serviceType gitResponse =
       Advertisement -> "advertisement"
 
 
-gitPack :: FilePath -> GitService -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
-gitPack repoPath serviceType postDataProducer moreData _flush =
+gitPack :: DiskLocation -> GitService -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
+gitPack diskLocation serviceType postDataProducer moreData _flush =
     runShell $
-    postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ repoPath) >-> filterStdErr
+    postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ (diskLocationToString diskLocation)) >-> filterStdErr
         >-> sendChunks moreData
   where
     service = stringyService serviceType

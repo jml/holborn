@@ -22,15 +22,18 @@ import           Pipes.Network.TCP.Safe (serve, fromSocket, toSocket)
 import qualified Pipes.Parse as PP
 import           Pipes.Safe (runSafeT)
 import           Pipes.Aeson (decode)
-import           Holborn.Repo.Config (Config, buildRepoPath, rawPort)
+import           Holborn.Repo.Config (Config(..), buildRepoPath, rawPort)
 import           Holborn.Repo.Process (streamIO, proc)
 import qualified Holborn.Logging as Log
 import           Holborn.JSON.SSHRepoCommunication (RepoCall(..), SSHCommandLine(..))
 import Holborn.JSON.RepoMeta (RepoId)
+import Holborn.Repo.LazyInit (lazyInit)
 
 
 gitPack :: String -> Config -> RepoId -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
-gitPack packCommand config repoId from to = do
+gitPack packCommand config@Config{repoRoot} repoId from to = do
+    -- TOOD error handling & logging
+    void $ lazyInit repoRoot repoId
     void $ streamIO (proc packCommand [buildRepoPath config repoId]) from to
     return ()
 
