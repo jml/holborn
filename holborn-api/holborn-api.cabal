@@ -41,7 +41,7 @@ library
                      , holborn-common-types >= 0.1.3
 
   hs-source-dirs:      lib
-  ghc-options:         -Wall
+  ghc-options:         -Wall -Werror
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
@@ -74,6 +74,7 @@ Test-Suite holborn-api-tests
                      , http-types
 
   hs-source-dirs:      tests
+  ghc-options:         -Wall -eventlog
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
@@ -96,7 +97,7 @@ executable holborn-api-server
                      , holborn-common-types
                      , wai-cors
 
-  ghc-options:         -eventlog
+  ghc-options:         -Wall -Werror -eventlog
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
                      , NamedFieldPuns

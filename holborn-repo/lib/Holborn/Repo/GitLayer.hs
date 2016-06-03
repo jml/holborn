@@ -37,7 +37,7 @@ import Data.Aeson.Types (Options(fieldLabelModifier, omitNothingFields))
 import GHC.Generics (Generic)
 import Data.Conduit.Combinators (sinkList)
 import qualified Data.Conduit.List as CL
-import Data.Conduit (Conduit, runConduit, yield, awaitForever, (=$=), await)
+import Data.Conduit (runConduit, yield, awaitForever, (=$=))
 import Servant (MimeRender(mimeRender))
 import qualified Data.ByteString.Char8 as BSC8
 
@@ -152,7 +152,7 @@ instance ToMarkup Blob where
         -- TODO: Handle unparseable files better. In the meantime, show our
         -- parse error so we can debug better.
         H.div $ do
-          "Could not parse"
+          void "Could not parse"
           H.pre $ toMarkup (show e)
         H.pre $ toMarkup (decodeUtf8 contents)
       Right annotated -> toMarkup annotated
@@ -174,7 +174,7 @@ instance MimeRender RenderedJson Blob where
          , ("path", toJSON blobPath)
          ]
        rendered = renderMarkup $ case annotateCode filename blobContents of
-           Left e -> toMarkup (decodeUtf8 blobContents)
+           Left _ -> toMarkup (decodeUtf8 blobContents)
            Right annotated -> toMarkup annotated
        filename = intercalate "/" blobPath
 
@@ -200,7 +200,7 @@ getBlob revision segments repo = do
             Just entry' ->
               case entry' of
                 Git.TreeEntry _treeEntryOid -> notImplementedYet "redirect to tree"
-                Git.BlobEntry blobEntryOid blobEntryKind -> do
+                Git.BlobEntry blobEntryOid _blobEntryKind -> do
                   blob <- Git.lookupBlob blobEntryOid
                   -- XXX: Loads the entire blob into memory.
                   -- Comment tom: limit to e.g. 10MB for API here, and do the rest with a
@@ -213,7 +213,7 @@ getBlob revision segments repo = do
     resolveReference = Git.resolveReference . revisionReference
 
 
-data Commit = Commit
+data Commit
 
 instance ToMarkup Commit where
   toMarkup = undefined
@@ -248,11 +248,16 @@ instance ToHttpApiData Revision where
 
 data TreeEntryMetaMode = SymlinkMode | BlobMode | ExecutableBlobMode | TreeMode deriving (Show)
 
+data EntryType = TreeEntry | BlobEntry | CommitEntry deriving (Eq, Show, Generic)
+
+instance ToJSON EntryType where
+  toJSON = genericToJSON defaultOptions
+
 -- TODO probably better off in common types
 data TreeEntryMeta = TreeEntryMeta
     { _TreeEntryMeta_path :: Text
     , _TreeEntryMeta_mode :: TreeEntryMetaMode
-    , _TreeEntryMeta_type_ :: Text -- TODO better types + ToJSON instances
+    , _TreeEntryMeta_type_ :: EntryType
     , _TreeEntryMeta_size :: Maybe Int -- doesn't apply to e.g. directories ATM
     , _TreeEntryMeta_sha :: Text
     } deriving (Show, Generic)
@@ -316,9 +321,9 @@ loadTree revision segments repo tree entry = do
   where
     compareEntriesMeta (path1, TreeEntryMeta{_TreeEntryMeta_type_=type1}) (path2, TreeEntryMeta{_TreeEntryMeta_type_=type2}) =
       case (type1, type2) of
-          ("tree", "tree") -> compare path1 path2
-          ("tree", _) -> LT
-          (_, "tree") -> GT
+          (TreeEntry, TreeEntry) -> compare path1 path2
+          (TreeEntry, _) -> LT
+          (_, TreeEntry) -> GT
           _ -> compare path1 path2
 
     -- TODO: compresses empty paths like
@@ -331,17 +336,16 @@ loadTree revision segments repo tree entry = do
     -- structure we're getting here...
     -- Right now we only keep the top level files, i.e. if a file is in a
     -- subtree (a/README.md) we're not keeping it.
-    compressPaths = awaitForever $ \(path, entry) -> do
+    compressPaths = awaitForever $ \(path, entry') ->
         -- Skip nested paths (length > 1)
         case pathToSegments path of
-            [_] -> case entry of
-                _ -> void (yield (path, entry))
+            [_] -> void (yield (path, entry'))
             _ -> pure ()
 
-    toTreeEntryMeta (path, entry) = case entry of
+    toTreeEntryMeta (path, entry') = case entry' of
         Git.TreeEntry treeEntryOid -> treeMeta path treeEntryOid
         Git.BlobEntry _blobEntryOid _blobEntryKind -> blobMeta path _blobEntryOid _blobEntryKind
-        Git.CommitEntry e -> notImplementedYet "what's a commit within tree?"
+        Git.CommitEntry _ -> notImplementedYet "what's a commit within tree?"
 
     blobMeta path _blobEntryOid _blobEntryKind = do
         -- blob <- Git.lookupBlob _blobEntryOid -- left commented out as documentation for later
@@ -350,20 +354,20 @@ loadTree revision segments repo tree entry = do
                 Git.ExecutableBlob -> ExecutableBlobMode
                 Git.SymlinkBlob -> SymlinkMode
         let sha = renderObjOid _blobEntryOid
-        pure $ (path, TreeEntryMeta
+        pure (path, TreeEntryMeta
           { _TreeEntryMeta_path = decodeUtf8 path
           , _TreeEntryMeta_mode = mode
-          , _TreeEntryMeta_type_ = "blob"
+          , _TreeEntryMeta_type_ = BlobEntry
           , _TreeEntryMeta_size = Just 100 -- TODO replace fake data
           , _TreeEntryMeta_sha = sha
           })
     treeMeta path _treeOid = do
         -- tree <- Git.lookupTree _treeOid -- left commented out as documentation for later
         let sha = renderObjOid _treeOid
-        pure $ (path, TreeEntryMeta
+        pure (path, TreeEntryMeta
           { _TreeEntryMeta_path = decodeUtf8 path
           , _TreeEntryMeta_mode = TreeMode
-          , _TreeEntryMeta_type_ = "tree"
+          , _TreeEntryMeta_type_ = TreeEntry
           , _TreeEntryMeta_size = Nothing
           , _TreeEntryMeta_sha = sha
           })
@@ -378,9 +382,9 @@ urlWithinTree Tree{treeRepository = Repo{_repoName, _repoOwner}, treeRevision} b
     [ _repoOwner
     , show _repoName
     , case _TreeEntryMeta_type_ of
-          "tree" -> "git/trees"
-          "blob" -> "git/blobs"
-          "commit" -> "git/commits"
+          TreeEntry -> "git/trees"
+          BlobEntry -> "git/blobs"
+          CommitEntry -> "git/commits"
     , toUrlPiece treeRevision
     , basePath
     , _TreeEntryMeta_path

@@ -6,8 +6,6 @@
 -- permissions for a user (if identified). Could be cached at some
 -- point but fine for now.
 
-{-# LANGUAGE QuasiQuotes        #-}
-
 module Holborn.Auth
        ( Permission(..)
        , Permissions(..)
@@ -46,7 +44,6 @@ data Permission =
 -- read "Permissions (fromList [UserFull])" :: A.Permissions
 newtype Permissions = Permissions (Set Permission) deriving (Show, Read)
 
-type UserId = Int
 
 -- | Function to better communicate what's going wrong:
 dataCorruptError :: Text -> a
