@@ -1,17 +1,5 @@
-module Holborn.Repo.LazyInit
-  ( lazyInit
-  , implicitForkInit
-  ) where
-
-import BasicPrelude
-import System.Process (proc, readCreateProcessWithExitCode, CreateProcess(cwd))
-import System.Exit (ExitCode(..))
-import Data.Text (unpack)
-
-type RepositoryId = Int
-
--- | Lazily initialize a bare repository on disk. The contract is that
--- by the time a push arrives at our doorstep either API or the SSH
+-- | Initialize a bare repository on disk. The contract is that by the
+-- time a push arrives at our doorstep either API or the SSH
 -- terminator have vetted that the push is valid. See note [1] at end
 -- of this file for why we're not locking.
 --
@@ -22,8 +10,20 @@ type RepositoryId = Int
 -- We care about the difference because a lazy init for an implicit
 -- fork can be made much more efficient by cloning the other repo
 -- first.
-lazyInit :: FilePath -> RepositoryId -> IO (Maybe ())
-lazyInit repoRoot repoId = do
+module Holborn.Repo.RepoInit
+  ( repoInit
+  , forkInit
+  ) where
+
+import BasicPrelude
+import System.Process (proc, readCreateProcessWithExitCode, CreateProcess(cwd))
+import System.Exit (ExitCode(..))
+import Data.Text (unpack)
+import Holborn.JSON.RepoMeta (RepoId)
+
+
+repoInit :: FilePath -> RepoId -> IO (Maybe ())
+repoInit repoRoot repoId = do
     -- http://git-scm.com/docs/git-init
     -- "Running git init in an existing repository is safe.
     -- It will not overwrite things that are already there.
@@ -41,8 +41,8 @@ lazyInit repoRoot repoId = do
 
 -- | Not used yet but added so I don't lose my research into git
 -- behaviour.
-implicitForkInit :: FilePath -> RepositoryId -> RepositoryId -> IO (Maybe ())
-implicitForkInit repoRoot existingRepoId repoId = do
+forkInit :: FilePath -> RepoId -> RepoId -> IO (Maybe ())
+forkInit repoRoot existingRepoId repoId = do
     let clone' = (proc "git" ["clone", "--bare", "--local", unpack (show existingRepoId), unpack (show repoId)]) { cwd = Just repoRoot }
     (exitCode, _, _) <- readCreateProcessWithExitCode clone' ""
     pure $ case exitCode of

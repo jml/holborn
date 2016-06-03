@@ -13,6 +13,8 @@
 module Holborn.Repo.HttpProtocol
        ( repoServer
        , repoAPI
+       , diskLocationToPath
+       , DiskLocation(..)
        ) where
 
 import           BasicPrelude
@@ -30,13 +32,12 @@ import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import           Servant ((:>), (:<|>)(..), Capture, QueryParam, Proxy(..), Server, Raw)
 import           Text.Printf (printf)
 import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
-import Data.Text (unpack)
 
 import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
-import Holborn.Repo.Config (Config(..), buildRepoPath)
+import Holborn.Repo.Config (Config(..))
 import Holborn.Repo.GitLayer (makeRepository)
 import Holborn.JSON.RepoMeta (RepoId)
-import Holborn.Repo.LazyInit (lazyInit)
+import Holborn.Repo.RepoInit (repoInit)
 
 
 -- | The git pull & push repository API. The URL schema is borrowed
@@ -51,20 +52,21 @@ type RepoAPI =
 repoAPI :: Proxy RepoAPI
 repoAPI = Proxy
 
+
 -- | Data type to describe where the repository lives on disk. Will
 -- probably be extended to handle implicit clones.
 data DiskLocation = DiskLocation { _repoRoot :: FilePath, _repoId :: RepoId }
 
-diskLocationToString :: DiskLocation -> String
-diskLocationToString DiskLocation{..} = _repoRoot <> "/" <> unpack (toUrlPiece _repoId)
+diskLocationToPath :: DiskLocation -> String
+diskLocationToPath DiskLocation{..} = _repoRoot <> "/" <> textToString (toUrlPiece _repoId)
 
 
 repoServer :: Config -> Server RepoAPI
-repoServer config@Config{repoRoot} repoId =
-    codeBrowser repo :<|> gitProtocolAPI (DiskLocation repoRoot repoId)
+repoServer Config{repoRoot} repoId =
+    codeBrowser repo :<|> gitProtocolAPI diskLocation
     where
-      repo = makeRepository repoId repoPath
-      repoPath = buildRepoPath config repoId
+      diskLocation = DiskLocation repoRoot repoId
+      repo = makeRepository repoId (diskLocationToPath diskLocation)
 
 
 -- | The core git protocol for a single repository.
@@ -118,11 +120,11 @@ smartHandshake diskLocation@DiskLocation{..} service =
         -- cloning of empty repositories. The user will see:
         -- "warning: You appear to have cloned an empty repository."
         -- TODO: error logging
-        void (lazyInit _repoRoot _repoId)
+        void (repoInit _repoRoot _repoId)
         respond $ maybe backupResponse gitResponse service
 
     gitResponse :: GitService -> Response
-    gitResponse serviceType = do
+    gitResponse serviceType =
         responseStream
             ok200
             (gitHeaders serviceType Advertisement)
@@ -135,7 +137,7 @@ smartHandshake diskLocation@DiskLocation{..} service =
     gitPack' serviceType moreData _flush =
         runShell $ (
             banner serviceName
-            >> (producerCmd (serviceName ++ " --stateless-rpc --advertise-refs " ++ (diskLocationToString diskLocation)) >-> filterStdErr)
+            >> (producerCmd (serviceName ++ " --stateless-rpc --advertise-refs " ++ (diskLocationToPath diskLocation)) >-> filterStdErr)
             >> footer) >-> sendChunks moreData
       where
 
@@ -186,7 +188,7 @@ gitHeaders serviceType gitResponse =
 gitPack :: DiskLocation -> GitService -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
 gitPack diskLocation serviceType postDataProducer moreData _flush =
     runShell $
-    postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ (diskLocationToString diskLocation)) >-> filterStdErr
+    postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ (diskLocationToPath diskLocation)) >-> filterStdErr
         >-> sendChunks moreData
   where
     service = stringyService serviceType

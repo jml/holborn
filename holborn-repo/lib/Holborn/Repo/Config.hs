@@ -1,15 +1,11 @@
 module Holborn.Repo.Config
        ( Config(..)
-       , buildRepoPath
        , warpSettings
        ) where
 
 import BasicPrelude
-import Data.Text (unpack)
 import Network.Wai.Handler.Warp (Port, Settings, setPort, defaultSettings, setBeforeMainLoop)
 import qualified Holborn.Logging as Log
-import Holborn.JSON.RepoMeta (RepoId)
-import Web.HttpApiData (toUrlPiece)
 
 
 data Config = Config
@@ -21,16 +17,6 @@ data Config = Config
     , rawPort :: Port
       -- ^ port to listen on for raw Git requests
     }
-
--- | Build a full repository path
--- TODO - find a better way to represent repos and conversions from /
--- to file system paths.
-buildRepoPath :: Config -> RepoId -> String
-buildRepoPath config repoId =
-    concat [ repoRoot config
-           , "/"
-           , unpack (toUrlPiece repoId)
-           ]
 
 
 -- XXX: Duplicated & modified from holborn-syntax Main

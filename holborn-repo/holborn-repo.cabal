@@ -22,7 +22,7 @@ library
                      , Holborn.Repo.GitLayer
                      , Holborn.Repo.Browse
                      , Holborn.Repo.HtmlFormatTokens
-                     , Holborn.Repo.LazyInit
+                     , Holborn.Repo.RepoInit
   hs-source-dirs:      lib
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude

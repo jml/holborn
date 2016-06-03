@@ -22,25 +22,25 @@ import           Pipes.Network.TCP.Safe (serve, fromSocket, toSocket)
 import qualified Pipes.Parse as PP
 import           Pipes.Safe (runSafeT)
 import           Pipes.Aeson (decode)
-import           Holborn.Repo.Config (Config(..), buildRepoPath, rawPort)
+import           Holborn.Repo.Config (Config(..), rawPort)
 import           Holborn.Repo.Process (streamIO, proc)
 import qualified Holborn.Logging as Log
 import           Holborn.JSON.SSHRepoCommunication (RepoCall(..), SSHCommandLine(..))
-import Holborn.JSON.RepoMeta (RepoId)
-import Holborn.Repo.LazyInit (lazyInit)
+import Holborn.Repo.RepoInit (repoInit)
+import Holborn.Repo.HttpProtocol (DiskLocation(..), diskLocationToPath)
 
 
-gitPack :: String -> Config -> RepoId -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
-gitPack packCommand config@Config{repoRoot} repoId from to = do
+gitPack :: String -> DiskLocation -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
+gitPack packCommand diskLocation@DiskLocation{..} from to = do
     -- TOOD error handling & logging
-    void $ lazyInit repoRoot repoId
-    void $ streamIO (proc packCommand [buildRepoPath config repoId]) from to
-    return ()
+    void $ repoInit _repoRoot _repoId
+    void $ streamIO (proc packCommand [diskLocationToPath diskLocation]) from to
 
-gitUploadPack :: Config -> RepoId -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
+
+gitUploadPack :: DiskLocation -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
 gitUploadPack = gitPack "git-upload-pack"
 
-gitReceivePack :: Config -> RepoId -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
+gitReceivePack :: DiskLocation -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
 gitReceivePack = gitPack "git-receive-pack"
 
 
@@ -61,16 +61,16 @@ getRepoParser = do
 -- | Accept connection, parse the exact repository, then dispatch to
 -- git.
 accept :: Config -> (Socket, SockAddr) -> IO ()
-accept config (sock, _) = do
+accept Config{repoRoot} (sock, _) = do
     let from = fromSocket sock 4096
     let to = toSocket sock
     (header, fromRest) <- runStateT getRepoParser from
     Log.debug header
     void $ case header of
         Just (WritableRepoCall (GitUploadPack _ _) repoId) ->
-            gitUploadPack config repoId fromRest to
+            gitUploadPack (DiskLocation repoRoot repoId) fromRest to
         Just (WritableRepoCall (GitReceivePack _ _) repoId) ->
-            gitReceivePack config repoId fromRest to
+            gitReceivePack (DiskLocation repoRoot repoId) fromRest to
             -- TODO: This doesn't appear to abort the connection, which is
             -- what we want it to do.
         _ -> terror $ "Bad header: " <> show header
