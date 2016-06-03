@@ -38,6 +38,8 @@ import Holborn.JSON.SSHRepoCommunication ( RepoCall(..)
                                          , RepoAccess(..)
                                          , unparseSSHKey
                                          )
+import Holborn.JSON.RepoMeta (RepoId)
+
 import qualified Holborn.Logging as Log
 
 
@@ -112,18 +114,30 @@ listKeys AppConf{conn} username = do
 -- | Determine whether the user identified by their SSH key can access a repo.
 checkRepoAccess' :: AppConf -> CheckRepoAccessRequest -> ExceptT Text IO RepoCall
 checkRepoAccess' AppConf{conn} CheckRepoAccessRequest{key_id, command} = do
+    let (owner, repo) = (_owner command, _sshCommandLineRepo command)
+
     rows <- liftIO $ query conn [sql|
                    select id, pk.readonly, pk.verified
                    from "public_key" as pk where id = ?
                |] (Only key_id)
     Log.debug (key_id, command, rows)
+
+    -- TODO - the following is just a placeholder query so we can get
+    -- a repoId. It works but needs error handling (return e.g. 404
+    -- when repo wasn't found).
+    [(_ :: String, repoId :: RepoId)] <- liftIO $ query conn [sql|
+               select 'org', id from "org" where orgname = ? and name = ?
+               UNION
+               select 'user',  id from "user" where username = ? and name = ?
+               |] (owner, repo, owner, repo)
+
     case (command, rows) of
         (_, []) -> throwE "No SSH key"
         (_, _:_:_) -> throwE "Multiple SSH keys"
-        (GitReceivePack _ _, [(_, False, True)]) -> return $ WritableRepoCall command
+        (GitReceivePack _ _, [(_, False, True)]) -> return $ WritableRepoCall command repoId
         (GitReceivePack _ _, [(keyId, True, True)]) ->
             throwE ("SSH key with id " <> show (keyId :: Int) <> " is readonly")
-        (GitUploadPack _ _, [(_, _, True)]) -> return $ WritableRepoCall command
+        (GitUploadPack _ _, [(_, _, True)]) -> return $ WritableRepoCall command repoId
         (_, [(_, _, False)]) -> throwE "SSH key not verified"
 
 

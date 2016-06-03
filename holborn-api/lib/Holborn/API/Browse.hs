@@ -8,6 +8,7 @@
 -- $ curl 127.0.0.1:8002/v1/browse -H "content-type: application/json" -d'{"repo": "jml/holborn", "path": ""}'
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE TypeOperators      #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Holborn.API.Browse
        ( API
@@ -19,13 +20,16 @@ import BasicPrelude
 import Data.Aeson (object, (.=))
 import Servant
 
+import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
 import Holborn.API.Types (Username)
-import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, toServantHandler, throwHandlerError, jsonGet')
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, toServantHandler, throwHandlerError, jsonGet', query)
 import Network.Wai (Application, responseLBS)
 import Network.HTTP.ReverseProxy (waiProxyTo, defaultOnExc, WaiProxyResponse(WPRModifiedRequest, WPRResponse), ProxyDest(..))
 import Network.HTTP.Types.Status (status404)
 import Holborn.JSON.Browse (BrowseMetaResponse(..))
+import Holborn.JSON.RepoMeta (RepoId)
+
 
 -- Following imports needed for RPC which we should do in a more
 -- clever way (e.g. cereal library will be 100x faster)
@@ -72,7 +76,13 @@ server conf =
 browse :: Maybe Username -> Owner -> Repo -> APIHandler BrowseError BrowseMetaResponse
 browse _maybeUsername owner repo = do
     AppConf{repoHostname, repoPort} <- getConfig
-    r <- jsonGet' ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> owner <> "/" <> repo)
+    [(_ :: String, repoId :: RepoId)] <- query [sql|
+               select 'org', id from "org" where orgname = ? and name = ?
+               UNION
+               select 'user',  id from "user" where username = ? and name = ?
+               |] (owner, repo, owner, repo)
+
+    r <- jsonGet' ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> toUrlPiece repoId)
     repoMeta <- case r of
         Just x -> pure x
         Nothing -> throwHandlerError NotFound

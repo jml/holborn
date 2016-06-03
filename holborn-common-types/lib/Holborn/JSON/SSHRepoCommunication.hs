@@ -30,8 +30,8 @@ import GHC.Generics (Generic)
 import System.IO (hClose)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
 import System.Process (runInteractiveCommand)
-import Holborn.JSON.RepoMeta (ValidRepoName, newValidRepoName)
 import Web.HttpApiData (toUrlPiece)
+import Holborn.JSON.RepoMeta (ValidRepoName, newValidRepoName, RepoId)
 
 
 import Test.QuickCheck
@@ -39,15 +39,14 @@ import Test.QuickCheck
   , Gen
   , elements
   , listOf1
-  , oneof
   )
 
 
 
 -- | A user-generated request to interact with a git repository.
 data SSHCommandLine =
-      GitReceivePack { _orgOrUser :: Text, _sshCommandLineRepo :: ValidRepoName }
-    | GitUploadPack { _orgOrUser :: Text, _sshCommandLineRepo :: ValidRepoName }
+      GitReceivePack { _owner :: Text, _sshCommandLineRepo :: ValidRepoName }
+    | GitUploadPack { _owner :: Text, _sshCommandLineRepo :: ValidRepoName }
     deriving (Show, Eq)
 
 instance FromJSON SSHCommandLine where
@@ -113,8 +112,7 @@ pathSegment =
 
 -- | Permission to interact with a git repository.
 data RepoCall =
-      WritableRepoCall { _command :: SSHCommandLine }
-    | ImplicitRepoCall { _command :: SSHCommandLine, _owner :: Text }
+      WritableRepoCall { _command  :: SSHCommandLine, _repoId :: RepoId }
     deriving (Eq, Show, Generic)
 
 instance FromJSON RepoCall where
@@ -124,10 +122,7 @@ instance ToJSON RepoCall where
   toJSON = genericToJSON defaultOptions{fieldLabelModifier = drop (length ("_" :: String))}
 
 instance Arbitrary RepoCall where
-  arbitrary =
-    oneof [ WritableRepoCall <$> arbitrary
-          , ImplicitRepoCall <$> arbitrary <*> pathSegment
-          ]
+  arbitrary = WritableRepoCall <$> arbitrary <*> arbitrary
 
 
 -- | Routing to a git repository.

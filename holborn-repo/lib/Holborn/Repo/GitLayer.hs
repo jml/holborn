@@ -51,14 +51,14 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 -- XXX: Get the instances. Need to move all HTML formatting stuff to a
 -- separate module, and leave this just about using Git.
 import Holborn.Repo.HtmlFormatTokens ()
-import Holborn.JSON.RepoMeta (RepoMeta(..), ValidRepoName)
+import Holborn.JSON.RepoMeta (RepoMeta(..))
 import Holborn.Syntax (annotateCode)
 import Holborn.ServantTypes (RenderedJson)
+import Holborn.JSON.RepoMeta (RepoId)
 
 -- | A git repository
 data Repository =
-  Repo { _repoOwner :: Text
-       , _repoName :: ValidRepoName
+  Repo { _repoId :: RepoId
        , _repoPath :: FilePath
        } deriving (Eq, Show)
 
@@ -72,7 +72,7 @@ type GitM m = ReaderT GitRepo m
 type GitException = Git.GitException
 
 
-makeRepository :: Text -> ValidRepoName -> FilePath -> Repository
+makeRepository :: RepoId -> FilePath -> Repository
 makeRepository = Repo
 
 
@@ -377,17 +377,16 @@ loadTree revision segments repo tree entry = do
 -- path *in* the repo). Really we should be using some sort of
 -- Servant-provided URL generation.
 urlWithinTree :: Tree -> Text -> TreeEntryMeta -> Text
-urlWithinTree Tree{treeRepository = Repo{_repoName, _repoOwner}, treeRevision} basePath TreeEntryMeta{..} =
-  intercalate "/"
-    [ _repoOwner
-    , show _repoName
+urlWithinTree Tree{treeRepository = Repo{_repoId}, treeRevision} basePath TreeEntryMeta{..} =
+  intercalate "/" $
+    [ toUrlPiece _repoId
     , case _TreeEntryMeta_type_ of
           TreeEntry -> "git/trees"
           BlobEntry -> "git/blobs"
           CommitEntry -> "git/commits"
     , toUrlPiece treeRevision
-    , basePath
-    , _TreeEntryMeta_path
+    ] ++ (if basePath == "" then [] else [basePath])
+    ++ [ _TreeEntryMeta_path
     ]
 
 
@@ -416,9 +415,9 @@ notImplementedYet feature = terror $ "Not implemented yet: " ++ feature
 -- (which is much rarer than reading).
 fillRepoMeta :: Repository -> GitM IO RepoMeta
 fillRepoMeta Repo{..} =
-  return $ RepoMeta _repoOwner _repoName 10 11 12 -- Fake data 10 11 12
+  return $ RepoMeta _repoId 10 11 12 -- Fake data 10 11 12
 
 instance ToMarkup RepoMeta where
   toMarkup RepoMeta{..} = do
     H.h1 $ "debug rendering for root metadata"
-    H.a ! A.href (H.toValue ("/v1/repos/" <> _RepoMeta_owner <> "/" <> (show _RepoMeta_repo) <> "/tree/master")) $ "tree-root"
+    H.a ! A.href (H.toValue ("/v1/repos/" <> toUrlPiece _RepoMeta_id <> "/git/trees/master")) $ "tree-root"

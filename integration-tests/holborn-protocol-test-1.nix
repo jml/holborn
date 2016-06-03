@@ -33,10 +33,11 @@ stdenv.mkDerivation {
       # Clone the test repository
       mkdir $out
       pushd $out
-      GIT_TRACE=2 git clone --verbose http://127.0.0.1:${repoPort}/v1/repos/org/hello >> $out/integration-test-log
+      GIT_TRACE=2 git clone --verbose http://127.0.0.1:${repoPort}/v1/repos/100 >> $out/integration-test-log
       popd
 
       # The same content?
-      diff ${test-repos}/org/hello/hello $out/hello/hello
+      ls $out
+      diff ${test-repos}/100/hello $out/100/hello
   '';
 }

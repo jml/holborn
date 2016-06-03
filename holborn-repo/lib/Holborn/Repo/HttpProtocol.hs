@@ -34,15 +34,15 @@ import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
 import Holborn.Repo.Config (Config, buildRepoPath)
 import Holborn.Repo.GitLayer (makeRepository)
-import Holborn.JSON.RepoMeta (newValidRepoName)
+import Holborn.JSON.RepoMeta (RepoId)
+
 
 -- | The git pull & push repository API. The URL schema is borrowed
 -- from github, i.e. `/user/repo` or `/org/repo`.
 type RepoAPI =
     "v1"
     :> "repos"
-    :> Capture "owner" Text
-    :> Capture "repo" Text
+    :> Capture "repoId" RepoId
     :> (BrowseAPI :<|> GitProtocolAPI)
 
 
@@ -51,14 +51,11 @@ repoAPI = Proxy
 
 
 repoServer :: Config -> Server RepoAPI
-repoServer config owner repoName =
+repoServer config repoId =
     codeBrowser repo :<|> gitProtocolAPI repoPath
     where
-      validRepoName = case newValidRepoName repoName of
-        Just x -> x
-        Nothing -> terror "invalid repository name"
-      repo = makeRepository owner validRepoName repoPath
-      repoPath = buildRepoPath config owner validRepoName
+      repo = makeRepository repoId repoPath
+      repoPath = buildRepoPath config repoId
 
 
 -- | The core git protocol for a single repository.
@@ -68,7 +65,12 @@ type GitProtocolAPI =
   :<|> "git-receive-pack" :> Raw
 
 
+
 -- | Git offers two kinds of service.
+-- TODO: unify with the GitUploadPack etc stuff in SSHRepoCommunication
+-- by moving it to:
+-- data GitCommand = GitReceivePack | GitUploadPack
+-- data SSHCommandLine = SSHCommandLine GitCommand Text ValidRepoName
 data GitService = GitUploadPack | GitReceivePack
 
 stringyService :: IsString a => GitService -> a
