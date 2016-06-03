@@ -26,7 +26,7 @@ import           Holborn.Repo.Config (Config, buildRepoPath, rawPort)
 import           Holborn.Repo.Process (streamIO, proc)
 import qualified Holborn.Logging as Log
 import           Holborn.JSON.SSHRepoCommunication (RepoCall(..), SSHCommandLine(..))
-import Holborn.JSON.RepoMeta (newValidRepoName, ValidRepoName)
+import Holborn.JSON.RepoMeta (ValidRepoName)
 
 
 gitPack :: String -> Config -> Text -> ValidRepoName -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
