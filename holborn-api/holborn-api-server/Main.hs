@@ -55,7 +55,8 @@ warpSettings port =
     port' = port
 
 
-devCors _ = Just (simpleCorsResourcePolicy { corsRequestHeaders = (simpleHeaders ++ ["Authorization"]) })
+devCors :: a -> Maybe CorsResourcePolicy
+devCors _ = Just (simpleCorsResourcePolicy { corsRequestHeaders = simpleHeaders ++ ["Authorization"] })
 
 
 app :: AppConf -> Application
@@ -65,7 +66,7 @@ app conf = serve api (server conf)
 main :: IO ()
 main = do
     conf@Config{..} <- loadConfig
-    print "Using config:"
+    print ("Using config:" :: Text)
     print conf
     appConf <- loadAppConf conf
     Warp.runSettings (warpSettings port) (cors devCors (app appConf))

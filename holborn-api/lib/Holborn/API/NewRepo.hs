@@ -19,7 +19,6 @@ import Holborn.API.Config (AppConf(..))
 import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, throwHandlerError, query)
 import Holborn.JSON.NewRepo (NewRepoRequest(..))
 import Holborn.JSON.RepoMeta (RepoMeta(..))
-import Holborn.API.Auth (getUserId)
 import Holborn.API.Types (Username)
 
 
@@ -44,9 +43,7 @@ server conf =
 
 
 newRepo :: Maybe Username -> NewRepoRequest -> APIHandler NewRepoError RepoMeta
-newRepo username NewRepoRequest{..} = do
-    userId <- getUserId username
-
+newRepo _username NewRepoRequest{..} = do
     -- TODO user permissions and userId to check whether user is
     -- allowed to create repo.
 
@@ -63,13 +60,13 @@ newRepo username NewRepoRequest{..} = do
 
   where
     newOrgRepo orgId = do
-       [Only (repoId :: Int)] <- query [sql|
+       [Only (_repoId :: Int)] <- query [sql|
             insert into "org_repo" (name, description, org_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (_NewRepoRequest_name, _NewRepoRequest_description, orgId, "127.0.0.1:8080" :: Text)
        pure (RepoMeta _NewRepoRequest_owner _NewRepoRequest_name 0 0 0)
 
     newUserRepo userId = do
-       [Only (repoId :: Int)] <- query [sql|
+       [Only (_repoId :: Int)] <- query [sql|
             insert into "user_repo" (name, description, user_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (_NewRepoRequest_name, _NewRepoRequest_description, userId, "127.0.0.1:8080" :: Text)
        pure (RepoMeta _NewRepoRequest_owner _NewRepoRequest_name 0 0 0)
