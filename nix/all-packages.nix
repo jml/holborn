@@ -21,7 +21,7 @@ haskellPackages.override {
       mkDerivation = { pname, ... }@args:
         super.mkDerivation (
           if builtins.substring 0 7 pname == "holborn"
-          then (args // { src = lib.sourceFilesBySuffices args.src [".cabal" ".hs"];
+          then (args // { preCompileBuildDriver = "rm -rf ./dist";
                           shellHook = generateDirLocals; })
           else args
         );

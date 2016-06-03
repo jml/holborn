@@ -3,6 +3,8 @@
 -- | Internal logic for how API requests work.
 module Holborn.API.Internal
   ( APIHandler
+  , runAPIHandler
+  -- | Get the application configuration
   , getConfig
   -- | Manipulate the database
   , query
@@ -23,12 +25,13 @@ module Holborn.API.Internal
 
 import BasicPrelude
 import Control.Error (bimapExceptT)
+import Control.Monad.Catch (MonadThrow(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
-import Data.Aeson (FromJSON, Value, decode', encode, object)
+import Data.Aeson (FromJSON, Value, decode', encode, object, (.=))
 import Data.ByteString.Lazy (fromStrict)
 import qualified Database.PostgreSQL.Simple as PostgreSQL
-import Network.HTTP.Client (Request, parseUrl, withResponse, requestHeaders, responseBody)
+import Network.HTTP.Client (parseUrl, withResponse, requestHeaders, responseBody)
 import Network.HTTP.Types.Header (hAccept)
 import Servant (ServantErr(..), (:~>)(Nat))
 
@@ -76,12 +79,17 @@ data APIError a =
       -- ^ Do not have sufficient permission to perform the requested action.
     | MissingAuthToken
       -- ^ No auth token found.
+    | UnexpectedException SomeException
+      -- ^ Some code threw an exception that we couldn't understand
+  deriving (Show)
+
 
 instance (JSONCodeableError a) => JSONCodeableError (APIError a) where
     toJSON MissingAuthToken = (401, object [])
     toJSON InvalidAuthToken = (401, object [])
     toJSON InsufficientPermissions = (403, object [])
     toJSON (SubAPIError x) = toJSON x
+    toJSON (UnexpectedException e) = (500, object [ "message" .= show e ])
 
 
 -- | Indicate that a handler has failed for a reason specific to that handler.
@@ -96,8 +104,12 @@ throwAPIError = APIHandler . lift . throwE
 
 -- | Basic type for all of the handlers of Holborn.API.
 newtype APIHandler err a =
-  APIHandler { runAPIHandler :: ReaderT AppConf (ExceptT (APIError err) IO) a }
+  APIHandler { unwrapAPIHandler :: ReaderT AppConf (ExceptT (APIError err) IO) a }
   deriving (Functor, Applicative, Monad)
+
+-- | Run an API handler action without doing the error translation
+runAPIHandler :: AppConf -> APIHandler err a -> ExceptT (APIError err) IO a
+runAPIHandler appConf handler = runReaderT (unwrapAPIHandler handler) appConf
 
 -- | Turn a Holborn.API-specific handler into a generic Servant handler.
 --
@@ -106,8 +118,11 @@ toServantHandler :: JSONCodeableError err => AppConf -> APIHandler err :~> Excep
 toServantHandler appConf = Nat (toServantHandler' appConf)
 
 toServantHandler' :: JSONCodeableError err => AppConf -> APIHandler err a -> ExceptT ServantErr IO a
-toServantHandler' appConf handler = bimapExceptT toServantErr id (runReaderT (runAPIHandler handler) appConf)
+toServantHandler' appConf handler = bimapExceptT toServantErr id (runAPIHandler appConf handler)
 
+-- | If something throws with 'throwM', we'll convert that to an unexpected exception.
+instance MonadThrow (APIHandler err) where
+  throwM e = throwAPIError (UnexpectedException (toException e))
 
 -- | Load the application configuration
 getConfig :: APIHandler err AppConf
@@ -134,18 +149,11 @@ execute sql values = do
 jsonGet' :: (FromJSON a) => Text -> APIHandler err (Maybe a)
 jsonGet' endpoint = do
     AppConf{httpManager} <- getConfig
-    r <- parseUrl' endpoint
+    r <- parseUrl (textToString endpoint)
     let rJson = r { requestHeaders = [(hAccept, "application/json")] }
     APIHandler $ liftIO $ withResponse rJson httpManager $ \response -> do
       body <- fmap fromStrict (responseBody response)
       return $ decode' body
-
-
-    where
-      parseUrl' :: Text -> APIHandler err Request
-      -- XXX: This throws in IO, which sucks. Figure out how to catch it and
-      -- return an APIError instead.
-      parseUrl' = APIHandler . parseUrl . textToString
 
 
 -- | Log something for debugging

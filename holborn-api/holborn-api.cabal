@@ -38,6 +38,7 @@ library
                      , http-reverse-proxy
                      , http-client
                      , http-types
+                     , exceptions >= 0.8
                      , holborn-common-types >= 0.1.3
 
   hs-source-dirs:      lib
@@ -66,9 +67,11 @@ Test-Suite holborn-api-tests
                      , aeson
                      , bytestring
                      , errors
+                     , http-client
                      , process
                      , holborn-common-types
                      , servant-server
+                     , transformers
                      , wai
                      , process
                      , http-types
