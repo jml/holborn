@@ -4,8 +4,10 @@
 
 module Main (main) where
 
+import BasicPrelude hiding (empty)
 import Turtle (shells, empty)
 
+main :: IO ()
 main = do
     shells "cabal clean" empty
     shells "cabal configure -O0 --disable-library-profiling" empty

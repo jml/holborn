@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module Main where
+module Main (main) where
 
 import BasicPrelude
 
@@ -15,7 +15,7 @@ parser = (,) <$> argInt "port" "port to check"
 main :: IO ()
 main = do
     (port, timeout) <- options "Wait for a port to become active for --timeout seconds, then fail if it didn't. Retries once a second." parser
-    (check port timeout) >>= exitWith
+    check port timeout >>= exitWith
 
   where
     check :: Int -> Int -> IO ExitCode
