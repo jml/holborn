@@ -7,7 +7,7 @@
 mkDerivation {
   pname = "holborn-common-types";
   version = "0.1.3.0";
-  src = lib.sourceFilesBySuffices ./. [".cabal" ".hs"];
+  src = ./.;
   libraryHaskellDepends = [
     aeson attoparsec base basic-prelude bcrypt bytestring containers
     entropy errors http-api-data http-client http-media
