@@ -34,7 +34,6 @@ import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
 import Holborn.Repo.Config (Config, buildRepoPath)
 import Holborn.Repo.GitLayer (makeRepository)
-import Holborn.JSON.RepoMeta (newValidRepoName)
 import Holborn.JSON.RepoMeta (RepoId)
 
 

@@ -26,7 +26,6 @@ import           Holborn.Repo.Config (Config, buildRepoPath, rawPort)
 import           Holborn.Repo.Process (streamIO, proc)
 import qualified Holborn.Logging as Log
 import           Holborn.JSON.SSHRepoCommunication (RepoCall(..), SSHCommandLine(..))
-import Holborn.JSON.RepoMeta (newValidRepoName, ValidRepoName)
 import Holborn.JSON.RepoMeta (RepoId)
 
 
@@ -65,9 +64,9 @@ accept config (sock, _) = do
     (header, fromRest) <- runStateT getRepoParser from
     Log.debug header
     void $ case header of
-        Just (WritableRepoCall _ repoId) ->
+        Just (WritableRepoCall (GitUploadPack _ _) repoId) ->
             gitUploadPack config repoId fromRest to
-        Just (WritableRepoCall _ repoId) ->
+        Just (WritableRepoCall (GitReceivePack _ _) repoId) ->
             gitReceivePack config repoId fromRest to
             -- TODO: This doesn't appear to abort the connection, which is
             -- what we want it to do.

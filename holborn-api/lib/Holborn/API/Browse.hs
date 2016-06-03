@@ -20,21 +20,16 @@ import BasicPrelude
 import Data.Aeson (object, (.=))
 import Servant
 
-import Database.PostgreSQL.Simple (query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
 import Holborn.API.Types (Username)
-import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, toServantHandler, throwHandlerError, jsonGet')
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, toServantHandler, throwHandlerError, jsonGet', query)
 import Network.Wai (Application, responseLBS)
 import Network.HTTP.ReverseProxy (waiProxyTo, defaultOnExc, WaiProxyResponse(WPRModifiedRequest, WPRResponse), ProxyDest(..))
 import Network.HTTP.Types.Status (status404)
 import Holborn.JSON.Browse (BrowseMetaResponse(..))
-import Network.HTTP.Client (parseUrl, withResponse, Manager, requestHeaders, responseBody)
-import Network.HTTP.Types.Header (hAccept)
-import Data.ByteString.Lazy (fromStrict)
-import Data.Text as T
 import Holborn.JSON.RepoMeta (RepoId)
-import Web.HttpApiData (ToHttpApiData(..))
+import Web.HttpApiData ()
 
 
 -- Following imports needed for RPC which we should do in a more
@@ -81,19 +76,14 @@ server conf =
 
 browse :: Maybe Username -> Owner -> Repo -> APIHandler BrowseError BrowseMetaResponse
 browse _maybeUsername owner repo = do
-<<<<<<< HEAD
     AppConf{repoHostname, repoPort} <- getConfig
-    r <- jsonGet' ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> owner <> "/" <> repo)
-=======
-    AppConf{httpManager, repoHostname, repoPort} <- getConfig
-    [(_ :: String, repoId :: RepoId)] <- liftIO $ query conn [sql|
+    [(_ :: String, repoId :: RepoId)] <- query [sql|
                select 'org', id from "org" where orgname = ? and name = ?
                UNION
                select 'user',  id from "user" where username = ? and name = ?
                |] (owner, repo, owner, repo)
 
-    r <- liftIO $ poorMansJsonGet httpManager ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> toUrlPiece repoId)
->>>>>>> Move to repository id for disk storage.
+    r <- jsonGet' ("http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> toUrlPiece repoId)
     repoMeta <- case r of
         Just x -> pure x
         Nothing -> throwHandlerError NotFound

@@ -9,6 +9,7 @@ import Data.Text (unpack)
 import Network.Wai.Handler.Warp (Port, Settings, setPort, defaultSettings, setBeforeMainLoop)
 import qualified Holborn.Logging as Log
 import Holborn.JSON.RepoMeta (RepoId)
+import Web.HttpApiData (toUrlPiece)
 
 
 data Config = Config
@@ -28,7 +29,7 @@ buildRepoPath :: Config -> RepoId -> String
 buildRepoPath config repoId =
     concat [ repoRoot config
            , "/"
-           , unpack (show repoId)
+           , unpack (toUrlPiece repoId)
            ]
 
 
