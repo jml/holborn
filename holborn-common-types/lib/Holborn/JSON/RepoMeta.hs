@@ -81,6 +81,12 @@ instance ToField ValidRepoName where
     toField (ValidRepoName s) = Escape (encodeUtf8 s)
 
 
+-- | This is what we're sending to users who query repository meta
+-- data. GH return this:
+-- https://developer.github.com/v3/repos/#list-organization-repositories
+--
+-- TODO: rename to ProjectMeta
+-- TODO: put in the fields we think are needed to write tools
 data RepoMeta = RepoMeta
     { _RepoMeta_id :: RepoId
     , _RepoMeta_number_commits :: Int -- git rev-list --count master

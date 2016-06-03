@@ -65,7 +65,12 @@ type GitProtocolAPI =
   :<|> "git-receive-pack" :> Raw
 
 
+
 -- | Git offers two kinds of service.
+-- TODO: unify with the GitUploadPack etc stuff in SSHRepoCommunication
+-- by moving it to:
+-- data GitCommand = GitReceivePack | GitUploadPack
+-- data SSHCommandLine = SSHCommandLine GitCommand Text ValidRepoName
 data GitService = GitUploadPack | GitReceivePack
 
 stringyService :: IsString a => GitService -> a

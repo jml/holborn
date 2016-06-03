@@ -29,7 +29,6 @@ import Network.HTTP.ReverseProxy (waiProxyTo, defaultOnExc, WaiProxyResponse(WPR
 import Network.HTTP.Types.Status (status404)
 import Holborn.JSON.Browse (BrowseMetaResponse(..))
 import Holborn.JSON.RepoMeta (RepoId)
-import Web.HttpApiData ()
 
 
 -- Following imports needed for RPC which we should do in a more

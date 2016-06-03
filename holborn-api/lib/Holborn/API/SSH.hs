@@ -114,9 +114,7 @@ listKeys AppConf{conn} username = do
 -- | Determine whether the user identified by their SSH key can access a repo.
 checkRepoAccess' :: AppConf -> CheckRepoAccessRequest -> ExceptT Text IO RepoCall
 checkRepoAccess' AppConf{conn} CheckRepoAccessRequest{key_id, command} = do
-    let (owner, repo) = case command of
-          GitReceivePack _owner _sshCommandLineRepo -> (_owner, _sshCommandLineRepo)
-          GitUploadPack _owner _sshCommandLineRepo -> (_owner, _sshCommandLineRepo)
+    let (owner, repo) = (_owner command, _sshCommandLineRepo command)
 
     rows <- liftIO $ query conn [sql|
                    select id, pk.readonly, pk.verified
