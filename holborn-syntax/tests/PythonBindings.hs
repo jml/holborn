@@ -5,7 +5,6 @@ module PythonBindings (tests) where
 
 import BasicPrelude
 import Control.Applicative (Alternative)
-import Data.Foldable (asum)
 
 import Test.Tasty (TestTree, TestName, testGroup)
 import Test.Tasty.HUnit
