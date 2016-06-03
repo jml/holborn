@@ -5,14 +5,11 @@ module Main (main) where
 
 import BasicPrelude
 
+import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (FromJSON, ToJSON, decode)
 import Data.ByteString.Lazy (fromStrict)
-import Holborn.API (api, server)
-import Holborn.API.Config (AppConf, Config(..), loadAppConf)
-import Holborn.API.SSH (shellEncode)
-import Holborn.API.Types (newPassword)
-import Holborn.JSON.SSHRepoCommunication (RepoCall)
 import qualified Network.HTTP.Types.Method as Method
+import Network.HTTP.Client.Internal (HttpException(..))
 import Network.Wai (Application)
 import Servant (serve)
 import System.Process (callCommand, shell, readCreateProcess)
@@ -24,6 +21,13 @@ import Test.Tasty.HUnit hiding (assert)
 import Test.Tasty.Hspec (testSpec, describe, it)
 import Test.Tasty.QuickCheck
 
+import Holborn.API (api, server)
+import Holborn.API.Config (AppConf, Config(..), loadAppConf)
+import Holborn.API.Internal (APIError(..), APIHandler, jsonGet', runAPIHandler)
+import Holborn.API.SSH (shellEncode)
+import Holborn.API.Types (newPassword)
+import Holborn.JSON.SSHRepoCommunication (RepoCall)
+
 
 main :: IO ()
 main = do
@@ -32,28 +36,31 @@ main = do
 
 resetDB :: IO ()
 resetDB = do
-    callCommand "createuser holborn-test-user || true"
     callCommand "dropdb holborn-test-db || true"
     callCommand "createdb -O holborn-test-user holborn-test-db"
+
+-- | A value of Config that can be used in tests that don't *actually* access
+-- the configuration for anything.
+testAppConf :: IO AppConf
+testAppConf = loadAppConf $ Config
+  { port = 9999
+  , pgDb = "holborn-test-db"
+  , pgUser = "holborn-test-user"
+  , pgPort = 5432
+  , configBaseUrl = "http://127.0.0.1:9999/"
+  , configStaticBaseUrl = ""
+  , configRepoHostname = ""
+  , configRepoPort = 0
+  , configRawRepoHostname = ""
+  , configRawRepoPort = 0
+  }
 
 
 testApp :: IO Application
 testApp = do
     callCommand "psql -q -f sql/initial.sql holborn-test-db -U holborn-test-user"
     callCommand "psql -q -f sql/sample-data.sql holborn-test-db -U holborn-test-user"
-    let conf = Config
-          { port = 9999
-          , pgDb = "holborn-test-db"
-          , pgUser = "holborn-test-user"
-          , pgPort = 5432
-          , configBaseUrl = "http://127.0.0.1:9999/"
-          , configStaticBaseUrl = ""
-          , configRepoHostname = ""
-          , configRepoPort = 0
-          , configRawRepoHostname = ""
-          , configRawRepoPort = 0
-          }
-    appConf <- loadAppConf conf
+    appConf <- testAppConf
     pure (serve api (server appConf))
 
 
@@ -70,6 +77,22 @@ waiTest = do
               `shouldRespondWith`
               [json|{number_objects:0,size:0,owner:"alice",repo:"name",number_commits:0}|]
               {matchStatus = 200}
+
+
+apiTests :: TestTree
+apiTests =
+  testGroup "Holborn.API integration tests"
+  [ testCase "Bad URL fails in ExceptT" $ do
+        resetDB
+        let badUrl = "413213243214"
+        let apiResult = (jsonGet' (fromString badUrl) :: APIHandler Int (Maybe Int))
+        let expectedException = UnexpectedException (toException (InvalidUrlException badUrl "Invalid URL")) :: APIError Int
+        config <- testAppConf
+        result <- runExceptT (runAPIHandler config apiResult)
+        case result of
+          Left e -> show expectedException @?= show e
+          Right _ -> assertFailure $ "Unexpectedly parsed URL: " ++ badUrl
+  ]
 
 
 stringToBytes :: String -> LByteString
