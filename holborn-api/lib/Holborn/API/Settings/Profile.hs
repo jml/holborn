@@ -11,9 +11,8 @@ module Holborn.API.Settings.Profile
 
 import BasicPrelude
 
-import Database.PostgreSQL.Simple (Only (..), query)
+import Database.PostgreSQL.Simple (Only(..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Control.Monad.Trans.Except (ExceptT, throwE)
 import Data.Aeson (object, (.=))
 import Servant
 
@@ -21,7 +20,7 @@ import Holborn.API.Config (AppConf(..))
 import Holborn.JSON.Settings.Profile (ProfileData(..))
 import Holborn.API.Types (Username)
 import Holborn.API.Auth (getUserId)
-import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, throwHandlerError, query)
 
 
 type API =
@@ -40,38 +39,38 @@ instance JSONCodeableError Error where
 
 
 server :: AppConf -> Server API
-server conf = enter jsonErrorHandler $
-    getUser conf
-    :<|> getAuthorizedUser conf
-    :<|> postAuthorizedUser conf
+server conf = enter (toServantHandler conf) $
+    getUser
+    :<|> getAuthorizedUser
+    :<|> postAuthorizedUser
 
 
-getUser :: AppConf -> Username -> ExceptT (APIError Error) IO ProfileData
-getUser AppConf{conn} username = do
-    r <- liftIO $ query conn [sql|
+getUser :: Username -> APIHandler Error ProfileData
+getUser username = do
+    r <- query [sql|
                    select id, username, created
                    from "user" where username = ?
                |] (Only username)
 
     case r of
-        [] -> throwE (SubAPIError (UserNotFound (show username)))
+        [] -> throwHandlerError (UserNotFound (show username))
         [(id_, un, created)] -> return (ProfileData id_ un "about this user TODO fetch from DB" created)
         _ -> terror $ "Multiple users found in the database for " ++ show username ++ ". Found: " ++ show r
 
 
 -- TODO The function to fetch the current user should go somewhere
 -- other than profile settings?
-getAuthorizedUser :: AppConf -> Maybe Username -> ExceptT (APIError Error) IO ProfileData
-getAuthorizedUser conf@AppConf{conn} username = do
-    userId <- getUserId conf username
-    r <- liftIO $ query conn [sql|
+getAuthorizedUser :: Maybe Username -> APIHandler Error ProfileData
+getAuthorizedUser username = do
+    userId <- getUserId username
+    r <- query [sql|
                    select username, created
                    from "user" where id = ?
                |] (Only userId)
     case r of
         [(uname, created)] -> pure (ProfileData userId uname "about this user TODO fetch from DB" created)
-        _ -> throwE (SubAPIError UserNotInDb) -- TODO more informative error by encrypting context and sending it to the user
+        _ -> throwHandlerError UserNotInDb
 
 
-postAuthorizedUser :: AppConf -> Maybe Username -> ProfileData -> ExceptT (APIError Error) IO ()
-postAuthorizedUser _conf _username _newProfile = undefined
+postAuthorizedUser :: Maybe Username -> ProfileData -> APIHandler Error ()
+postAuthorizedUser _username _newProfile = undefined

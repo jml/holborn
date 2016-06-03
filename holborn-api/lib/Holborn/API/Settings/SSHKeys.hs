@@ -12,16 +12,15 @@ module Holborn.API.Settings.SSHKeys
 
 import BasicPrelude
 
-import Database.PostgreSQL.Simple (Only (..), execute, query)
+import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Control.Monad.Trans.Except (ExceptT, throwE)
 import Data.Aeson (object, (.=))
 import Servant
 
 import Holborn.API.Config (AppConf(..))
 import Holborn.JSON.SSHRepoCommunication (parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
-import Holborn.Errors (jsonErrorHandler, APIError(..), JSONCodeableError(..))
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, throwHandlerError, execute, query)
 import Holborn.API.Auth (getUserId)
 import qualified Holborn.Logging as Log
 import Holborn.API.Types (Username)
@@ -46,50 +45,49 @@ instance JSONCodeableError KeyError where
 
 
 server :: AppConf -> Server API
-server conf = enter jsonErrorHandler $
-    listKeys conf
-    :<|> getKey conf
-    :<|> deleteKey conf
-    :<|> addKey conf
+server conf = enter (toServantHandler conf) $
+    listKeys
+    :<|> getKey
+    :<|> deleteKey
+    :<|> addKey
 
 
-listKeys :: AppConf -> Username -> ExceptT (APIError KeyError) IO [ListKeysRow]
-listKeys AppConf{conn=conn} username = do
-    r <- liftIO $ query conn [sql|
-                   select id, comparison_pubkey, name, verified, readonly, created
-                   from "public_key" where owner_id = (select id from "user" where username = ?)
-               |] (Only username)
-    return r
+listKeys :: Username -> APIHandler KeyError [ListKeysRow]
+listKeys username =
+    query [sql|
+              select id, comparison_pubkey, name, verified, readonly, created
+              from "public_key" where owner_id = (select id from "user" where username = ?)
+          |] (Only username)
 
 
-getKey :: AppConf -> Int -> ExceptT (APIError KeyError) IO ListKeysRow
-getKey _conf _keyId = undefined
+getKey :: Int -> APIHandler KeyError ListKeysRow
+getKey _keyId = undefined
 
 
-deleteKey :: AppConf -> Maybe Username -> Int -> ExceptT (APIError KeyError) IO ()
-deleteKey appconf@AppConf{conn=conn} username keyId = do
-    userId <- getUserId appconf username
+deleteKey :: Maybe Username -> Int -> APIHandler KeyError ()
+deleteKey username keyId = do
+    userId <- getUserId username
 
-    count <- liftIO $ execute conn [sql|
+    count <- execute [sql|
             delete from "public_key" where id = ? and owner_id = ?
             |] (keyId, userId)
     Log.debug count
     return ()
 
 
-addKey :: AppConf -> Maybe Username -> AddKeyData -> ExceptT (APIError KeyError) IO ListKeysRow
-addKey appconf@AppConf{conn=conn} username AddKeyData{..} = do
+addKey :: Maybe Username -> AddKeyData -> APIHandler KeyError ListKeysRow
+addKey username AddKeyData{..} = do
     let sshKey = parseSSHKey (encodeUtf8 _AddKeyData_key)
-    when (isNothing sshKey) (throwE (SubAPIError InvalidSSHKey))
-    when (_AddKeyData_title == "") (throwE (SubAPIError EmptyTitle))
-    userId <- getUserId appconf username
+    when (isNothing sshKey) (throwHandlerError InvalidSSHKey)
+    when (_AddKeyData_title == "") (throwHandlerError EmptyTitle)
+    userId <- getUserId username
 
-    [Only id_] <- liftIO $ query conn [sql|
+    [Only id_] <- query [sql|
             insert into "public_key" (id, name, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly, created)
             values (default, ?, ?, ?, ?, false, true, default) returning id
             |] (_AddKeyData_title, _AddKeyData_key, sshKey, userId)
 
-    [r] <- liftIO $ query conn [sql|
+    [r] <- query [sql|
                    select id, submitted_pubkey, name, verified, readonly, created
                    from "public_key" where id = ?
                |] (Only id_ :: Only Integer)

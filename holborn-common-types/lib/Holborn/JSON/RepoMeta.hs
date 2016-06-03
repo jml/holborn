@@ -32,8 +32,9 @@ instance ToHttpApiData ValidRepoName where
 
 instance Arbitrary ValidRepoName where
     arbitrary =
-      (\a b -> ValidRepoName (fromString (a : b))) <$> elements startAlphabet <*> listOf1 (elements alphabet)
+      (ValidRepoName . fromString) <$> validString
       where
+        validString = (:) <$> elements startAlphabet <*> listOf1 (elements alphabet)
         startAlphabet = ['A'..'Z'] <> ['a'..'z'] <> ['0'..'9']
         alphabet = startAlphabet <> "-_"
 

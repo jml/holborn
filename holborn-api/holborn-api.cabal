@@ -11,12 +11,12 @@ library
                      , Holborn.API.Auth
                      , Holborn.API.Browse
                      , Holborn.API.Config
+                     , Holborn.API.Internal
                      , Holborn.API.NewRepo
                      , Holborn.API.SSH
                      , Holborn.API.Settings.Profile
                      , Holborn.API.Settings.SSHKeys
                      , Holborn.Docs
-                     , Holborn.Errors
   build-depends:       base >=4.8 && <5
                      , postgresql-simple
                      , text
