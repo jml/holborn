@@ -122,6 +122,9 @@ checkRepoAccess' AppConf{conn} CheckRepoAccessRequest{key_id, command} = do
                |] (Only key_id)
     Log.debug (key_id, command, rows)
 
+    -- TODO - the following is just a placeholder query so we can get
+    -- a repoId. It works but needs error handling (return e.g. 404
+    -- when repo wasn't found).
     [(_ :: String, repoId :: RepoId)] <- liftIO $ query conn [sql|
                select 'org', id from "org" where orgname = ? and name = ?
                UNION
