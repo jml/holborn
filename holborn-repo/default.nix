@@ -5,7 +5,7 @@
 , mtl, network, pipes, pipes-aeson, pipes-bytestring, pipes-network
 , pipes-parse, pipes-safe, pipes-shell, pipes-zlib, process
 , servant-blaze, servant-server, stdenv, tagged, text, transformers
-, wai, warp, lib
+, wai, warp
 }:
 mkDerivation {
   pname = "holborn-repo";
