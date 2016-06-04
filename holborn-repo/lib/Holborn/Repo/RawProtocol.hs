@@ -33,7 +33,7 @@ import Holborn.Repo.HttpProtocol (DiskLocation(..), diskLocationToPath)
 gitPack :: String -> DiskLocation -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
 gitPack packCommand diskLocation@DiskLocation{..} from to = do
     -- TOOD error handling & logging
-    void $ repoInit _repoRoot _repoId
+    void $ repoInit repoRoot repoId
     void $ streamIO (proc packCommand [diskLocationToPath diskLocation]) from to
 
 

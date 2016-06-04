@@ -57,6 +57,7 @@ import Holborn.ServantTypes (RenderedJson)
 import Holborn.JSON.RepoMeta (RepoId)
 
 -- | A git repository
+-- | TODO: this seems to have the same function as HttpProtocol.DiskLocation?
 data Repository =
   Repo { _repoId :: RepoId
        , _repoPath :: FilePath

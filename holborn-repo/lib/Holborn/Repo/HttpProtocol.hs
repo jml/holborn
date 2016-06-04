@@ -55,10 +55,10 @@ repoAPI = Proxy
 
 -- | Data type to describe where the repository lives on disk. Will
 -- probably be extended to handle implicit clones.
-data DiskLocation = DiskLocation { _repoRoot :: FilePath, _repoId :: RepoId }
+data DiskLocation = DiskLocation { repoRoot :: FilePath, repoId :: RepoId }
 
 diskLocationToPath :: DiskLocation -> String
-diskLocationToPath DiskLocation{..} = _repoRoot <> "/" <> textToString (toUrlPiece _repoId)
+diskLocationToPath DiskLocation{..} = repoRoot <> "/" <> textToString (toUrlPiece repoId)
 
 
 repoServer :: Config -> Server RepoAPI
@@ -120,7 +120,7 @@ smartHandshake diskLocation@DiskLocation{..} service =
         -- cloning of empty repositories. The user will see:
         -- "warning: You appear to have cloned an empty repository."
         -- TODO: error logging
-        void (repoInit _repoRoot _repoId)
+        void (repoInit repoRoot repoId)
         respond $ maybe backupResponse gitResponse service
 
     gitResponse :: GitService -> Response
