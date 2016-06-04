@@ -111,8 +111,17 @@ listKeys AppConf{conn} username = do
           |]
 
 
+-- | Different ways an SSH request can fail.
+data SSHAccessError
+  = NoSSHKey
+  | MultipleSSHKeys
+  | ReadOnlyKey KeyId
+  | UnverifiedKey
+  deriving (Eq, Show)
+
+
 -- | Determine whether the user identified by their SSH key can access a repo.
-checkRepoAccess' :: AppConf -> CheckRepoAccessRequest -> ExceptT Text IO RepoCall
+checkRepoAccess' :: AppConf -> CheckRepoAccessRequest -> ExceptT SSHAccessError IO RepoCall
 checkRepoAccess' AppConf{conn} CheckRepoAccessRequest{key_id, command} = do
     let (owner, repo) = (_owner command, _sshCommandLineRepo command)
 
@@ -132,18 +141,17 @@ checkRepoAccess' AppConf{conn} CheckRepoAccessRequest{key_id, command} = do
                |] (owner, repo, owner, repo)
 
     case (command, rows) of
-        (_, []) -> throwE "No SSH key"
-        (_, _:_:_) -> throwE "Multiple SSH keys"
+        (_, []) -> throwE NoSSHKey
+        (_, _:_:_) -> throwE MultipleSSHKeys
         (GitReceivePack _ _, [(_, False, True)]) -> return $ WritableRepoCall command repoId
-        (GitReceivePack _ _, [(keyId, True, True)]) ->
-            throwE ("SSH key with id " <> show (keyId :: Int) <> " is readonly")
+        (GitReceivePack _ _, [(keyId, True, True)]) -> throwE $ ReadOnlyKey keyId
         (GitUploadPack _ _, [(_, _, True)]) -> return $ WritableRepoCall command repoId
-        (_, [(_, _, False)]) -> throwE "SSH key not verified"
+        (_, [(_, _, False)]) -> throwE UnverifiedKey
 
 
 -- | Either route a git request to the correct repo, or give an error saying
 -- why not.
-routeRepoRequest :: AppConf -> CheckRepoAccessRequest -> ExceptT Text IO RepoAccess
+routeRepoRequest :: AppConf -> CheckRepoAccessRequest -> ExceptT SSHAccessError IO RepoAccess
 routeRepoRequest conf@AppConf{rawRepoHostname, rawRepoPort} request =
     AccessGranted rawRepoHostname rawRepoPort <$> checkRepoAccess' conf request
 
@@ -176,8 +184,13 @@ shellQuote str = "'" <> escape str <> "'"
 
 
 -- | Emit the Holborn side of the SSH command
-renderAccess :: Either Text RepoAccess -> Text
-renderAccess (Left err) = ">&2 echo '" <> err <> "' && exit 1"
+renderAccess :: Either SSHAccessError RepoAccess -> Text
+renderAccess (Left err) = ">&2 echo '" <> toErrorMessage err <> "' && exit 1"
+  where
+    toErrorMessage NoSSHKey = "No SSH key"
+    toErrorMessage MultipleSSHKeys = "Multiple SSH keys"
+    toErrorMessage (ReadOnlyKey keyId) = "SSH key with id " <> show (keyId :: Int) <> " is readonly"
+    toErrorMessage UnverifiedKey = "SSH key not verified"
 renderAccess (Right (AccessGranted hostname port repoCall)) =
   concat ["(echo -n "
          , shellEncode repoCall
