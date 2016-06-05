@@ -50,7 +50,7 @@ gDecode' sig json = case sig of
               sp <- gDecode' constr pf
               pure { recLabel: lbl, recValue: const sp }
           _ -> do
-            pf <- mFail ("'" <> lbl <> "' property missing") (M.lookup lbl jObj)
+            pf <- mFail ("'" <> lbl <> "' property missing. Expected: " <> (show (map _.recLabel props))) (M.lookup lbl jObj)
             sp <- gDecode' (val unit) pf
             pure { recLabel: lbl, recValue: const sp }
 

@@ -28,7 +28,7 @@ import Control.Error (bimapExceptT)
 import Control.Monad.Catch (MonadThrow(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
-import Data.Aeson (FromJSON, Value, decode', encode, object, (.=))
+import Data.Aeson (FromJSON, Value, eitherDecode', encode, object, (.=))
 import Data.ByteString.Lazy (fromStrict)
 import qualified Database.PostgreSQL.Simple as PostgreSQL
 import Network.HTTP.Client (parseUrl, withResponse, requestHeaders, responseBody)
@@ -146,14 +146,14 @@ execute sql values = do
 --
 -- Will eagerly load the entire response into memory and convert all of the
 -- JSON values to Haskell values.
-jsonGet' :: (FromJSON a) => Text -> APIHandler err (Maybe a)
+jsonGet' :: (FromJSON a) => Text -> APIHandler err (Either String a)
 jsonGet' endpoint = do
     AppConf{httpManager} <- getConfig
     r <- parseUrl (textToString endpoint)
     let rJson = r { requestHeaders = [(hAccept, "application/json")] }
     APIHandler $ liftIO $ withResponse rJson httpManager $ \response -> do
       body <- fmap fromStrict (responseBody response)
-      return $ decode' body
+      return $ eitherDecode' body
 
 
 -- | Log something for debugging

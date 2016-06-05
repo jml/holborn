@@ -262,8 +262,14 @@ data TreeEntryMetaMode = SymlinkMode | BlobMode | ExecutableBlobMode | TreeMode 
 
 data EntryType = TreeEntry | BlobEntry | CommitEntry deriving (Eq, Show, Generic)
 
+
+-- The EntryType shows up in the frontend so we need to encode
+-- manually
 instance ToJSON EntryType where
-  toJSON = genericToJSON defaultOptions
+  toJSON TreeEntry = toJSON ("tree" :: Text)
+  toJSON BlobEntry = toJSON ("blob" :: Text)
+  toJSON CommitEntry = toJSON ("commit" :: Text)
+
 
 -- TODO probably better off in common types
 data TreeEntryMeta = TreeEntryMeta
@@ -427,7 +433,7 @@ notImplementedYet feature = terror $ "Not implemented yet: " ++ feature
 -- (which is much rarer than reading).
 fillRepoMeta :: Repository -> GitM IO RepoMeta
 fillRepoMeta Repo{..} =
-  return $ RepoMeta _repoId 10 11 12 -- Fake data 10 11 12
+  return $ RepoMeta _repoId 10 11 12 "owner-filled-by-api" -- Fake data 10 11 12
 
 instance ToMarkup RepoMeta where
   toMarkup RepoMeta{..} = do

@@ -15,3 +15,5 @@
 * [switch to gerrit](http://techspot.zzzeek.org/2016/04/21/gerrit-is-awesome/)
 
 * [composing smaller parsers that can deal with invalid code and still generate useful facts](https://blog.acolyer.org/2016/05/31/how-to-build-static-checking-systems-using-orders-of-magnitude-less-code/)
+
+* [Chrome embedding API in case we want to pre-render pages before sending them to the user](https://chromium.googlesource.com/chromium/src/+/9ef54766bc24bdeff0fec0a8df5540feb691cfc9/headless/README.md)

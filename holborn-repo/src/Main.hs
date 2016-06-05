@@ -15,6 +15,8 @@ import Control.Concurrent (forkIO)
 import Holborn.Repo.HttpProtocol (repoServer, repoAPI)
 import Holborn.Repo.Config (Config(..), warpSettings)
 import Holborn.Repo.RawProtocol (serveRaw)
+import qualified Network.Wai.Middleware.RequestLogger as RL
+
 
 -- git init --bare /tmp/hello
 app :: Config -> Application
@@ -33,4 +35,4 @@ main :: IO ()
 main = do
     config <- loadConfig
     void $ forkIO (serveRaw config)
-    runSettings (warpSettings config) (app config)
+    runSettings (warpSettings config) (RL.logStdoutDev (app config))
