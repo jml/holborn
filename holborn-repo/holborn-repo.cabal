@@ -73,6 +73,7 @@ library
                      , conduit >=1.1
                      , conduit-combinators >=1.0
                      , holborn-common-types
+                     , directory
 
 executable holborn-repo
   main-is:             Main.hs

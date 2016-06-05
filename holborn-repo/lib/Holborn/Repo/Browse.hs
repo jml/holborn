@@ -12,17 +12,17 @@ module Holborn.Repo.Browse (BrowseAPI, browseAPI, codeBrowser) where
 import BasicPrelude
 
 import Control.Error (bimapExceptT)
-import Control.Monad.Trans.Except (ExceptT)
+import Control.Monad.Trans.Except (ExceptT, throwE)
 import Data.ByteString.Lazy (fromStrict)
 import Servant ((:>), (:<|>)(..), Capture, Get, Proxy(..), QueryParam, ServantErr(..), Server, JSON, MimeRender(mimeRender))
 import Servant.HTML.Blaze (HTML)
-import Servant.Server (enter, (:~>)(..), err500)
+import Servant.Server (enter, (:~>)(..), err500, err404)
 import Data.Aeson (encode)
 
 import Holborn.ServantTypes (RenderedJson)
 import Holborn.Repo.GitLayer ( Blob
                              , Commit
-                             , GitException(..)
+                             , BrowseException(..)
                              , Repository
                              , Revision
                              , Tree
@@ -77,16 +77,23 @@ browseAPI :: Proxy BrowseAPI
 browseAPI = Proxy
 
 
-type RepoBrowser = ExceptT GitException IO
+type RepoBrowser = ExceptT BrowseException IO
 
 
 -- | Translate from RepoBrowser to the standard Servant monad
 --
 -- See http://haskell-servant.github.io/tutorial/server.html#using-another-monad-for-your-handlers
-gitBrowserT :: ExceptT GitException IO :~> ExceptT ServantErr IO
-gitBrowserT = Nat (bimapExceptT gitExceptionToServantErr id)
+gitBrowserT :: ExceptT BrowseException IO :~> ExceptT ServantErr IO
+gitBrowserT = Nat (bimapExceptT browseExceptionToServantErr id)
   where
-    gitExceptionToServantErr e = err500 { errBody = fromStrict (encodeUtf8 (show e)) }
+    browseExceptionToServantErr (GitException e) = err500 { errBody = fromStrict (encodeUtf8 (show e)) }
+    browseExceptionToServantErr BlobNotFoundException = err404 { errBody = "not found" }
+
+    -- TOOD empty (no commit) repositories return
+    -- TreeNotFoundException which is not great.
+    browseExceptionToServantErr TreeNotFoundException = err404 { errBody = "not found" }
+    browseExceptionToServantErr CommitNotFoundException = err404 { errBody = "not found" }
+    browseExceptionToServantErr RepoNotFoundException = err404 { errBody = "repo not found" }
 
 
 codeBrowser :: Repository -> Server BrowseAPI
@@ -108,13 +115,19 @@ renderMeta repo = do
 
 
 renderBlob :: Repository -> Revision -> [Text] -> RepoBrowser Blob
-renderBlob repo revision segments =
-  fromMaybe (terror ("no blob found for " <> (show segments))) <$> withRepository repo (getBlob revision segments)
+renderBlob repo revision segments = do
+  x <- withRepository repo (getBlob revision segments)
+  case x of
+    Nothing -> throwE BlobNotFoundException
+    Just x' -> pure x'
 
 
 renderTree :: Repository -> Revision -> [Text] -> RepoBrowser Tree
-renderTree repo revision segments =
-    fromMaybe (terror ("no tree found for" <> (show segments))) <$> withRepository repo (getTree revision segments)
+renderTree repo revision segments = do
+  x <- withRepository repo (getTree revision segments)
+  case x of
+    Nothing -> throwE TreeNotFoundException
+    Just x' -> pure x'
 
 
 renderCommits :: Repository -> Revision -> Maybe Author -> RepoBrowser [Commit]

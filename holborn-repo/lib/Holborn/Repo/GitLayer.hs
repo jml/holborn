@@ -9,7 +9,7 @@ The Holborn interface to Git.
 module Holborn.Repo.GitLayer
        ( Blob
        , Commit
-       , Git.GitException(..)
+       , BrowseException(..)
        , Repository
        , Revision
        , Tree
@@ -40,6 +40,7 @@ import qualified Data.Conduit.List as CL
 import Data.Conduit (runConduit, yield, awaitForever, (=$=))
 import Servant (MimeRender(mimeRender))
 import qualified Data.ByteString.Char8 as BSC8
+import System.Directory (doesDirectoryExist)
 
 -- XXX: Putting web stuff here to avoid orphan warnings. Would be nice to have
 -- it completely separate.
@@ -69,9 +70,15 @@ type GitRepo = LgRepo
 type GitM m = ReaderT GitRepo m
 
 
--- XXX: Make this a sum type of GitException plus our own kinds of errors.
-type GitException = Git.GitException
+data BrowseException =
+    GitException Git.GitException
+    | BlobNotFoundException -- TODO add some details for nicer error messages
+    | TreeNotFoundException
+    | CommitNotFoundException
+    | RepoNotFoundException
+    deriving (Show, Typeable)
 
+instance Exception BrowseException
 
 makeRepository :: RepoId -> FilePath -> Repository
 makeRepository = Repo
@@ -79,9 +86,13 @@ makeRepository = Repo
 
 -- TODO: Verify behaviour when the repository does not exist.
 -- XXX: Store "Repository" in Reader(T)
-withRepository :: Repository -> (Repository -> GitM IO a) -> ExceptT GitException IO a
+withRepository :: Repository -> (Repository -> GitM IO a) -> ExceptT BrowseException IO a
 withRepository repo action =
-  bimapExceptT justGitException id $ syncIO $ Git.withRepository' lgFactory options (action repo)
+  bimapExceptT justBrowseException id $ syncIO $ do
+    repoExists <- doesDirectoryExist (_repoPath repo)
+    if repoExists
+      then Git.withRepository' lgFactory options (action repo)
+      else throwIO RepoNotFoundException
   where
     options = Git.RepositoryOptions { Git.repoPath = _repoPath repo
                                     , Git.repoWorkingDir = Nothing
@@ -89,11 +100,11 @@ withRepository repo action =
                                     , Git.repoAutoCreate = False
                                     }
 
-    justGitException :: SomeException -> GitException
-    justGitException e =
+    justBrowseException :: SomeException -> BrowseException
+    justBrowseException e =
       case fromException e of
-        Just gitException -> gitException
-        _ -> terror $ "Unknown error: " ++ show e
+        Just browseException -> browseException
+        _ -> terror $ "Unknown execption: " ++ show e
 
 
 -- XXX: Staircasing
