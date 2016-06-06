@@ -49,24 +49,24 @@ newRepo _username NewRepoRequest{..} = do
 
     -- UNION query to check both user and org at the same time
     result <- query [sql|
-        select 'org', id from "org" where orgname = ? UNION select 'user',  id from "user" where username = ?
+        select 'org', id, orgname from "org" where orgname = ? UNION select 'user', id, username from "user" where username = ?
         |] (_NewRepoRequest_owner, _NewRepoRequest_owner)
 
     case result of
-         [("org" :: String, orgId :: Int)] -> newOrgRepo orgId
-         [("user" :: String, userId' :: Int)] -> newUserRepo userId'
+         [("org" :: String, orgId :: Int, owner :: Text)] -> newOrgRepo orgId owner
+         [("user" :: String, userId' :: Int, owner :: Text)] -> newUserRepo userId' owner
          [] -> throwHandlerError OwnerNotFound
          _ -> terror "Unexpected number of rows in newRepo"
 
   where
-    newOrgRepo orgId = do
+    newOrgRepo orgId owner = do
        [Only (repoId :: Int)] <- query [sql|
             insert into "org_repo" (name, description, org_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (_NewRepoRequest_name, _NewRepoRequest_description, orgId, "127.0.0.1:8080" :: Text)
-       pure (RepoMeta repoId 0 0 0)
+       pure (RepoMeta repoId 0 0 0 owner)
 
-    newUserRepo userId = do
+    newUserRepo userId owner = do
        [Only (repoId :: Int)] <- query [sql|
             insert into "user_repo" (name, description, user_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (_NewRepoRequest_name, _NewRepoRequest_description, userId, "127.0.0.1:8080" :: Text)
-       pure (RepoMeta repoId 0 0 0)
+       pure (RepoMeta repoId 0 0 0 owner)

@@ -92,3 +92,5 @@ executable holborn-repo
                      , wai
                      , warp
                      , envparse >=0.2
+                     , time >=1.5
+                     , wai-extra
