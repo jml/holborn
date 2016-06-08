@@ -60,7 +60,7 @@ http {
         }
 
         location /v1 {
-            proxy_pass         http://127.0.0.1:${proxy_port};
+            proxy_pass         http://127.0.0.1:${toString proxy_port};
             proxy_redirect     off;
             proxy_set_header X-Forwarded-For $remote_addr;
             proxy_set_header X-Forwarded-Proto $scheme;

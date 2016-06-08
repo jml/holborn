@@ -13,7 +13,7 @@ in
         description = "the package";
       };
       port = mkOption {
-        type = types.str;
+        type = types.int;
         default = null;
         description = "port to run on";
       };
@@ -49,14 +49,14 @@ in
       path = [ pkgs.openssh ];
 
       environment = {
-          PORT = "${cfg.port}";
+          PORT = "${toString cfg.port}";
           HOLBORN_PG_DATABASE = "holborn";
           HOLBORN_PG_USER = "holborn";
           HOLBORN_BASE_URL = "https://norf.co";
           HOLBORN_REPO_HOSTNAME = "${cfg.repoServer}";
           HOLBORN_REPO_PORT = "${toString cfg.repoPort}";
           HOLBORN_REPO_RAW_HOSTNAME = "${cfg.repoServer}";
-          HOLBORN_REPO_RAW_PORT "${toString cfg.rawRepoPort}";
+          HOLBORN_REPO_RAW_PORT = "${toString cfg.rawRepoPort}";
       };
 
       serviceConfig.ExecStart = "${cfg.package}/bin/holborn-api-server";

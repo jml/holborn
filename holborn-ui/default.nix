@@ -9,7 +9,6 @@ stdenv.mkDerivation {
   buildInputs = [
     nodejs
     haskellPackages.purescript
-    haskellPackages.psc-ide
     sassc
     node_modules
     bower_modules
