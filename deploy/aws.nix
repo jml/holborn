@@ -73,6 +73,7 @@ rec {
           ./nix/holborn-openssh-module.nix
           ./nix/holborn-api-module.nix
           ./nix/holborn-repo-module.nix
+          ./nix/dex-module.nix
         ];
 
         services.openssh.ports = [ normalSSHPort ];
@@ -80,7 +81,7 @@ rec {
         services.holborn-openssh = {
           package = pkgs.openssh;
           holbornSshPackage = holborn-ssh;
-          holbornApiEndpoint = "http://127.0.01:${ports.API}";
+          holbornApiEndpoint = "http://127.0.01:${toString ports.API}";
         };
 
         services.holborn-api = {
@@ -97,7 +98,27 @@ rec {
           rawPort = ports.RAW;
         };
 
+        services.dex = {
+          enable = true;
+          package = (pkgs.callPackage ../nix/dex.nix { goPackages = pkgs.go15Packages; });
+          overlordDBURL = "postgres://dex-rw@127.0.0.1/dex?sslmode=disable";
+          overlordAdminAPISecret = "lyErb98S0KpcUJ9AYM3jWlkPLxhvD5czolgJqpjls3jdBslhYqmZUOYhPoi8leiSoLvB6fVZ3xA9KdhZC7UA0COdbhgGORyGLlIq2DY/2xxkPm8UItARTqjSbAfVpqSVzSd1ZEhoNUi+iWNTdTVVArZN2Dg20geMNZEzlx/KqyM=";
+          overlordKeySecrets = ["RKLSntSuSsg6Ki8AKmo3WaAw1m3KqTxC3bnGF5i9jCk="];
+          logDebug = true;
+          emailConfig = {
+            type = "smtp";
+            host = "127.0.0.1";
+            port = 25;
+          };
+          connectorConfig = [{
+            type = "local";
+            id = "local";
+          }];
+        };
+
         environment.systemPackages = [ pkgs.git pkgs.vim frontend ];
+
+        services.postfix.enable = true;
 
         services.postgresql.enable = true;
         services.postgresql.package = pkgs.postgresql95;
