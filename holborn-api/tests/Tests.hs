@@ -85,7 +85,7 @@ apiTests =
   [ testCase "Bad URL fails in ExceptT" $ do
         resetDB
         let badUrl = "413213243214"
-        let apiResult = (jsonGet' (fromString badUrl) :: APIHandler Int (Maybe Int))
+        let apiResult = (jsonGet' (fromString badUrl) :: APIHandler Int (Either String Int))
         let expectedException = UnexpectedException (toException (InvalidUrlException badUrl "Invalid URL")) :: APIError Int
         config <- testAppConf
         result <- runExceptT (runAPIHandler config apiResult)
