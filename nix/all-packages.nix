@@ -44,8 +44,7 @@ haskellPackages.override {
       # purescript relies on > 0.6 but we only have 0.5 branch in nix
       language-javascript = self.callPackage ./language-javascript.nix {};
 
-      # jailbreak because of aeson, don't check because tests need npm
-      purescript = haskell.lib.dontCheck (haskell.lib.doJailbreak (
-        self.callPackage ./purescript.nix {}));
+      # Don't check because tests need nodejs
+      purescript = haskell.lib.dontCheck (self.callPackage ./purescript.nix {});
     };
 }
