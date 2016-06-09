@@ -32,22 +32,19 @@ haskellPackages.override {
       holborn-syntax = self.callPackage ../holborn-syntax {};
       holborn-common-types = self.callPackage ../holborn-common-types {};
 
-      # Switch to servant-0.5
-      servant = super.servant_0_5;
-      servant-blaze = super.servant-blaze_0_5;
-      servant-docs = super.servant-docs_0_5;
-      servant-server = super.servant-server_0_5;
+      # Switch to servant-0.6
+      servant = super.servant_0_6;
+      servant-blaze = super.servant-blaze_0_6;
+      servant-docs = super.servant-docs_0_6;
+      servant-server = super.servant-server_0_6;
 
-      aeson = haskell.lib.dontCheck (self.callPackage ./aeson.nix {});
       language-python = self.callPackage ./language-python.nix {};
-      pipes-aeson = haskell.lib.doJailbreak (self.callPackage ./pipes-aeson.nix {});
       unexceptionalio = self.callPackage ./unexceptionalio.nix {};
 
       # purescript relies on > 0.6 but we only have 0.5 branch in nix
       language-javascript = self.callPackage ./language-javascript.nix {};
 
-      # jailbreak because of aeson, don't check because tests need npm
-      purescript = haskell.lib.dontCheck (haskell.lib.doJailbreak (
-        self.callPackage ./purescript.nix { language-javascript = self.language-javascript; }));
+      # Don't check because tests need nodejs
+      purescript = haskell.lib.dontCheck (self.callPackage ./purescript.nix {});
     };
 }

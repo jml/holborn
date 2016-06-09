@@ -3,30 +3,11 @@
 var webpack = require("webpack");
 var path = require("path");
 
-var PurescriptWebpackPlugin = require('purescript-webpack-plugin');
-
-var src = ['bower_components/purescript-*/src/**/*.purs', 'src/**/*.purs'];
-
-// TOOD "pulp server" writes a src/.webpack.js so we need to adjust
-// the ffi files to ignore that.
-var ffi = ['bower_components/purescript-*/src/**/*.js', 'src/**/FFI*.js'];
 
 var modulesDirectories = [
   'node_modules',
   'bower_components'
 ];
-
-
-var purescriptWebpackPlugin = new PurescriptWebpackPlugin({
-  src: src,
-  ffi: ffi,
-  // TODO currently running on language-javascript 0.5 with missing
-  // `a` escape.
-  bundle: true,
-
-  // PSA not working for unknown reasons. Use psc for now.
-  //psc: 'psa',
-});
 
 
 var config = {
@@ -41,6 +22,10 @@ var config = {
   module: { loaders: [
     { test: /\.purs$/,
       loader: 'purs-loader',
+      exclude: /node_modules/,
+      query: {
+        src: ['bower_components/purescript-*/src/**/*.purs', 'src/**/*.purs'],
+      },
     },
     {
       test: /\.scss$/,
@@ -54,7 +39,6 @@ var config = {
 
   resolve: { modulesDirectories: modulesDirectories, extensions: [ '', '.js', '.purs'] },
   plugins: [
-    purescriptWebpackPlugin,
     new webpack.optimize.CommonsChunkPlugin("vendor", "vendor.bundle.js"),
   ],
 

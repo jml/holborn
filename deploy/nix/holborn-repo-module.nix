@@ -43,7 +43,7 @@ in
       environment = {
           REPO_ROOT = "/tmp";
           PORT = "${toString cfg.port}";
-          RAW_PORT = "${toString cfg.rawPort}"
+          RAW_PORT = "${toString cfg.rawPort}";
       };
 
       serviceConfig.DevicePolicy = "closed";
