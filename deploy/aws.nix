@@ -6,9 +6,9 @@ let
         nix.gc.dates = "10:00";
         nix.gc.options = "--delete-older-than 7d";
 
-        networking.firewall.enable = true;
-        networking.firewall.allowedTCPPorts = [ 22 80 443 ];
-        networking.firewall.allowPing = true;
+        networking.firewall.enable = false;
+        #networking.firewall.allowedTCPPorts = [ 22 80 443 5556 ];
+        #networking.firewall.allowPing = true;
         services.journald.extraConfig = "SystemMaxUse=100M";
 
         # Set up ssh keys for git-pushing
@@ -31,6 +31,8 @@ rec {
             { fromPort = normalSSHPort; toPort = normalSSHPort; sourceIp = "0.0.0.0/0"; }
             { fromPort = 80; toPort = 80; sourceIp = "0.0.0.0/0"; }
             { fromPort = 443; toPort = 443; sourceIp = "0.0.0.0/0"; }
+            { fromPort = 5556; toPort = 5556; sourceIp = "0.0.0.0/0"; }
+            { fromPort = 4180; toPort = 4180; sourceIp = "0.0.0.0/0"; }
         ];
     };
 
@@ -74,6 +76,7 @@ rec {
           ./nix/holborn-api-module.nix
           ./nix/holborn-repo-module.nix
           ./nix/dex-module.nix
+          ./nix/oauth2_proxy-module.nix
         ];
 
         services.openssh.ports = [ normalSSHPort ];
@@ -82,6 +85,27 @@ rec {
           package = pkgs.openssh;
           holbornSshPackage = holborn-ssh;
           holbornApiEndpoint = "http://127.0.01:${toString ports.API}";
+        };
+
+        services.oauth2_proxy = {
+          package = (pkgs.callPackage ../nix/oauth2_proxy.nix {}).bin;
+          enable = true;
+          provider = "google";
+
+          loginURL = "http://52.50.74.68:5556/auth";
+          redeemURL = "http://52.50.74.68:5556/token";
+          validateURL = "http://52.50.74.68:5556/keys";
+          profileURL = "http://52.50.74.68:5556/";
+          redirectURL = "http://52.50.74.68:4180/oauth2/callback";
+
+          cookie.secret = "gei5jo1A fa9ooSh4";
+          cookie.secure = false;
+          upstream = "http://127.0.0.1:8005/";
+          httpAddress = "0.0.0.0:4180";
+          clientID = "ULGNrOr4hC9_HakhTBJJzncNUsuef-Y54FjzBj-xPLs=@52.50.74.68";
+          clientSecret = "EIZRrGT_925P2OlgM571PQoZnhNv59XXRVLXUmU6WtKX29eT8VOntuqzOtOq3jW_eZarmfcthF54ErRH6WNWrUHZRlmQvm1M";
+          scope = "'openid email'";
+          email.domains = ["*"];
         };
 
         services.holborn-api = {
@@ -100,15 +124,13 @@ rec {
 
         services.dex = {
           enable = true;
-          package = (pkgs.callPackage ../nix/dex.nix { goPackages = pkgs.go15Packages; });
+          package = (pkgs.callPackage ../nix/dex.nix { goPackages = pkgs.go16Packages; });
           overlordDBURL = "postgres://dex-rw@127.0.0.1/dex?sslmode=disable";
           overlordAdminAPISecret = "lyErb98S0KpcUJ9AYM3jWlkPLxhvD5czolgJqpjls3jdBslhYqmZUOYhPoi8leiSoLvB6fVZ3xA9KdhZC7UA0COdbhgGORyGLlIq2DY/2xxkPm8UItARTqjSbAfVpqSVzSd1ZEhoNUi+iWNTdTVVArZN2Dg20geMNZEzlx/KqyM=";
           overlordKeySecrets = ["RKLSntSuSsg6Ki8AKmo3WaAw1m3KqTxC3bnGF5i9jCk="];
           logDebug = true;
           emailConfig = {
-            type = "smtp";
-            host = "127.0.0.1";
-            port = 25;
+            type = "fake";
           };
           connectorConfig = [{
             type = "local";

@@ -99,7 +99,7 @@ in
   config = mkIf cfg.enable {
 
     # Make pkg dexctl command available on machine.
-    environment.systemPackages = [ cfg.package ];
+    environment.systemPackages = [ cfg.package.bin ];
 
     users.extraUsers = singleton {
       name = "dex";
@@ -148,6 +148,9 @@ in
         DEX_WORKER_HTML_ASSETS = "${cfg.package}/share/go/src/github.com/coreos/dex/static/html/";
         DEX_WORKER_CLIENTS = "${clientConfigFile}";
         DEX_WORKER_CONNECTORS = "${connectorConfigFile}";
+        DEX_WORKER_LISTEN = "http://0.0.0.0:5556";
+        DEX_WORKER_ISSUER = "http://norf.co:5556"; # Needs to be the public domain or IP
+        DEX_WORKER_EMAIL_TEMPLATES = "${cfg.package}/share/go/src/github.com/coreos/dex/static/email/";
       };
 
       serviceConfig = {
