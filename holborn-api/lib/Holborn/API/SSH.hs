@@ -22,14 +22,14 @@ module Holborn.API.SSH
 import BasicPrelude
 
 import GHC.Generics (Generic)
-import Control.Monad.Trans.Except (ExceptT, throwE, runExceptT)
 import qualified Data.Text as Text
 import Data.ByteString.Lazy (fromChunks, toStrict)
 import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, encode)
-import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(..), PlainText, ServantErr, Server)
-import Database.PostgreSQL.Simple (Only (..), query)
+import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(..), PlainText, Server, enter)
+import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
+import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, logDebug, query, toServantHandler)
 import Holborn.API.Types (Username)
 import Holborn.JSON.SSHRepoCommunication ( RepoCall(..)
                                          , KeyType(..)
@@ -39,8 +39,6 @@ import Holborn.JSON.SSHRepoCommunication ( RepoCall(..)
                                          , unparseSSHKey
                                          )
 import Holborn.JSON.RepoMeta (RepoId)
-
-import qualified Holborn.Logging as Log
 
 
 -- | Main internal API (only used by our openssh version ATM).
@@ -59,9 +57,35 @@ type API =
 
 
 server :: AppConf -> Server API
-server conf = checkKey conf
-    :<|> checkRepoAccess conf
-    :<|> listKeys conf
+server conf = enter (toServantHandler conf) $ checkKey
+    :<|> checkRepoAccess
+    :<|> listKeys
+
+
+-- None of the SSH handlers can return any valid error. Instead, they do a
+-- weird thing where always return success responses (i.e. 200 response code),
+-- but some success responses indicate failure.
+--
+-- This is because the primary client of this API is a fork of OpenSSH which
+-- we are trying to keep very simple.
+--
+-- Rather than have this fork understand complicated responses, we just give
+-- it a shell command that produces the effect that we desire.
+
+-- | Unconstructable data type that represents the error that we can never
+-- ever raise. Fills in a placeholder in the APIHandler type signature.
+data SSHError
+
+instance JSONCodeableError SSHError where
+  toJSON _ = (500, object [ "message" .= ("unexpected SSH error" :: Text) ])
+
+
+-- | Wrapper around APIHandler to indicate that we're never using it to return
+-- errors.
+--
+-- TODO: Probably a more clever thing would be to separate the config/io stuff
+-- from the servanterr translation stuff. jml is not that clever yet.
+type SSHHandler a = APIHandler SSHError a
 
 
 newtype SSHKeys = SSHKeys { unSSHKeys :: [SSHKey] } deriving (ToJSON, Show)
@@ -73,18 +97,18 @@ instance MimeRender PlainText SSHKeys where
 
 
 -- | Implementation
-checkKey :: AppConf -> CheckKeyRequest -> ExceptT ServantErr IO CheckKeyResponse
-checkKey AppConf{conn} request@CheckKeyRequest{..} = do
-    Log.debug ("checkKey" :: Text, request)
+checkKey :: CheckKeyRequest -> SSHHandler CheckKeyResponse
+checkKey request@CheckKeyRequest{..} = do
+    logDebug ("checkKey" :: Text, request)
     let comparison_pubkey = case key_type of
             RSA -> "ssh-rsa " <> key
             DSA -> "ssh-dsa " <> key
-    Log.debug ("actual db check" :: String, comparison_pubkey)
-    rows <- liftIO $ query conn [sql|
+    logDebug ("actual db check" :: String, comparison_pubkey)
+    rows <- query [sql|
                    select pk.id, pk.verified
                    from "public_key" as pk  where comparison_pubkey = ?
                |] (Only comparison_pubkey)
-    Log.debug rows
+    logDebug rows
 
     return $ case rows of
        [(keyId, True)] -> CheckKeyResponse (Just keyId)
@@ -97,10 +121,10 @@ checkKey AppConf{conn} request@CheckKeyRequest{..} = do
 
 
 -- | List all the verified SSH keys for a user.
-listKeys :: AppConf -> Username -> ExceptT ServantErr IO SSHKeys
-listKeys AppConf{conn} username = do
-    Log.debug ("listing keys for" :: Text, username)
-    keys <- liftIO $ query conn keysQuery (Only username)
+listKeys :: Username -> SSHHandler SSHKeys
+listKeys username = do
+    logDebug ("listing keys for" :: Text, username)
+    keys <- query keysQuery (Only username)
     return $ SSHKeys keys
   where
     keysQuery =
@@ -111,41 +135,50 @@ listKeys AppConf{conn} username = do
           |]
 
 
+-- | Different ways an SSH request can fail.
+data SSHAccessError
+  = NoSSHKey
+  | MultipleSSHKeys
+  | ReadOnlyKey KeyId
+  | UnverifiedKey
+  deriving (Eq, Show)
+
+
 -- | Determine whether the user identified by their SSH key can access a repo.
-checkRepoAccess' :: AppConf -> CheckRepoAccessRequest -> ExceptT Text IO RepoCall
-checkRepoAccess' AppConf{conn} CheckRepoAccessRequest{key_id, command} = do
+checkRepoAccess' :: CheckRepoAccessRequest -> SSHHandler (Either SSHAccessError RepoCall)
+checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
     let (owner, repo) = (_owner command, _sshCommandLineRepo command)
 
-    rows <- liftIO $ query conn [sql|
+    rows <- query [sql|
                    select id, pk.readonly, pk.verified
                    from "public_key" as pk where id = ?
                |] (Only key_id)
-    Log.debug (key_id, command, rows)
+    logDebug (key_id, command, rows)
 
     -- TODO - the following is just a placeholder query so we can get
     -- a repoId. It works but needs error handling (return e.g. 404
     -- when repo wasn't found).
-    [(_ :: String, repoId :: RepoId)] <- liftIO $ query conn [sql|
+    [(_ :: String, repoId :: RepoId)] <- query [sql|
                select 'org', id from "org" where orgname = ? and name = ?
                UNION
                select 'user',  id from "user" where username = ? and name = ?
                |] (owner, repo, owner, repo)
 
     case (command, rows) of
-        (_, []) -> throwE "No SSH key"
-        (_, _:_:_) -> throwE "Multiple SSH keys"
-        (GitReceivePack _ _, [(_, False, True)]) -> return $ WritableRepoCall command repoId
-        (GitReceivePack _ _, [(keyId, True, True)]) ->
-            throwE ("SSH key with id " <> show (keyId :: Int) <> " is readonly")
-        (GitUploadPack _ _, [(_, _, True)]) -> return $ WritableRepoCall command repoId
-        (_, [(_, _, False)]) -> throwE "SSH key not verified"
+        (_, []) -> return $ Left NoSSHKey
+        (_, _:_:_) -> return $ Left MultipleSSHKeys
+        (GitReceivePack _ _, [(_, False, True)]) -> return $ Right $ WritableRepoCall command repoId
+        (GitReceivePack _ _, [(keyId, True, True)]) -> return $ Left $ ReadOnlyKey keyId
+        (GitUploadPack _ _, [(_, _, True)]) -> return $ Right $ WritableRepoCall command repoId
+        (_, [(_, _, False)]) -> return $ Left UnverifiedKey
 
 
 -- | Either route a git request to the correct repo, or give an error saying
 -- why not.
-routeRepoRequest :: AppConf -> CheckRepoAccessRequest -> ExceptT Text IO RepoAccess
-routeRepoRequest conf@AppConf{rawRepoHostname, rawRepoPort} request =
-    AccessGranted rawRepoHostname rawRepoPort <$> checkRepoAccess' conf request
+routeRepoRequest :: CheckRepoAccessRequest -> SSHHandler (Either SSHAccessError RepoAccess)
+routeRepoRequest request = do
+    AppConf{rawRepoHostname, rawRepoPort} <- getConfig
+    fmap (AccessGranted rawRepoHostname rawRepoPort) <$> checkRepoAccess' request
 
 
 -- | Encode a JSON object so that it can be echoed on the shell.
@@ -176,8 +209,13 @@ shellQuote str = "'" <> escape str <> "'"
 
 
 -- | Emit the Holborn side of the SSH command
-renderAccess :: Either Text RepoAccess -> Text
-renderAccess (Left err) = ">&2 echo '" <> err <> "' && exit 1"
+renderAccess :: Either SSHAccessError RepoAccess -> Text
+renderAccess (Left err) = ">&2 echo '" <> toErrorMessage err <> "' && exit 1"
+  where
+    toErrorMessage NoSSHKey = "No SSH key"
+    toErrorMessage MultipleSSHKeys = "Multiple SSH keys"
+    toErrorMessage (ReadOnlyKey keyId) = "SSH key with id " <> show (keyId :: Int) <> " is readonly"
+    toErrorMessage UnverifiedKey = "SSH key not verified"
 renderAccess (Right (AccessGranted hostname port repoCall)) =
   concat ["(echo -n "
          , shellEncode repoCall
@@ -188,9 +226,9 @@ renderAccess (Right (AccessGranted hostname port repoCall)) =
          ]
 
 
-checkRepoAccess :: AppConf -> CheckRepoAccessRequest -> ExceptT ServantErr IO CheckRepoAccessResponse
-checkRepoAccess conf request = do
-    route <- liftIO $ runExceptT (routeRepoRequest conf request)
+checkRepoAccess :: CheckRepoAccessRequest -> SSHHandler CheckRepoAccessResponse
+checkRepoAccess request = do
+    route <- routeRepoRequest request
     return . CheckRepoAccessResponse . Just . renderAccess $ route
 
 
