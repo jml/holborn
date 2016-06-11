@@ -18,7 +18,7 @@ executable hcl-wait-for-port
   -- exposed-modules:
   -- other-modules:
   -- other-extensions:
-  build-depends:       base >=4.8 && <4.9
+  build-depends:       base >=4.9
                      , turtle >=1.2
                      , basic-prelude
                      , network-simple >=0.4
@@ -30,7 +30,7 @@ executable hcl-wait-for-port
                      , OverloadedStrings
 
 executable hcl-unused
-  build-depends:       base >=4.8 && <4.9
+  build-depends:       base >=4.9
                      , turtle >=1.2
                      , basic-prelude
   hs-source-dirs:      src
