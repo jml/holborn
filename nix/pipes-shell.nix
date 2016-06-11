@@ -12,7 +12,6 @@ mkDerivation {
   pname = "pipes-shell";
   version = "0.1.4";
 
-  # XXX: Use Github version
   src = fetchFromGitHub {
     owner = "jml";
     repo = "pipes-shell";
