@@ -32,7 +32,7 @@ let
       # PUPPY: Re-using credentials from deploy box.
       gitRepo = "https://holbornlondon:DSmiB2AVZJhftk4XRyH1N98XNMYzOmY9@bitbucket.org/holbornlondon/holborn";
       gitBranch = "master";
-      builderName = "holborn-experimental-builder";
+      builderName = "full-build";
       pollInterval = 300; # poll git repo every N seconds
     });
 
