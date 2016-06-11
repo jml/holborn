@@ -34,6 +34,7 @@ library
                      , NamedFieldPuns
                      , RecordWildCards
                      , GeneralizedNewtypeDeriving
+                     , MonadFailDesugaring
   ghc-options:         -Wall -Werror
 
 Test-Suite holborn-test
@@ -53,3 +54,4 @@ Test-Suite holborn-test
                      , NamedFieldPuns
                      , RecordWildCards
                      , GeneralizedNewtypeDeriving
+                     , MonadFailDesugaring

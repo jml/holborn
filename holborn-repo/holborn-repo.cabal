@@ -30,6 +30,8 @@ library
                      , NamedFieldPuns
                      , RecordWildCards
                      , GeneralizedNewtypeDeriving
+                     , MonadFailDesugaring
+
                      -- `threaded` because System.Process needs it for
                      -- certain functions (e.g. waiting for process)
                      -- `rtsopts` so we can print system stats (gc
@@ -85,6 +87,7 @@ executable holborn-repo
                      , NamedFieldPuns
                      , RecordWildCards
                      , GeneralizedNewtypeDeriving
+                     , MonadFailDesugaring
   build-depends:       base >=4.9 && <5.0
                      , basic-prelude >= 0.3.13 && <0.6
                      , holborn-repo
