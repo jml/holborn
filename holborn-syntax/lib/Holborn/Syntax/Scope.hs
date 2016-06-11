@@ -59,11 +59,11 @@ class Interpreter m location where
   interpret :: m location -> Scoped location ()
 
   -- | Interpret the expression if it's there.
-  interpretMaybe :: Interpreter m a => Maybe (m a) -> Scoped a ()
+  interpretMaybe :: Maybe (m location) -> Scoped location ()
   interpretMaybe = maybe (return ()) interpret
 
   -- | Interpret a sequence of things.
-  interpretSequence :: (Foldable t, Interpreter m a) => t (m a) -> Scoped a ()
+  interpretSequence :: (Foldable t) => t (m location) -> Scoped location ()
   interpretSequence = mapM_ interpret
 
 
