@@ -34,11 +34,12 @@ library
                      -- certain functions (e.g. waiting for process)
                      -- `rtsopts` so we can print system stats (gc
                      -- time etc) when testing cloning.
-  ghc-options:         -Wall -Werror -threaded -rtsopts
-  build-depends:       base >=4.8 && <5
+  ghc-options:         -Wall -Werror
+  build-depends:       base >=4.9 && <5
                      , basic-prelude >= 0.5 && <0.6
                      , servant-server >= 0.5
-                     , pipes-shell
+                     -- 0.1.4 doesn't work on ghc 8.0
+                     , pipes-shell >= 0.2.0
                      , pipes-safe
                      , pipes-zlib
                      , wai
@@ -56,7 +57,6 @@ library
                      , mtl
                      , pipes-bytestring
                      , process
-                     , pipes-bytestring
                      , http-api-data
                        -- Git support
                      , gitlib
@@ -85,7 +85,7 @@ executable holborn-repo
                      , NamedFieldPuns
                      , RecordWildCards
                      , GeneralizedNewtypeDeriving
-  build-depends:       base >=4.8 && <4.9
+  build-depends:       base >=4.9 && <5.0
                      , basic-prelude >= 0.3.13 && <0.6
                      , holborn-repo
                      , servant-server >= 0.5

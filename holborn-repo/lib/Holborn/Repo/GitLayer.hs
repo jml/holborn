@@ -328,7 +328,7 @@ instance ToJSON Blob where
 -- entries). TODO this is also super slow for large repos so we should
 -- at the very least cache in process or find a faster way to
 -- traverse.
-loadTree :: (Git.MonadGit GitRepo m, MonadIO m) => Revision -> [Text] -> Repository -> Git.Tree GitRepo -> Git.TreeEntry GitRepo -> m Tree
+loadTree :: (Git.MonadGit GitRepo m) => Revision -> [Text] -> Repository -> Git.Tree GitRepo -> Git.TreeEntry GitRepo -> m Tree
 loadTree revision segments repo tree entry = do
     -- Use conduits to compress a whole repository to sth readable in
     -- ~constant space.

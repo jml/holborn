@@ -38,6 +38,9 @@ haskellPackages.override {
       # purescript relies on > 0.6 but we only have 0.5 branch in nix
       language-javascript = self.callPackage ./language-javascript.nix {};
 
+      # Get pipes-shell working with ghc 8.0
+      pipes-shell = self.callPackage ./pipes-shell.nix {};
+
       # Don't check because tests need nodejs
       purescript = haskell.lib.dontCheck (self.callPackage ./purescript.nix {});
     };
