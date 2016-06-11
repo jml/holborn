@@ -26,6 +26,7 @@ let
     { inherit workerPort buildbotWebPort;
       inherit workerName workerPassword;
       buildbotURL = "${publicURL}/";
+      buildbotFromEmail = "holborn-buildbot@buildbot.mumak.net";
       projectName = "holborn";
       projectURL = "https://bitbucket.com/holbornlondon/holborn";
       # PUPPY: Re-using credentials from deploy box.
@@ -100,6 +101,10 @@ in
       jonathan.lange@gmail.com
       thomas.e.hunger@gmail.com
     '';
+  };
+
+  services.postfix = {
+    enable = true;
   };
 
   security.acme.certs."buildbot.mumak.net" = {
