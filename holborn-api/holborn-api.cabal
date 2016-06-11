@@ -50,6 +50,7 @@ library
                      , RecordWildCards
                      , GeneralizedNewtypeDeriving
                      , ScopedTypeVariables
+                     , MonadFailDesugaring
 
 Test-Suite holborn-api-tests
   type:                exitcode-stdio-1.0
@@ -84,6 +85,7 @@ Test-Suite holborn-api-tests
                      , NamedFieldPuns
                      , RecordWildCards
                      , GeneralizedNewtypeDeriving
+                     , MonadFailDesugaring
 
 
 executable holborn-api-server
@@ -106,3 +108,4 @@ executable holborn-api-server
                      , NamedFieldPuns
                      , RecordWildCards
                      , GeneralizedNewtypeDeriving
+                     , MonadFailDesugaring

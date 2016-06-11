@@ -26,6 +26,7 @@ module Holborn.API.Internal
 import BasicPrelude
 import Control.Error (bimapExceptT)
 import Control.Monad.Catch (MonadThrow(..))
+import Control.Monad.Fail (MonadFail(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
 import Data.Aeson (FromJSON, Value, eitherDecode', encode, object, (.=))
@@ -81,6 +82,8 @@ data APIError a =
       -- ^ No auth token found.
     | UnexpectedException SomeException
       -- ^ Some code threw an exception that we couldn't understand
+    | BrokenCode String
+      -- ^ We called 'fail' when we should not have
   deriving (Show)
 
 
@@ -89,7 +92,12 @@ instance (JSONCodeableError a) => JSONCodeableError (APIError a) where
     toJSON InvalidAuthToken = (401, object [])
     toJSON InsufficientPermissions = (403, object [])
     toJSON (SubAPIError x) = toJSON x
-    toJSON (UnexpectedException e) = (500, object [ "message" .= show e ])
+    toJSON (UnexpectedException e) = (500, object [ "message" .= show e
+                                                  , "type" .= ("UncaughtException" :: Text)
+                                                  ])
+    toJSON (BrokenCode msg) = (500, object [ "message" .= msg
+                                           , "type" .= ("BrokenCode" :: String)
+                                           ])
 
 
 -- | Indicate that a handler has failed for a reason specific to that handler.
@@ -106,6 +114,9 @@ throwAPIError = APIHandler . lift . throwE
 newtype APIHandler err a =
   APIHandler { unwrapAPIHandler :: ReaderT AppConf (ExceptT (APIError err) IO) a }
   deriving (Functor, Applicative, Monad)
+
+instance MonadFail (APIHandler err) where
+  fail = throwAPIError . BrokenCode
 
 -- | Run an API handler action without doing the error translation
 runAPIHandler :: AppConf -> APIHandler err a -> ExceptT (APIError err) IO a
