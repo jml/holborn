@@ -6,13 +6,19 @@
 { mkDerivation, async, base, bytestring, directory, hspec, pipes
 , pipes-bytestring, pipes-safe, process, stm, stm-chans, text
 , stdenv
+, fetchFromGitHub
 }:
 mkDerivation {
   pname = "pipes-shell";
   version = "0.1.4";
 
   # XXX: Use Github version
-  src = ../../pipes-shell;
+  src = fetchFromGitHub {
+    owner = "jml";
+    repo = "pipes-shell";
+    rev = "ghc-8";
+    sha256 = "148rmqvp2s085krfnww24jl9r9dfjvvg1wgy8yvwfkbjjjcxpzpk";
+  };
 
   libraryHaskellDepends = [
     async base bytestring pipes pipes-bytestring pipes-safe process stm
