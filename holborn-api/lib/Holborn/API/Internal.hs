@@ -93,7 +93,7 @@ instance (JSONCodeableError a) => JSONCodeableError (APIError a) where
 
 
 -- | Indicate that a handler has failed for a reason specific to that handler.
-throwHandlerError :: (JSONCodeableError err) => err -> APIHandler err a
+throwHandlerError :: err -> APIHandler err a
 throwHandlerError = throwAPIError . SubAPIError
 
 

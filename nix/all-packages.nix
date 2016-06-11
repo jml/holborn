@@ -41,6 +41,8 @@ haskellPackages.override {
       # Get pipes-shell working with ghc 8.0
       pipes-shell = self.callPackage ./pipes-shell.nix {};
 
+      # Don't check because tests need phantomjs
+      wai-cors = haskell.lib.dontCheck haskellPackages.wai-cors;
       # Don't check because tests need nodejs
       purescript = haskell.lib.dontCheck (self.callPackage ./purescript.nix {});
     };
