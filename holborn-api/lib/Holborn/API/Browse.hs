@@ -5,7 +5,7 @@
 -- the edge but that's a premature optimization for now.
 --
 -- Test e.g.:
--- $ curl 127.0.0.1:8002/v1/browse -H "content-type: application/json" -d'{"repo": "jml/holborn", "path": ""}'
+--   curl 127.0.0.1:8002/v1/browse -H "content-type: application/json" -d'{"repo": "jml/holborn", "path": ""}'
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes #-}
