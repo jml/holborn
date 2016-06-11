@@ -30,7 +30,6 @@ data Config = Config { port :: Warp.Port
 -- | Configuration usable directly by application.
 data AppConf = AppConf
   { conn :: Connection
-  , jwtSecret :: Text
   , httpManager :: Manager
   , baseUrl :: Text -- e.g. https://holborn-example.com/
   , staticBaseUrl :: Text -- e.g. https://holborn-example.com/
@@ -50,7 +49,6 @@ loadAppConf :: Config -> IO AppConf
 loadAppConf Config{..} =
   AppConf
     <$> connect (defaultConnectInfo  { connectDatabase = pgDb, connectUser = pgUser, connectPort = pgPort })
-    <*> pure "test-secret-todo-read-from-env"
     <*> newManager defaultManagerSettings
     <*> pure configBaseUrl
     <*> pure configStaticBaseUrl

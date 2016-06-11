@@ -52,10 +52,9 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 -- XXX: Get the instances. Need to move all HTML formatting stuff to a
 -- separate module, and leave this just about using Git.
 import Holborn.Repo.HtmlFormatTokens ()
-import Holborn.JSON.RepoMeta (RepoMeta(..))
 import Holborn.Syntax (annotateCode)
 import Holborn.ServantTypes (RenderedJson)
-import Holborn.JSON.RepoMeta (RepoId)
+import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..))
 
 -- | A git repository
 -- | TODO: this seems to have the same function as HttpProtocol.DiskLocation?
@@ -437,5 +436,5 @@ fillRepoMeta Repo{..} =
 
 instance ToMarkup RepoMeta where
   toMarkup RepoMeta{..} = do
-    H.h1 $ "debug rendering for root metadata"
+    H.h1 "debug rendering for root metadata"
     H.a ! A.href (H.toValue ("/v1/repos/" <> toUrlPiece _RepoMeta_id <> "/git/trees/master")) $ "tree-root"
