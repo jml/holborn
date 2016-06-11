@@ -16,7 +16,7 @@ library
                      , Holborn.Syntax.Types
                      , Holborn.Syntax.Scope
                      , Holborn.Syntax.Languages.Python
-  build-depends:       base >=4.8 && <4.9
+  build-depends:       base >=4.9
                      , basic-prelude >= 0.5 && <0.6
                      , highlighter2 >= 0.2 && <0.3
                      , errors >= 2.0
@@ -39,7 +39,7 @@ library
 Test-Suite holborn-test
   type:                exitcode-stdio-1.0
   main-is:             Tests.hs
-  build-depends:       base >=4.8 && <4.9
+  build-depends:       base >=4.9
                      , tasty
                      , tasty-hunit
                      , tasty-quickcheck
