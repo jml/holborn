@@ -32,12 +32,6 @@ haskellPackages.override {
       holborn-syntax = self.callPackage ../holborn-syntax {};
       holborn-common-types = self.callPackage ../holborn-common-types {};
 
-      # Switch to servant-0.6
-      servant = super.servant_0_6;
-      servant-blaze = super.servant-blaze_0_6;
-      servant-docs = super.servant-docs_0_6;
-      servant-server = super.servant-server_0_6;
-
       language-python = self.callPackage ./language-python.nix {};
       unexceptionalio = self.callPackage ./unexceptionalio.nix {};
 
