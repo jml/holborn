@@ -43,6 +43,8 @@ import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar', readTVarIO, TVar)
 import Control.Concurrent.STM (atomically)
 import GHC.Generics (Generic)
 
+import Holborn.Proxy.Config (loadConfig, Config(..), oauth2FromConfig)
+
 
 -- | TrustedCreds are extracted from the id_token returend by
 -- fetchAccessToken and are therefore turstworthy.
@@ -77,29 +79,20 @@ instance AuthJar MemoryJar where
     make _ = pure "test-cookie" -- TODO random bytes
 
 
--- | Secret fluff and oauth2 URLs.
-dexKey :: OAuth2
-dexKey = OAuth2
-         { oauthClientId = "HWBN_c1uNIItwm-gamnkZEhYeKDE-jKNmE_vJvq--BU=@127.0.0.1"
-         , oauthClientSecret = "M7KgulFwBODJa5XObMNUqygJtqDXmGjk3Tuwfrwsdge_ffNJA3wM9qSUC2hCW2vjXnhDbNz4Qpt4aUAKONG2W-aPwMoMdCly"
-         , oauthCallback = Just "http://127.0.0.1:8002/oauth2/callback"
-         , oauthOAuthorizeEndpoint = "http://52.50.74.68:5556/auth"
-         , oauthAccessTokenEndpoint = "http://52.50.74.68:5556/token"
-         }
-
 -- | Redirect to dex
-redirectoToAuth :: Application
-redirectoToAuth _ respond =
-    let redirectUrl = authorizationUrl dexKey `appendQueryParam` [("scope", "openid profile email")]
+redirectToToAuth :: OAuth2 -> Application
+redirectToToAuth oauth2Conf _ respond =
+    let redirectUrl = authorizationUrl oauth2Conf `appendQueryParam` [("scope", "openid profile email")]
     in respond (responseLBS status302 [("location", redirectUrl)] BSL.empty)
 
 
 -- | Set the cookie that will identify the user on subsequent
 -- requests. Note that it's not HTTPonly because we want to use it
 -- from JS as well.
-redirectSetAuthCookie :: UserCookie -> Application
-redirectSetAuthCookie userCookie _ respond =
-    let redirectUrl = "http://127.0.0.1:8002/"
+redirectSetAuthCookie :: Config -> UserCookie -> Application
+redirectSetAuthCookie Config{configPort, configPublicHost} userCookie _ respond =
+    -- TODO redirectUrl should be a type
+    let redirectUrl = "http://" <> configPublicHost <> ":" <> encodeUtf8 (show configPort) <> "/"
         authCookie = def { setCookieName = "auth_cookie", setCookieValue = userCookie, setCookiePath = Just "/", setCookieSecure = False }
         setCookie = (BSL.toStrict . toLazyByteString . renderSetCookie) authCookie
     in respond (responseLBS status302 [("Set-Cookie", setCookie), ("location", redirectUrl)] BSL.empty)
@@ -113,15 +106,15 @@ authProblem msg = WPRApplication app
     app _ respond =
       respond (responseLBS status401 [] (BSL.fromStrict  (encodeUtf8 msg)))
 
-proxy :: (AuthJar jar) => Manager -> jar -> Request -> IO WaiProxyResponse
-proxy manager jar request = do
+proxy :: (AuthJar jar) => Config -> Manager -> jar -> Request -> IO WaiProxyResponse
+proxy config@Config{..} manager jar request = do
     let headers = requestHeaders request
 
     case pathInfo request of
       ["oauth2", "callback"] -> do
           case lookup "code" (queryString request) of
             Just (Just code) -> do
-                eitherToken <- fetchAccessToken manager dexKey code
+                eitherToken <- fetchAccessToken manager (oauth2FromConfig config) code
                 case eitherToken of
                   Right token -> do
                       let trustedCreds = unpackClaims token
@@ -129,18 +122,18 @@ proxy manager jar request = do
                         Right creds -> do
                             userCookie <- make jar
                             set jar userCookie creds
-                            pure (WPRApplication (redirectSetAuthCookie userCookie))
+                            pure (WPRApplication (redirectSetAuthCookie config userCookie))
                         Left _ -> pure (authProblem "could not parse id_token")
                   Left err -> print err >> pure (authProblem "token problem")
             _ -> pure (authProblem "invalid oauth2 code")
 
       _ -> case lookup "Cookie" headers >>= \cookies -> lookup "auth_cookie" (parseCookies cookies) of
-             Nothing -> pure (WPRApplication redirectoToAuth)
+             Nothing -> pure (WPRApplication (redirectToToAuth (oauth2FromConfig config)))
              Just authCookie -> do
                  c <- get jar authCookie
                  case c of
                    Just userCookie -> pure (setCredHeaders request userCookie)
-                   Nothing -> pure (WPRApplication redirectoToAuth)
+                   Nothing -> pure (WPRApplication (redirectToToAuth (oauth2FromConfig config)))
     where
       setCredHeaders :: Request -> TrustedCreds -> WaiProxyResponse
       setCredHeaders request' TrustedCreds{..} =
@@ -160,7 +153,7 @@ proxy manager jar request = do
                        , maybeHeader "If-None-Match"
                        , maybeHeader "User-Agent"
                        ])
-          in WPRModifiedRequest (request' {requestHeaders = forwardedHeaders}) (ProxyDest "127.0.0.1" 8000)
+          in WPRModifiedRequest (request' {requestHeaders = forwardedHeaders}) (ProxyDest configUpstreamHost configUpstreamPort)
 
       -- TODO disgusting code but checked by compiler and no IO so I
       -- assume it works.
@@ -194,7 +187,8 @@ proxy manager jar request = do
 
 main :: IO ()
 main = do
+    config@Config{..} <- loadConfig
     jar <- newMemoryJar
     manager <- newManager defaultManagerSettings
-    let app = waiProxyTo (proxy manager jar) defaultOnExc manager
-    run 8002 app
+    let app = waiProxyTo (proxy config manager jar) defaultOnExc manager
+    run configPort app

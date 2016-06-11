@@ -76,7 +76,6 @@ rec {
           ./nix/holborn-api-module.nix
           ./nix/holborn-repo-module.nix
           ./nix/dex-module.nix
-          ./nix/oauth2_proxy-module.nix
         ];
 
         services.openssh.ports = [ normalSSHPort ];
@@ -85,27 +84,6 @@ rec {
           package = pkgs.openssh;
           holbornSshPackage = holborn-ssh;
           holbornApiEndpoint = "http://127.0.01:${toString ports.API}";
-        };
-
-        services.oauth2_proxy = {
-          package = (pkgs.callPackage ../nix/oauth2_proxy.nix {}).bin;
-          enable = true;
-          provider = "google";
-
-          loginURL = "http://52.50.74.68:5556/auth";
-          redeemURL = "http://52.50.74.68:5556/token";
-          validateURL = "http://52.50.74.68:5556/keys";
-          profileURL = "http://52.50.74.68:5556/";
-          redirectURL = "http://52.50.74.68:4180/oauth2/callback";
-
-          cookie.secret = "gei5jo1A fa9ooSh4";
-          cookie.secure = false;
-          upstream = "http://127.0.0.1:8005/";
-          httpAddress = "0.0.0.0:4180";
-          clientID = "ULGNrOr4hC9_HakhTBJJzncNUsuef-Y54FjzBj-xPLs=@52.50.74.68";
-          clientSecret = "EIZRrGT_925P2OlgM571PQoZnhNv59XXRVLXUmU6WtKX29eT8VOntuqzOtOq3jW_eZarmfcthF54ErRH6WNWrUHZRlmQvm1M";
-          scope = "'openid email'";
-          email.domains = ["*"];
         };
 
         services.holborn-api = {
