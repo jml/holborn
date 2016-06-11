@@ -12,9 +12,7 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Holborn.JSON.User
-                     , Holborn.JSON.Response
-                     , Holborn.JSON.Browse
+  exposed-modules:     Holborn.JSON.Browse
                      , Holborn.JSON.RepoMeta
                      , Holborn.JSON.NewRepo
                      , Holborn.JSON.Settings.SSHKeys
