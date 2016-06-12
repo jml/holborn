@@ -35,8 +35,7 @@ import qualified Data.Time as Time
 type Owner = Text
 type Repo = Text
 
--- TODO: we need the CaptureAll combinator to capture paths of objects.
--- https://github.com/haskell-servant/servant/pull/519
+-- TODO: Update this to use CaptureAll
 -- Until we have that browsing will be brokwn
 type API =
          Header "GAP-Auth" Username
@@ -46,6 +45,7 @@ type API =
     :<|> Header "GAP-Auth" Username
          :> Capture "owner" Owner
          :> Capture "repo" Repo
+         -- TODO: Remove hardcoded branch
          :> "git" :> "trees" :> "master"
          :> Get '[JSON] Value
     :<|> Header "GAP-Auth" Username
