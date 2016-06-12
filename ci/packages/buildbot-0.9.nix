@@ -1,6 +1,7 @@
 { stdenv, buildPythonPackage, fetchurl, pythonPackages, callPackage
 , enableDebugClient ? false, pygobject ? null, pyGtkGlade ? null
 , enableWWW ? false
+, enableWaterfallView ? false
 }:
 
 # enableDebugClient enables "buildbot debugclient", a Gtk-based debug control
@@ -32,7 +33,8 @@ buildPythonPackage (rec {
     [ twisted dateutil jinja2 future sqlalchemy sqlalchemy_migrate
       (callPackage ./autobahn.nix {})
     ] ++ stdenv.lib.optional enableDebugClient [ pygobject pyGtkGlade ]
-    ++ stdenv.lib.optional enableWWW [ (callPackage ./buildbot-www-0.9.nix {}) ];
+    ++ stdenv.lib.optional enableWWW [ (callPackage ./buildbot-www-0.9.nix {}) ]
+    ++ stdenv.lib.optional enableWaterfallView [ (callPackage ./buildbot-waterfall-view-0.9.nix {}) ];
 
   # What's up with this?! 'trial' should be 'test', no?
   #
