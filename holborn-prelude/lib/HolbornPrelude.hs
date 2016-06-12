@@ -59,9 +59,6 @@ module HolbornPrelude
   , Text.unwords
   , textToString
   , ltextToString
-  , fpToText
-  , fpFromText
-  , fpToString
   , encodeUtf8
   , decodeUtf8
     -- ** Text operations (IO)
@@ -216,26 +213,6 @@ textToString = Text.unpack
 
 ltextToString :: LText -> Prelude.String
 ltextToString = LText.unpack
-
--- | This function assumes file paths are encoded in UTF8. If it
--- cannot decode the 'FilePath', the result is just an approximation.
---
--- Since 0.3.13
-fpToText :: FilePath -> Text
-fpToText = Text.pack
-{-# DEPRECATED fpToText "Use Data.Text.pack" #-}
-
--- |
--- Since 0.3.13
-fpFromText :: Text -> FilePath
-fpFromText = Text.unpack
-{-# DEPRECATED fpFromText "Use Data.Text.unpack" #-}
-
--- |
--- Since 0.3.13
-fpToString :: FilePath -> Prelude.String
-fpToString = id
-{-# DEPRECATED fpToString "Use id" #-}
 
 -- | Note that this is /not/ the standard @Data.Text.Encoding.decodeUtf8@. That
 -- function will throw impure exceptions on any decoding errors. This function
