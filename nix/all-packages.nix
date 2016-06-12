@@ -51,10 +51,6 @@ haskellPackages.override {
       pipes-shell = self.callPackage ./pipes-shell.nix {};
 
       # We use a fork of Servant that has CaptureAll
-      # XXX: Should I call callPackage here instead of the servant.nix file?
-      #
-      # XXX: Is there an easier way of doing all these assignments? Do I want
-      # something like inherit?
       servant = self.callPackage ./servant/servant.nix { forked-servant = capture-all-fork; };
       servant-client = self.callPackage ./servant/servant-client.nix { forked-servant = capture-all-fork; };
       servant-docs = self.callPackage ./servant/servant-docs.nix { forked-servant = capture-all-fork; };
