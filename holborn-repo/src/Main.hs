@@ -26,7 +26,7 @@ app config = serve repoAPI (repoServer config)
 loadConfig :: IO Config
 loadConfig =
   Env.parse (Env.header "run a holborn repo server") $
-  Config <$> Env.var (Env.str Env.<=< Env.nonempty) "REPO_ROOT" (Env.help "path to root of ./org/repo bare repositories")
+  Config <$> Env.var (Env.str Env.<=< Env.nonempty) "REPO_ROOT" (Env.help "path to root of ./<repoId> bare repositories")
          <*> Env.var Env.auto "PORT" (Env.def 8080 <> Env.help "Port to listen on")
          <*> Env.var Env.auto "RAW_PORT" (Env.def 8081 <> Env.help "Port to listen on for raw connections")
 

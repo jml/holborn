@@ -11,7 +11,7 @@ import qualified Holborn.Logging as Log
 data Config = Config
     { repoRoot :: String
       -- ^ path to a set of bare repositories with the subdirectory
-      -- shape ./org/repo
+      -- shape ./<repoid>
     , port :: Port
       -- ^ port to listen on for web API requests
     , rawPort :: Port
