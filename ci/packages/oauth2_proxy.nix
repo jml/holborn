@@ -13,8 +13,6 @@ buildGoPackage {
     repo = "oauth2_proxy";
     sha256 = "0khbpj2pbvi2hb9j5ks8fn267qby4hg0cxjz5wji4alms4l9n355";
   };
-  buildInputs = [
-    go-assert go-options go-simplejson toml fsnotify.v1 oauth2
-    google-api-go-client hmacauth websocket
-  ];
+
+  goDeps = ./oauth2_proxy.deps.json;
 }
