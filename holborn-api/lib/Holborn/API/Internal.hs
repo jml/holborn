@@ -23,7 +23,7 @@ module Holborn.API.Internal
   , throwAPIError
   ) where
 
-import BasicPrelude
+import HolbornPrelude
 import Control.Error (bimapExceptT)
 import Control.Monad.Catch (MonadThrow(..))
 import Control.Monad.Fail (MonadFail(..))

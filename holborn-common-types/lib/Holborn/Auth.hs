@@ -13,7 +13,7 @@ module Holborn.Auth
        , webPermissions
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import qualified Data.Set as Set
 import Database.PostgreSQL.Simple.FromField (FromField(..))

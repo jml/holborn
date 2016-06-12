@@ -17,7 +17,7 @@ module Holborn.Repo.HttpProtocol
        , DiskLocation(..)
        ) where
 
-import           BasicPrelude
+import           HolbornPrelude
 
 import           Blaze.ByteString.Builder (Builder, fromByteString)
 import qualified Data.ByteString as BS

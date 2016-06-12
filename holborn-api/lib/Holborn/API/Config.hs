@@ -5,7 +5,7 @@ module Holborn.API.Config ( AppConf(..)
                           , loadAppConf
                           ) where
 
-import BasicPrelude
+import HolbornPrelude
 import Database.PostgreSQL.Simple (Connection, connect, ConnectInfo(..), defaultConnectInfo)
 import GHC.Word (Word16)
 import Network.HTTP.Client (Manager, newManager, defaultManagerSettings)

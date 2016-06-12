@@ -15,7 +15,7 @@ module Holborn.Repo.RepoInit
   , forkInit
   ) where
 
-import BasicPrelude
+import HolbornPrelude
 import System.Process (proc, readCreateProcessWithExitCode, CreateProcess(cwd))
 import System.Exit (ExitCode(..))
 import Data.Text (unpack)

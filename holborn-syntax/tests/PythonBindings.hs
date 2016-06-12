@@ -3,7 +3,7 @@ Tests for the Python binding and reference logic.
 |-}
 module PythonBindings (tests) where
 
-import BasicPrelude
+import HolbornPrelude
 import Control.Applicative (Alternative)
 
 import Test.Tasty (TestTree, TestName, testGroup)

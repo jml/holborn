@@ -3,7 +3,7 @@ module Holborn.Repo.Process
        , Process.proc
        ) where
 
-import           BasicPrelude
+import           HolbornPrelude
 
 import           Control.Concurrent (forkIO)
 import           Control.Concurrent.MVar (newMVar, modifyMVar_)

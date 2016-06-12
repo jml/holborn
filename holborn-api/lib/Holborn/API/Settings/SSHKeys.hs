@@ -10,7 +10,7 @@ module Holborn.API.Settings.SSHKeys
        , server
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)

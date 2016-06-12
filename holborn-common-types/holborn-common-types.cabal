@@ -23,10 +23,10 @@ library
                      , Holborn.Auth
                      , Holborn.ServantTypes
 
-  build-depends:       base >=4.8 && <5.0
+  build-depends:       base >=4.9 && <5.0
+                     , holborn-prelude
                      , aeson >= 0.10
                      , attoparsec
-                     , basic-prelude >= 0.3.13 && <0.6
                      , bcrypt
                      , errors
                      , process
@@ -63,8 +63,8 @@ test-suite holborn-common-types-test
   ghc-options:        -Wall -Werror -O2 -threaded -rtsopts -with-rtsopts=-N
   hs-source-dirs:     tests
   main-is:            Main.hs
-  build-depends:      base >= 4.8 && < 5
-                    , basic-prelude >= 0.5
+  build-depends:      base >= 4.9 && < 5
+                    , holborn-prelude
                     , aeson >= 0.10
                     , tasty >= 0.11
                     , tasty-hunit

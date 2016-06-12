@@ -21,7 +21,7 @@ module Holborn.Repo.GitLayer
        , fillRepoMeta
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 import Control.Error (bimapExceptT, syncIO)
 import Control.Monad.Reader (ReaderT)
 import Control.Monad.Trans.Except (ExceptT)

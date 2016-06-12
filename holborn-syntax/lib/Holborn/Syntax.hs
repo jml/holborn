@@ -16,7 +16,7 @@ module Holborn.Syntax
        , tokenShortName
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Control.Error (fmapL, note)
 import Data.ByteString.Char8 (unpack)

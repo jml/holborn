@@ -8,7 +8,7 @@ module Holborn.JSON.Browse
        , TreeObject(..)
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 import Data.Aeson (ToJSON(..), genericToJSON)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import GHC.Generics (Generic)

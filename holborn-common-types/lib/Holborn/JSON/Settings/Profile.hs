@@ -4,7 +4,7 @@ module Holborn.JSON.Settings.Profile
        ( ProfileData(..)
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions)
 import Data.Aeson.Types (Options(fieldLabelModifier))
 import Data.Time.LocalTime (LocalTime)

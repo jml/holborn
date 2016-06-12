@@ -5,7 +5,7 @@ module Holborn.JSON.NewRepo
        )
        where
 
-import BasicPrelude
+import HolbornPrelude
 import Data.Aeson (FromJSON(..), genericParseJSON)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import GHC.Generics (Generic)

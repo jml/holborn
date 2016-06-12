@@ -16,12 +16,12 @@ library
                      , Holborn.API.Settings.Profile
                      , Holborn.API.Settings.SSHKeys
                      , Holborn.Docs
-  build-depends:       base >=4.8 && <5
+  build-depends:       base >=4.9 && <5
+                     , holborn-prelude
                      , postgresql-simple
                      , text
                      , bytestring
                      , errors
-                     , basic-prelude
                      , aeson >= 0.10
                      , servant-server >=0.5
                      , blaze-html
@@ -55,14 +55,14 @@ library
 Test-Suite holborn-api-tests
   type:                exitcode-stdio-1.0
   main-is:             Tests.hs
-  build-depends:       base >=4.8 && <5
+  build-depends:       base >=4.9 && <5
+                     , holborn-prelude
                      , tasty >= 0.10
                      , tasty-hunit >= 0.9.0
                      , tasty-quickcheck >= 0.8
                      , tasty-hspec >= 1.1.0
                      , hspec-wai >= 0.6.5
                      , hspec-wai-json >= 0.6.0
-                     , basic-prelude >= 0.3.13
                      , holborn-api
                      , QuickCheck
                      , aeson
@@ -92,8 +92,8 @@ executable holborn-api-server
   main-is:             Main.hs
   hs-source-dirs:      holborn-api-server
   default-language:    Haskell2010
-  build-depends:       base >=4.8 && <5
-                     , basic-prelude >= 0.3.13 && <0.6
+  build-depends:       base >=4.9 && <5
+                     , holborn-prelude
                      , servant-server >= 0.5
                      , wai >= 3.0
                      , warp >= 3.1

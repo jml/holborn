@@ -38,7 +38,7 @@ library
                      -- time etc) when testing cloning.
   ghc-options:         -Wall -Werror
   build-depends:       base >=4.9 && <5
-                     , basic-prelude >= 0.5 && <0.6
+                     , holborn-prelude
                      , servant-server >= 0.5
                      -- 0.1.4 doesn't work on ghc 8.0
                      , pipes-shell >= 0.2.0
@@ -89,7 +89,7 @@ executable holborn-repo
                      , GeneralizedNewtypeDeriving
                      , MonadFailDesugaring
   build-depends:       base >=4.9 && <5.0
-                     , basic-prelude >= 0.3.13 && <0.6
+                     , holborn-prelude
                      , holborn-repo
                      , servant-server >= 0.5
                      , wai

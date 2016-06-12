@@ -5,7 +5,7 @@ module Holborn.JSON.Settings.SSHKeys
        , AddKeyData(..)
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions)
 import Data.Aeson.Types (Options(fieldLabelModifier))

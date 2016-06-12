@@ -1,4 +1,5 @@
-{ mkDerivation, base, basic-prelude, network-simple, stdenv, turtle
+{ mkDerivation, base, holborn-prelude, network-simple, stdenv
+, turtle
 }:
 mkDerivation {
   pname = "hcl";
@@ -7,7 +8,7 @@ mkDerivation {
   isLibrary = false;
   isExecutable = true;
   executableHaskellDepends = [
-    base basic-prelude network-simple turtle
+    base holborn-prelude network-simple turtle
   ];
   description = "Command line tool for holborn";
   license = stdenv.lib.licenses.unfree;

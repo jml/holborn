@@ -4,7 +4,7 @@
 
 module Main (main) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import qualified Env
 import Network.Wai (Application)

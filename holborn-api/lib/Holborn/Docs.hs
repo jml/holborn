@@ -9,7 +9,7 @@ module Holborn.Docs
        , server
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Servant.Docs (docsWithIntros, markdown, noSamples, ToSample(..), ToCapture(..), DocCapture(..))
 import qualified Servant.Docs

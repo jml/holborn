@@ -9,7 +9,7 @@ module Holborn.Syntax.Types
        , tokenType
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 import Text.Highlighter.Types (Token(..), TokenType, shortName)
 
 

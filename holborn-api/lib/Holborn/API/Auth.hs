@@ -4,7 +4,7 @@ module Holborn.API.Auth
        ( getUserId
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Database.PostgreSQL.Simple (Only(..))

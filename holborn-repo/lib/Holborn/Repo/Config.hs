@@ -3,7 +3,7 @@ module Holborn.Repo.Config
        , warpSettings
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 import Network.Wai.Handler.Warp (Port, Settings, setPort, defaultSettings, setBeforeMainLoop)
 import qualified Holborn.Logging as Log
 

@@ -40,7 +40,7 @@ module Holborn.Syntax.Scope ( Scoped
                             , Interpreter(..)
                             ) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Control.Monad.State (State, get, modify, state, runState)
 import qualified Data.Map as M

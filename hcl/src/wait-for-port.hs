@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main (main) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Turtle
 import Control.Concurrent (threadDelay)

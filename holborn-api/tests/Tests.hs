@@ -3,7 +3,7 @@
 
 module Main (main) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (FromJSON, ToJSON, decode)

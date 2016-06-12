@@ -15,7 +15,7 @@ module Holborn.API.Browse
        , server
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Data.Aeson (object, (.=), Value)
 import Servant

@@ -8,7 +8,7 @@ module Holborn.API.NewRepo
        , server
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Data.Aeson (object, (.=))
 import Servant

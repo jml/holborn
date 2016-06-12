@@ -8,7 +8,7 @@ module Holborn.JSON.RepoMeta
        )
        where
 
-import BasicPrelude
+import HolbornPrelude
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, Value(String))
 import Data.Aeson.Types (typeMismatch)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)

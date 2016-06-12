@@ -4,7 +4,7 @@
 
 module Main where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Network.Wai (Application)
 import Network.Wai.Handler.Warp (runSettings)

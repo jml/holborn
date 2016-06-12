@@ -6,7 +6,7 @@
 
 module Holborn.Repo.HtmlFormatTokens () where
 
-import BasicPrelude hiding (div, span)
+import HolbornPrelude hiding (div, span)
 
 import Text.Blaze (ToMarkup(..))
 import Text.Blaze.Html5 (Html, (!))

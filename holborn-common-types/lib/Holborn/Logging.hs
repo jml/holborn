@@ -5,7 +5,7 @@
 
 module Holborn.Logging (debug, info) where
 
-import BasicPrelude
+import HolbornPrelude
 import System.IO (stdout, hFlush)
 
 

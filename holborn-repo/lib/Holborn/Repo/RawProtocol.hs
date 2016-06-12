@@ -12,7 +12,7 @@ module Holborn.Repo.RawProtocol
        ( serveRaw
        ) where
 
-import           BasicPrelude
+import           HolbornPrelude
 
 import           Control.Monad.State.Strict (runStateT)
 import           Network.Socket (Socket, SockAddr)

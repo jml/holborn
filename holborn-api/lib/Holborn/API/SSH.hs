@@ -19,7 +19,7 @@ module Holborn.API.SSH
        , shellQuote
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import GHC.Generics (Generic)
 import qualified Data.Text as Text

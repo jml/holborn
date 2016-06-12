@@ -2,7 +2,7 @@ module Holborn.Syntax.Internal
        ( leftMergeBy
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 
 
 leftMergeBy :: (a -> b -> Bool) -> [a] -> [b] -> Either [b] [(a, Maybe b)]

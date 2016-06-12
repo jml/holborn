@@ -28,6 +28,7 @@ haskellPackages.override {
 
       hcl = self.callPackage ../hcl {};
       holborn-api = self.callPackage ../holborn-api {};
+      holborn-prelude = self.callPackage ../holborn-prelude {};
       holborn-repo = self.callPackage ../holborn-repo {};
       holborn-syntax = self.callPackage ../holborn-syntax {};
       holborn-common-types = self.callPackage ../holborn-common-types {};

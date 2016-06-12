@@ -21,7 +21,7 @@ Currently missing support for:
 -}
 module Holborn.Syntax.Languages.Python (annotateSourceCode, getAST, ParseError, Token) where
 
-import BasicPrelude hiding (lex)
+import HolbornPrelude hiding (lex)
 
 import qualified Data.Map as M
 import Data.Text (pack)

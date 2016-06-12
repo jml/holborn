@@ -1,6 +1,6 @@
 module SSH (tests) where
 
-import BasicPrelude
+import HolbornPrelude
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit

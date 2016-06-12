@@ -9,7 +9,7 @@ module Holborn.API.Settings.Profile
        , server
        ) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Database.PostgreSQL.Simple (Only(..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)

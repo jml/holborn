@@ -1,4 +1,4 @@
-import BasicPrelude
+import HolbornPrelude
 
 import Test.Tasty (defaultMain, TestTree, testGroup)
 import Test.Tasty.HUnit

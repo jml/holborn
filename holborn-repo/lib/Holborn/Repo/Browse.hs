@@ -9,7 +9,7 @@
 
 module Holborn.Repo.Browse (BrowseAPI, browseAPI, codeBrowser) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Except (ExceptT, throwE)

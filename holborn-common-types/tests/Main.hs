@@ -1,6 +1,6 @@
 module Main (main) where
 
-import BasicPrelude
+import HolbornPrelude
 import Test.Tasty (defaultMain, TestTree, testGroup)
 
 import qualified SSH
