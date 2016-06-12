@@ -40,8 +40,10 @@ import Holborn.JSON.RepoMeta (RepoId)
 import Holborn.Repo.RepoInit (repoInit)
 
 
--- | The git pull & push repository API. The URL schema is borrowed
--- from github, i.e. `/user/repo` or `/org/repo`.
+-- | The git pull & push repository API.
+--
+-- Repositories have a repoId, and each repository has an API for browsing and
+-- one for the Git HTTP protocol.
 type RepoAPI =
     "v1"
     :> "repos"

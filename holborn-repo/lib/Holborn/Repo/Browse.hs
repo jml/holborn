@@ -14,7 +14,7 @@ import HolbornPrelude
 import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Data.ByteString.Lazy (fromStrict)
-import Servant ((:>), (:<|>)(..), Capture, Get, Proxy(..), QueryParam, ServantErr(..), Server, JSON, MimeRender(mimeRender))
+import Servant ((:>), (:<|>)(..), Capture, CaptureAll, Get, Proxy(..), QueryParam, ServantErr(..), Server, JSON, MimeRender(mimeRender))
 import Servant.HTML.Blaze (HTML)
 import Servant.Server (enter, (:~>)(..), err500, err404)
 import Data.Aeson (encode)
@@ -42,32 +42,17 @@ type Author = Text
 -- Github will accept a single segment, but will also accept, e.g.
 -- 'refs/heads/master'.
 
-type CPS = Capture "pathspec" Text
-
 type BrowseAPI =
   -- just the root
   Get '[HTML, JSON, RenderedJson] RepoMeta
 
   -- e.g. /v1/repos/src/pulp/blob/master/setup.py
-  -- XXX: blob & tree have this hacky thing because Servant 0.5 broke our CaptureAll combinator.
-  -- https://github.com/haskell-servant/servant/issues/257 tracks fixing this.
   :<|> "git" :> "blobs" :> Capture "revspec" Revision :>
-    ((Get '[HTML, JSON, RenderedJson] Blob)
-     :<|> (CPS :> Get '[HTML, JSON, RenderedJson] Blob)
-     :<|> (CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Blob)
-     :<|> (CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Blob)
-     :<|> (CPS :> CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Blob)
-     :<|> (CPS :> CPS :> CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Blob))
-
+    CaptureAll "pathspec" Text :> Get '[HTML, JSON, RenderedJson] Blob
 
   -- e.g. /v1/repos/src/pulp/tree/master/
   :<|> "git" :> "trees" :> Capture "revspec" Revision :>
-    ((Get '[HTML, JSON, RenderedJson] Tree)
-     :<|> (CPS :> Get '[HTML, JSON, RenderedJson] Tree)
-     :<|> (CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Tree)
-     :<|> (CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Tree)
-     :<|> (CPS :> CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Tree)
-     :<|> (CPS :> CPS :> CPS :> CPS :> CPS :> Get '[HTML, JSON, RenderedJson] Tree))
+    CaptureAll "pathspec" Text :> Get '[HTML, JSON, RenderedJson] Tree
 
   :<|> "commits" :> Capture "revspec" Revision :> QueryParam "author" Author :> Get '[HTML] [Commit]
   :<|> "git" :> "commits" :> Capture "revspec" Revision :> Get '[HTML] Commit
@@ -100,12 +85,10 @@ codeBrowser :: Repository -> Server BrowseAPI
 codeBrowser repo = enter gitBrowserT $
   -- XXX: What should we do for repos that don't have a master?
   renderMeta repo
-  :<|> (handlePaths . renderBlob repo)
-  :<|> (handlePaths . renderTree repo)
+  :<|> renderBlob repo
+  :<|> renderTree repo
   :<|> renderCommits repo
   :<|> renderCommit repo
-
-  where handlePaths f = (f []) :<|> (\a -> f [a]) :<|> (\a b -> f [a, b]) :<|> (\a b c -> f [a, b, c]) :<|> (\a b c d -> f [a, b, c, d]) :<|> (\a b c d e -> f [a, b, c, d, e])
 
 
 renderMeta :: Repository -> RepoBrowser RepoMeta
