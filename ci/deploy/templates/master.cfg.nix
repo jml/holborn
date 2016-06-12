@@ -92,7 +92,7 @@ BuildmasterConfig = {
             # http://buildbot.readthedocs.io/en/latest/manual/cfg-reporters.html?highlight=github#mailnotifier-arguments
             mode='all',
             # XXX: Temporarily hard-code until we can figure out how to get these automatically from commits.
-            extraRecipients=["jml@mumak.net", "tehunger@gmail.com"],
+            extraRecipients=["jml@mumak.net", "thomas.e.hunger@gmail.com"],
         )
     ],
 }
