@@ -14,6 +14,8 @@
 # These are only relevant if you're using the web plugin, which you are
 # probably using.
 , buildbotURL, buildbotWebPort
+# Where the email comes from
+, buildbotFromEmail
 # Assume one git repository, one branchh, one builder.
 , gitRepo, gitBranch, builderName, pollInterval ? 600
 # Assuming only one worker for now, which kind of sucks.
@@ -78,6 +80,20 @@ BuildmasterConfig = {
 
     'db': {
         'db_url' : "sqlite:///state.sqlite",
-    }
+    },
+
+    'services': [
+        reporters.MailNotifier(
+            fromaddr='${buildbotFromEmail}',
+            # TODO(jml): Currently sending mail for all builds. We should send
+            # mail under fewer circumstances once we have a better idea about
+            # what we actually want.
+            #
+            # http://buildbot.readthedocs.io/en/latest/manual/cfg-reporters.html?highlight=github#mailnotifier-arguments
+            mode='all',
+            # XXX: Temporarily hard-code until we can figure out how to get these automatically from commits.
+            extraRecipients=["jml@mumak.net", "thomas.e.hunger@gmail.com"],
+        )
+    ],
 }
 ''
