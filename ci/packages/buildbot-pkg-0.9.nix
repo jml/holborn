@@ -3,11 +3,11 @@
 
 buildPythonPackage (rec {
   name = "buildbot-pkg-${version}";
-  version = "0.9.0b7";
+  version = "0.9.0b9";
 
   src = fetchurl {
-    url = "https://pypi.python.org/packages/3a/c1/adc89f894d1b060ac81d901a00231fd9ef96fff0d813d6b23d570216c5be/${name}.tar.gz";
-    sha256 = "02gg9mk0v95dwbz330yilmlg94gz9vqr6jk3bgjxdxpm27zmqp2b";
+    url = "https://pypi.python.org/packages/f2/37/c554c8a75273fbf7ad2e7b5dcc782f942b770b27f690d5eab42f8f758b84/${name}.tar.gz";
+    sha256 = "16lpji46hyn1d2lnkzm0nsf1lxx067p3rc0249m63lq2nnkyapcc";
   };
 
   doCheck = true;

@@ -2,12 +2,12 @@
 }:
 
 buildPythonPackage (rec {
-  name = "buildbot-slave-${version}";
-  version = "0.9.0b7";
+  name = "buildbot-worker-${version}";
+  version = "0.9.0b9";
 
   src = fetchurl {
-    url = "https://pypi.python.org/packages/d9/57/37e529fe46bc176aa78ad7a589d0c7aca2bb104c556d834d44a22df99f23/${name}.tar.gz";
-    sha256 = "0vi64p328d4748806l7m4rx257szsg59vbydk5j9bf2aqcjan033";
+    url = "https://pypi.python.org/packages/45/d6/12d115c08959af2e8c99f7b2543f458c277f7ad0a6f8bf9415d232381927/${name}.tar.gz";
+    sha256 = "06zbiqyzynwiprlc17n14czb97d2f7zbja4i3sq6g3lf80vxg7xa";
   };
 
   propagatedBuildInputs =

@@ -6,7 +6,7 @@ let
   buildbotDirectory = "/var/run/buildbot-worker";
 
   # XXX: Depend on custom package for now.
-  buildbotWorkerPackage = pkgs.callPackage ../packages/buildbot-slave-0.9.nix {};
+  buildbotWorkerPackage = pkgs.callPackage ../packages/buildbot-worker-0.9.nix {};
   buildbotWorkerCommand = "${buildbotWorkerPackage}/bin/buildslave";
 
   cfg = config.services.buildbot-worker;

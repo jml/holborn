@@ -18,7 +18,10 @@ let
   # - buildbotWebPort
 
   # XXX: Depend on our custom packages for now.
-  buildbotPackage = pkgs.callPackage ../packages/buildbot-0.9.nix { enableWWW = true; };
+  buildbotPackage = pkgs.callPackage ../packages/buildbot-0.9.nix {
+    enableWWW = true;
+    enableWaterfallView = true;
+  };
   buildbotWebPackage = pkgs.callPackage ../packages/buildbot-www-0.9.nix {};
 
   cfg = config.services.buildbot;

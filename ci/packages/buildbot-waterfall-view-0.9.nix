@@ -3,21 +3,19 @@
 }:
 
 let
-  buildbot = callPackage ./buildbot-0.9.nix {};
   buildbotPkg = callPackage ./buildbot-pkg-0.9.nix {};
 in
 
 buildPythonPackage (rec {
-  name = "buildbot-www-${version}";
+  name = "buildbot-waterfall-view-${version}";
   version = "0.9.0b9";
-  format = "wheel";
 
   src = fetchurl {
-    url = "https://pypi.python.org/packages/2f/91/63e76ad6c95ede1993a90464d8123504d217755757e86b6872cb161de955/buildbot_www-0.9.0b9-py2-none-any.whl";
-    sha256 = "1n65k2wrvdy840cpgm21fx0m8wdq7w926vaaizyb9s3yyyimyci0";
+    url = "https://pypi.python.org/packages/bb/b1/ec561ebcb6894a84d71b6c821fa26cf8aa9819078d0fdc406c2f34f5ab51/${name}.tar.gz";
+    sha256 = "0xcl1msf3s04wj9g12db45a3f3br5xybsvfdjan8f5klp6m5kw40";
   };
 
-  buildInputs = [ buildbot buildbotPkg pythonPackages.mock ];
+  buildInputs = [ buildbotPkg ];
 
   doCheck = true;
 

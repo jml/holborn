@@ -76,10 +76,15 @@ BuildmasterConfig = {
 
     'buildbotURL': "${buildbotURL}",
 
-    'www': dict(port=${toString buildbotWebPort}),
+    'www': {
+        'port': ${toString buildbotWebPort},
+        'plugins': {
+           'waterfall_view': {},
+        },
+    },
 
     'db': {
-        'db_url' : "sqlite:///state.sqlite",
+        'db_url': "sqlite:///state.sqlite",
     },
 
     'services': [
