@@ -9,11 +9,12 @@ in
 
 buildPythonPackage (rec {
   name = "buildbot-www-${version}";
-  version = "0.9.0b8";
+  version = "0.9.0b9";
+  format = "wheel";
 
   src = fetchurl {
-    url = "https://pypi.python.org/packages/a9/60/bc2d129d39f62fe2a30198c080c8652f8aaf611fbc1a5be65ca672a4fded/${name}.tar.gz";
-    sha256 = "1a6a4lml57d8qy4ffyvxx179xbxj9ccs09vl804ifk3gxq83hdcd";
+    url = "https://pypi.python.org/packages/2f/91/63e76ad6c95ede1993a90464d8123504d217755757e86b6872cb161de955/buildbot_www-0.9.0b9-py2-none-any.whl";
+    sha256 = "1n65k2wrvdy840cpgm21fx0m8wdq7w926vaaizyb9s3yyyimyci0";
   };
 
   buildInputs = [ buildbot buildbotPkg pythonPackages.mock ];

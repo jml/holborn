@@ -10,11 +10,11 @@ assert enableDebugClient -> pygobject != null && pyGtkGlade != null;
 
 buildPythonPackage (rec {
   name = "buildbot-${version}";
-  version = "0.9.0b8";
+  version = "0.9.0b9";
 
   src = fetchurl {
-    url = "https://pypi.python.org/packages/source/b/buildbot/${name}.tar.gz";
-    sha256 = "1nbj52l969a2byqy8pvcr1wsbfwpkzn1q5yybhd89ssr0hnrp6hf";
+    url = "https://pypi.python.org/packages/1d/49/08e269242c253daca67a2a853c807780ec247c0a8de27d594e9833af2faf/${name}.tar.gz";
+    sha256 = "1dn448kffmqlkkrj62qjal2rbdykgd4fmfpsfsykcihxx3vx0mg1";
   };
 
   patchPhase =
