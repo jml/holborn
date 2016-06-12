@@ -4,7 +4,7 @@
 
 module Main (main) where
 
-import HolbornPrelude hiding (empty)
+import HolbornPrelude
 import Turtle (shells, empty)
 
 main :: IO ()

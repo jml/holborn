@@ -34,7 +34,6 @@ module HolbornPrelude
     -- * Enhanced exports
     -- ** Simpler name for a typeclassed operation
   , map
-  , empty
   , (++)
   , concat
   , intercalate
@@ -143,11 +142,6 @@ import qualified Safe
 -- | > map = fmap
 map :: (Functor f) => (a -> b) -> f a -> f b
 map = fmap
-
--- | > empty = mempty
-empty :: Monoid w => w
-empty = mempty
-{-# DEPRECATED empty "Use mempty" #-}
 
 infixr 5 ++
 

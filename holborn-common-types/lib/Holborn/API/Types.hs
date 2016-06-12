@@ -9,7 +9,7 @@ module Holborn.API.Types
        , ApiError(..)
        ) where
 
-import HolbornPrelude hiding (empty)
+import HolbornPrelude
 import qualified Crypto.BCrypt as BCrypt
 import Database.PostgreSQL.Simple.FromField (FromField(..))
 import Database.PostgreSQL.Simple.ToField (ToField(..))
