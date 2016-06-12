@@ -14,7 +14,7 @@ module Holborn.JSON.SSHRepoCommunication
        , RepoAccess(..)
        ) where
 
-import HolbornPrelude hiding (empty)
+import HolbornPrelude
 
 import Control.Applicative (Alternative(..))
 import Control.Error (rightZ)
