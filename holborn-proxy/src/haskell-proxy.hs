@@ -35,7 +35,6 @@ import Crypto.JWT (JWT(..), ClaimsSet(_unregisteredClaims))
 import Data.Aeson (fromJSON, Result(..))
 import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.HashMap.Strict as HashMap
 import Network.HTTP.Client (newManager, Manager, defaultManagerSettings)
 import Network.HTTP.ReverseProxy (defaultOnExc, waiProxyTo, WaiProxyResponse(..), ProxyDest(..))
 import Network.HTTP.Types (status302)
@@ -43,16 +42,16 @@ import Network.OAuth.OAuth2 (authorizationUrl, OAuth2(..), appendQueryParam, Acc
 import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application)
 import Network.Wai.Handler.Warp (run)
 import Web.Cookie (parseCookies, renderSetCookie, def, setCookieName, setCookieValue, setCookiePath, setCookieSecure)
-import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar', readTVarIO, TVar)
-import Control.Concurrent.STM (atomically)
-import GHC.Generics (Generic)
 import Servant (serve, (:<|>)(..), (:>), Raw, Server, QueryParam, Header, Get, NoContent(..), JSON)
 import Servant.Server (ServantErr(..), err302, err401)
 import Data.Proxy (Proxy(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
+import qualified Data.HashMap.Strict as HashMap
 
 
 import Holborn.Proxy.Config (loadConfig, Config(..), oauth2FromConfig)
+import Holborn.Proxy.AuthJar (AuthJar(..), UserCookie, TrustedCreds(..), newMemoryJar)
+
 
 type ProxyAPI =
     "oauth2" :> "callback" :> QueryParam "code" Text :> Get '[JSON] NoContent
@@ -66,34 +65,6 @@ proxyServer config manager jar =
     handleOauth2Callback config manager jar
     :<|> handleProxying config manager jar
 
--- | TrustedCreds are extracted from the id_token returend by
--- fetchAccessToken and are therefore turstworthy.
-data TrustedCreds = TrustedCreds
-  { _email :: Text
-  , _emailVerified :: Bool
-  , _name :: Text
-  } deriving (Show, Generic)
-
-instance Hashable TrustedCreds
-
-type UserCookie = ByteString
-type CookieMap = HashMap.HashMap UserCookie TrustedCreds
-
-data MemoryJar = MemoryJar (TVar CookieMap)
-
-newMemoryJar :: IO MemoryJar
-newMemoryJar = MemoryJar <$> newTVarIO HashMap.empty
-
-class AuthJar a where
-    get :: a -> UserCookie -> IO (Maybe TrustedCreds)
-    set :: a -> UserCookie -> TrustedCreds -> IO ()
-    make :: a -> IO UserCookie
-
--- | An in-memory jar for testing
-instance AuthJar MemoryJar where
-    set (MemoryJar jar) key token = atomically (modifyTVar' jar (HashMap.insert key token))
-    get (MemoryJar jar) key = readTVarIO jar >>= \m -> pure (HashMap.lookup key m)
-    make _ = pure "test-cookie" -- TODO random bytes
 
 -- | Redirect to dex
 redirectToToAuth :: OAuth2 -> Application
