@@ -57,8 +57,10 @@ type ProxyAPI =
     "oauth2" :> "callback" :> QueryParam "code" Text :> Get '[JSON] NoContent
     :<|> Header "Cookie" Text :> Raw
 
+
 proxyApi :: Proxy ProxyAPI
 proxyApi = Proxy
+
 
 proxyServer :: (AuthJar jar) => Config -> Manager -> jar -> Server ProxyAPI
 proxyServer config manager jar =
@@ -66,14 +68,15 @@ proxyServer config manager jar =
     :<|> handleProxying config manager jar
 
 
--- | Redirect to dex
+-- | Redirect to dex (or whatever we hav configured)
 redirectToToAuth :: OAuth2 -> Application
 redirectToToAuth oauth2Conf _ respond =
     let redirectUrl = authorizationUrl oauth2Conf `appendQueryParam` [("scope", "openid profile email")]
     in respond (responseLBS status302 [("location", redirectUrl)] BSL.empty)
 
+
 -- | Set the cookie that will identify the user on subsequent
--- requests. Note that it's not HTTPonly because we want to use it
+-- requests. Note that it's not HTTPOnly because we want to use it
 -- from JS as well.
 redirectSetAuthCookie :: Config -> UserCookie -> ExceptT ServantErr IO NoContent
 redirectSetAuthCookie Config{configPublicHost} userCookie =
@@ -87,7 +90,8 @@ redirectSetAuthCookie Config{configPublicHost} userCookie =
 -- | Tell the user what went wrong. At some point we probably want to
 -- send a generic 401 and log in parallel for debugging.
 authProblem :: Text -> ExceptT ServantErr IO NoContent
-authProblem msg = throwE (err401 { errBody = BSL.fromStrict (encodeUtf8 msg)}) >> pure NoContent
+authProblem msg =
+    throwE (err401 { errBody = BSL.fromStrict (encodeUtf8 msg)}) >> pure NoContent
 
 
 handleOauth2Callback :: (AuthJar jar) => Config -> Manager -> jar -> Maybe Text -> ExceptT ServantErr IO NoContent
@@ -108,6 +112,8 @@ handleOauth2Callback config@Config{..} manager jar maybeCode = do
       Left err -> liftIO (print err) >> authProblem "token problem"
 
   where
+      -- TODO: unpackClaims is nested too deeply but checked by
+      -- compiler and no IO so I assume it works..
       unpackClaims :: AccessToken -> Either String TrustedCreds
       unpackClaims accessToken =
         case idToken accessToken of
@@ -134,6 +140,7 @@ handleOauth2Callback config@Config{..} manager jar maybeCode = do
           email_verified <- fmap fromJSON (HashMap.lookup "email_verified" c)
           name <- fmap fromJSON (HashMap.lookup "name" c)
           pure $ TrustedCreds <$> email <*>  email_verified <*> name
+
 
 handleProxying :: (AuthJar jar) => Config -> Manager -> jar -> Maybe Text -> Application
 handleProxying config@Config{..} manager jar cookie = waiProxyTo doProxy defaultOnExc manager
@@ -167,18 +174,17 @@ handleProxying config@Config{..} manager jar cookie = waiProxyTo doProxy default
                      , maybeHeader "User-Agent"
                      ])
         in WPRModifiedRequest (request' {requestHeaders = forwardedHeaders}) (ProxyDest configUpstreamHost configUpstreamPort)
-    -- TODO disgusting code but checked by compiler and no IO so I
-    -- assume it works.
+
 
 app :: (AuthJar jar) => Config -> Manager -> jar -> Application
 app config manager jar = serve proxyApi (proxyServer config manager jar)
 
+
 main :: IO ()
 main = do
     config@Config{..} <- loadConfig
+    -- TOOD we might want an on-disk jar to survive restarts. Not sure
+    -- what the security trade-offs are here.
     jar <- newMemoryJar
     manager <- newManager defaultManagerSettings
     run configPort (app config manager jar)
-
-
--- Jun 12 00:18:42 web dex-worker[28029]: ERROR: Request provided unregistered redirect URL: http://127.0.0.1/oauth2/callback
