@@ -2,8 +2,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Holborn.ServantTypes (RenderedJson) where
 
-import Servant (Accept(..))
+import Servant (Accept(..), MimeRender(..))
 import qualified Network.HTTP.Media as M
+import Data.Aeson (Value, encode)
 
 data RenderedJson
 
@@ -12,3 +13,7 @@ data RenderedJson
 -- highlighted, linking to definitions) where applicable.
 instance Accept RenderedJson where
     contentType _ = "application" M.// "r-json"
+
+
+instance MimeRender RenderedJson Value where
+  mimeRender _ = encode

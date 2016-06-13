@@ -30,15 +30,15 @@ import Control.Monad.Fail (MonadFail(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
 import Data.Aeson (FromJSON, Value, eitherDecode', encode, object, (.=))
-import Data.ByteString.Lazy (fromStrict)
 import qualified Database.PostgreSQL.Simple as PostgreSQL
-import Network.HTTP.Client (parseUrl, withResponse, requestHeaders, responseBody)
+import Network.HTTP.Client (parseUrl, httpLbs, requestHeaders, responseBody)
 import Network.HTTP.Types.Header (hAccept)
 import Servant (ServantErr(..), (:~>)(Nat))
 
 import Holborn.API.Config (AppConf(..))
-import Holborn.Logging (debug)
+import Holborn.Logging (debugWithCallStack)
 
+import qualified GHC.Stack as Stack
 
 type HttpCode = Int
 
@@ -162,11 +162,10 @@ jsonGet' endpoint = do
     AppConf{httpManager} <- getConfig
     r <- parseUrl (textToString endpoint)
     let rJson = r { requestHeaders = [(hAccept, "application/json")] }
-    APIHandler $ liftIO $ withResponse rJson httpManager $ \response -> do
-      body <- fmap fromStrict (responseBody response)
-      return $ eitherDecode' body
+    APIHandler $ liftIO (httpLbs rJson httpManager) >>= \response -> return (eitherDecode' (responseBody response))
 
 
 -- | Log something for debugging
-logDebug :: Show s => s -> APIHandler err ()
-logDebug thing = APIHandler $ debug thing
+logDebug :: (Show s, Stack.HasCallStack) => s -> APIHandler err ()
+logDebug thing =
+    APIHandler $ debugWithCallStack thing Stack.callStack
