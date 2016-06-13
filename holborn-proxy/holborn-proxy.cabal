@@ -52,6 +52,9 @@ executable holborn-proxy
                      , aeson
                      , stm
                      , hashable
+                     , servant
+                     , servant-server
+                     , transformers
 
   hs-source-dirs:      src
   ghc-options:         -Wall -Werror -threaded

@@ -22,6 +22,10 @@
 -- table that stores whether the user has been banned, etc).
 
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE TypeFamilies  #-}
+{-# LANGUAGE TypeOperators #-}
+
 module Main (main) where
 
 import BasicPrelude
@@ -34,17 +38,33 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.HashMap.Strict as HashMap
 import Network.HTTP.Client (newManager, Manager, defaultManagerSettings)
 import Network.HTTP.ReverseProxy (defaultOnExc, waiProxyTo, WaiProxyResponse(..), ProxyDest(..))
-import Network.HTTP.Types (status302, status401)
+import Network.HTTP.Types (status302)
 import Network.OAuth.OAuth2 (authorizationUrl, OAuth2(..), appendQueryParam, AccessToken(idToken), fetchAccessToken)
-import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application, pathInfo, queryString)
+import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application)
 import Network.Wai.Handler.Warp (run)
 import Web.Cookie (parseCookies, renderSetCookie, def, setCookieName, setCookieValue, setCookiePath, setCookieSecure)
 import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar', readTVarIO, TVar)
 import Control.Concurrent.STM (atomically)
 import GHC.Generics (Generic)
+import Servant (serve, (:<|>)(..), (:>), Raw, Server, QueryParam, Header, Get, NoContent(..), JSON)
+import Servant.Server (ServantErr(..), err302, err401)
+import Data.Proxy (Proxy(..))
+import Control.Monad.Trans.Except (ExceptT, throwE)
+
 
 import Holborn.Proxy.Config (loadConfig, Config(..), oauth2FromConfig)
 
+type ProxyAPI =
+    "oauth2" :> "callback" :> QueryParam "code" Text :> Get '[JSON] NoContent
+    :<|> Header "Cookie" Text :> Raw
+
+proxyApi :: Proxy ProxyAPI
+proxyApi = Proxy
+
+proxyServer :: (AuthJar jar) => Config -> Manager -> jar -> Server ProxyAPI
+proxyServer config manager jar =
+    handleOauth2Callback config manager jar
+    :<|> handleProxying config manager jar
 
 -- | TrustedCreds are extracted from the id_token returend by
 -- fetchAccessToken and are therefore turstworthy.
@@ -56,7 +76,6 @@ data TrustedCreds = TrustedCreds
 
 instance Hashable TrustedCreds
 
-
 type UserCookie = ByteString
 type CookieMap = HashMap.HashMap UserCookie TrustedCreds
 
@@ -65,12 +84,10 @@ data MemoryJar = MemoryJar (TVar CookieMap)
 newMemoryJar :: IO MemoryJar
 newMemoryJar = MemoryJar <$> newTVarIO HashMap.empty
 
-
 class AuthJar a where
     get :: a -> UserCookie -> IO (Maybe TrustedCreds)
     set :: a -> UserCookie -> TrustedCreds -> IO ()
     make :: a -> IO UserCookie
-
 
 -- | An in-memory jar for testing
 instance AuthJar MemoryJar where
@@ -78,85 +95,48 @@ instance AuthJar MemoryJar where
     get (MemoryJar jar) key = readTVarIO jar >>= \m -> pure (HashMap.lookup key m)
     make _ = pure "test-cookie" -- TODO random bytes
 
-
 -- | Redirect to dex
 redirectToToAuth :: OAuth2 -> Application
 redirectToToAuth oauth2Conf _ respond =
     let redirectUrl = authorizationUrl oauth2Conf `appendQueryParam` [("scope", "openid profile email")]
     in respond (responseLBS status302 [("location", redirectUrl)] BSL.empty)
 
-
 -- | Set the cookie that will identify the user on subsequent
 -- requests. Note that it's not HTTPonly because we want to use it
 -- from JS as well.
-redirectSetAuthCookie :: Config -> UserCookie -> Application
-redirectSetAuthCookie Config{configPort, configPublicHost} userCookie _ respond =
-    -- TODO redirectUrl should be a type
-    let redirectUrl = "http://" <> configPublicHost <> ":" <> encodeUtf8 (show configPort) <> "/"
+redirectSetAuthCookie :: Config -> UserCookie -> ExceptT ServantErr IO NoContent
+redirectSetAuthCookie Config{configPublicHost} userCookie =
+    -- TODO redirectUrl should be a type etc.
+    let redirectUrl = "http://" <> configPublicHost <> "/"
         authCookie = def { setCookieName = "auth_cookie", setCookieValue = userCookie, setCookiePath = Just "/", setCookieSecure = False }
         setCookie = (BSL.toStrict . toLazyByteString . renderSetCookie) authCookie
-    in respond (responseLBS status302 [("Set-Cookie", setCookie), ("location", redirectUrl)] BSL.empty)
+    in throwE (err302 { errHeaders = [("Set-Cookie", setCookie), ("location", redirectUrl)] }) >> pure NoContent
 
 
 -- | Tell the user what went wrong. At some point we probably want to
 -- send a generic 401 and log in parallel for debugging.
-authProblem :: Text -> WaiProxyResponse
-authProblem msg = WPRApplication app
+authProblem :: Text -> ExceptT ServantErr IO NoContent
+authProblem msg = throwE (err401 { errBody = BSL.fromStrict (encodeUtf8 msg)}) >> pure NoContent
+
+
+handleOauth2Callback :: (AuthJar jar) => Config -> Manager -> jar -> Maybe Text -> ExceptT ServantErr IO NoContent
+handleOauth2Callback config@Config{..} manager jar maybeCode = do
+    -- Classic Control.Monad.when doesn't work because it's () instead of NoContent
+    _ <- if (maybeCode == Nothing) then authProblem "need code" else pure NoContent
+    let Just code = maybeCode
+    eitherToken <- liftIO (fetchAccessToken manager (oauth2FromConfig config) (encodeUtf8 code))
+    case eitherToken of
+      Right token -> do
+          let trustedCreds = unpackClaims token
+          case trustedCreds of
+            Right creds -> do
+                userCookie <- liftIO (make jar)
+                liftIO (set jar userCookie creds)
+                redirectSetAuthCookie config userCookie
+            Left _ -> authProblem "could not parse id_token"
+      Left err -> liftIO (print err) >> authProblem "token problem"
+
   where
-    app _ respond =
-      respond (responseLBS status401 [] (BSL.fromStrict  (encodeUtf8 msg)))
-
-proxy :: (AuthJar jar) => Config -> Manager -> jar -> Request -> IO WaiProxyResponse
-proxy config@Config{..} manager jar request = do
-    let headers = requestHeaders request
-
-    case pathInfo request of
-      ["oauth2", "callback"] -> do
-          case lookup "code" (queryString request) of
-            Just (Just code) -> do
-                eitherToken <- fetchAccessToken manager (oauth2FromConfig config) code
-                case eitherToken of
-                  Right token -> do
-                      let trustedCreds = unpackClaims token
-                      case trustedCreds of
-                        Right creds -> do
-                            userCookie <- make jar
-                            set jar userCookie creds
-                            pure (WPRApplication (redirectSetAuthCookie config userCookie))
-                        Left _ -> pure (authProblem "could not parse id_token")
-                  Left err -> print err >> pure (authProblem "token problem")
-            _ -> pure (authProblem "invalid oauth2 code")
-
-      _ -> case lookup "Cookie" headers >>= \cookies -> lookup "auth_cookie" (parseCookies cookies) of
-             Nothing -> pure (WPRApplication (redirectToToAuth (oauth2FromConfig config)))
-             Just authCookie -> do
-                 c <- get jar authCookie
-                 case c of
-                   Just userCookie -> pure (setCredHeaders request userCookie)
-                   Nothing -> pure (WPRApplication (redirectToToAuth (oauth2FromConfig config)))
-    where
-      setCredHeaders :: Request -> TrustedCreds -> WaiProxyResponse
-      setCredHeaders request' TrustedCreds{..} =
-          let headers = requestHeaders request'
-              maybeHeader hdr = (,) hdr <$> lookup hdr headers
-              forwardedHeaders =
-                [ ("x-holborn-name", encodeUtf8 _name)
-                , ("x-holborn-email", encodeUtf8 _email)
-                , ("x-holborn-email-verified", encodeUtf8  (show _emailVerified))
-                , ("x-forwarded-for", encodeUtf8  (show (remoteHost request'))) -- TODO maybe needs better encoding
-                ] ++ (catMaybes
-                       [ maybeHeader "Accept"
-                       , maybeHeader "Accept-Encoding"
-                       , maybeHeader "Content-Length"
-                       , maybeHeader "Content-Type"
-                       , maybeHeader "If-Modified-Since"
-                       , maybeHeader "If-None-Match"
-                       , maybeHeader "User-Agent"
-                       ])
-          in WPRModifiedRequest (request' {requestHeaders = forwardedHeaders}) (ProxyDest configUpstreamHost configUpstreamPort)
-
-      -- TODO disgusting code but checked by compiler and no IO so I
-      -- assume it works.
       unpackClaims :: AccessToken -> Either String TrustedCreds
       unpackClaims accessToken =
         case idToken accessToken of
@@ -184,11 +164,50 @@ proxy config@Config{..} manager jar request = do
           name <- fmap fromJSON (HashMap.lookup "name" c)
           pure $ TrustedCreds <$> email <*>  email_verified <*> name
 
+handleProxying :: (AuthJar jar) => Config -> Manager -> jar -> Maybe Text -> Application
+handleProxying config@Config{..} manager jar cookie = waiProxyTo doProxy defaultOnExc manager
+  where
+    doProxy :: Request -> IO WaiProxyResponse
+    doProxy request = do
+      case cookie >>= \cookie' -> lookup "auth_cookie" (parseCookies (encodeUtf8 cookie')) of
+        Nothing -> pure (WPRApplication (redirectToToAuth (oauth2FromConfig config)))
+        Just authCookie -> do
+            c <- get jar authCookie
+            case c of
+              Just userCookie -> pure (setCredHeaders request userCookie)
+              Nothing -> pure (WPRApplication (redirectToToAuth (oauth2FromConfig config)))
+
+    setCredHeaders :: Request -> TrustedCreds -> WaiProxyResponse
+    setCredHeaders request' TrustedCreds{..} =
+        let headers = requestHeaders request'
+            maybeHeader hdr = (,) hdr <$> lookup hdr headers
+            forwardedHeaders =
+              [ ("x-holborn-name", encodeUtf8 _name)
+              , ("x-holborn-email", encodeUtf8 _email)
+              , ("x-holborn-email-verified", encodeUtf8  (show _emailVerified))
+              , ("x-forwarded-for", encodeUtf8  (show (remoteHost request'))) -- TODO maybe needs better encoding
+              ] ++ (catMaybes
+                     [ maybeHeader "Accept"
+                     , maybeHeader "Accept-Encoding"
+                     , maybeHeader "Content-Length"
+                     , maybeHeader "Content-Type"
+                     , maybeHeader "If-Modified-Since"
+                     , maybeHeader "If-None-Match"
+                     , maybeHeader "User-Agent"
+                     ])
+        in WPRModifiedRequest (request' {requestHeaders = forwardedHeaders}) (ProxyDest configUpstreamHost configUpstreamPort)
+    -- TODO disgusting code but checked by compiler and no IO so I
+    -- assume it works.
+
+app :: (AuthJar jar) => Config -> Manager -> jar -> Application
+app config manager jar = serve proxyApi (proxyServer config manager jar)
 
 main :: IO ()
 main = do
     config@Config{..} <- loadConfig
     jar <- newMemoryJar
     manager <- newManager defaultManagerSettings
-    let app = waiProxyTo (proxy config manager jar) defaultOnExc manager
-    run configPort app
+    run configPort (app config manager jar)
+
+
+-- Jun 12 00:18:42 web dex-worker[28029]: ERROR: Request provided unregistered redirect URL: http://127.0.0.1/oauth2/callback

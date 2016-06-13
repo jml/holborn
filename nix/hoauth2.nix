@@ -6,8 +6,8 @@ mkDerivation {
   version = "0.5.3.1";
   src = fetchgit {
     url = "https://github.com/teh/hoauth2";
-    sha256 = "10nl0lf4bxx8qjkhqz33mmra2fwqf37kxy9y44jj0smyqbkhqdah";
-    rev = "0f8a9b7fb0a644b14fc73598486d43301a3ae879";
+    sha256 = "08ah3d64nb3c6v5p53jphkxay33wwabg9ban13xm89vahzsr23n9";
+    rev = "d622f48";
   };
   isLibrary = true;
   isExecutable = true;

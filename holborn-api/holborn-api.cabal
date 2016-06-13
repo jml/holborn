@@ -1,104 +1,114 @@
--- This file has been generated from package.yaml by hpack version 0.13.0.
---
--- see: https://github.com/sol/hpack
-
 name:                holborn-api
 version:             0.1.0.0
-synopsis:            API server for Holborn
-license:             AllRightsReserved
+author:              Tom Hunger and Jonathan Lange
+maintainer:          tehunger@gmail.com
 build-type:          Simple
-cabal-version:       >= 1.10
+cabal-version:       >=1.10
 
 library
-  exposed-modules:
-      Holborn.API
-      Holborn.API.Auth
-      Holborn.API.Browse
-      Holborn.API.Config
-      Holborn.API.Internal
-      Holborn.API.NewRepo
-      Holborn.API.Settings.Profile
-      Holborn.API.Settings.SSHKeys
-      Holborn.API.SSH
-      Holborn.Docs
-  build-depends:
-      base >=4.9 && <5
-    , holborn-common-types
-    , holborn-prelude
-    , servant-server
-    , wai
-    , aeson >= 0.10
-    , attoparsec
-    , blaze-html
-    , blaze-markup
-    , bytestring
-    , either
-    , errors
-    , exceptions >= 0.8
-    , http-api-data
-    , http-client
-    , http-reverse-proxy
-    , http-types
-    , jwt
-    , postgresql-simple
-    , servant-docs >= 0.5
-    , text
-    , time
-    , transformers
-    , warp >= 3.1
-  hs-source-dirs:
-      lib
-  ghc-options: -Wall -Werror
-  default-language: Haskell2010
-  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
+  exposed-modules:     Holborn.API
+                     , Holborn.API.Auth
+                     , Holborn.API.Browse
+                     , Holborn.API.Config
+                     , Holborn.API.Internal
+                     , Holborn.API.NewRepo
+                     , Holborn.API.SSH
+                     , Holborn.API.Settings.Profile
+                     , Holborn.API.Settings.SSHKeys
+                     , Holborn.Docs
+  build-depends:       base >=4.9 && <5
+                     , holborn-prelude
+                     , postgresql-simple
+                     , text
+                     , bytestring
+                     , errors
+                     , aeson >= 0.10
+                     , servant-server >=0.5
+                     , blaze-html
+                     , blaze-markup
+                     , either
+                     , jwt
+                     , attoparsec
+                     , time
+                     , transformers
+                     , servant-docs >= 0.5
+                     , wai
+                     , warp >= 3.1
+                     , http-reverse-proxy
+                     , http-client
+                     , http-types
+                     , exceptions >= 0.8
+                     , holborn-common-types >= 0.1.3
+                     , http-api-data
+
+  hs-source-dirs:      lib
+  ghc-options:         -Wall -Werror
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+                     , NamedFieldPuns
+                     , RecordWildCards
+                     , GeneralizedNewtypeDeriving
+                     , ScopedTypeVariables
+                     , MonadFailDesugaring
+                     , ImplicitParams
+
+Test-Suite holborn-api-tests
+  type:                exitcode-stdio-1.0
+  main-is:             Tests.hs
+  build-depends:       base >=4.9 && <5
+                     , holborn-prelude
+                     , tasty >= 0.10
+                     , tasty-hunit >= 0.9.0
+                     , tasty-quickcheck >= 0.8
+                     , tasty-hspec >= 1.1.0
+                     , hspec-wai >= 0.6.5
+                     , hspec-wai-json >= 0.6.0
+                     , holborn-api
+                     , QuickCheck
+                     , aeson
+                     , bytestring
+                     , errors
+                     , http-client
+                     , process
+                     , holborn-common-types
+                     , servant-server
+                     , transformers
+                     , wai
+                     , process
+                     , http-types
+                     , text
+
+  hs-source-dirs:      tests
+  ghc-options:         -Wall -eventlog
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+                     , NamedFieldPuns
+                     , RecordWildCards
+                     , GeneralizedNewtypeDeriving
+                     , MonadFailDesugaring
+
 
 executable holborn-api-server
-  main-is: Main.hs
-  hs-source-dirs:
-      holborn-api-server
-  default-language: Haskell2010
-  build-depends:
-      base >=4.9 && <5
-    , holborn-common-types
-    , holborn-prelude
-    , servant-server
-    , wai
-    , holborn-api
-    , optparse-applicative
-    , wai-cors
-    , wai-extra
-    , warp >= 3.1
-  ghc-options: -Wall -Werror
-  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
+  main-is:             Main.hs
+  hs-source-dirs:      holborn-api-server
+  default-language:    Haskell2010
+  build-depends:       base >=4.9 && <5
+                     , holborn-prelude
+                     , servant-server >= 0.5
+                     , wai >= 3.0
+                     , wai-extra
+                     , warp >= 3.1
+                     , optparse-applicative
+                     , holborn-api
+                     , holborn-common-types
+                     , wai-cors
 
-test-suite holborn-api-tests
-  type: exitcode-stdio-1.0
-  main-is: Tests.hs
-  hs-source-dirs:
-      tests
-  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
-  ghc-options: -Wall -eventlog
-  build-depends:
-      base >=4.9 && <5
-    , holborn-common-types
-    , holborn-prelude
-    , servant-server
-    , wai
-    , QuickCheck
-    , aeson
-    , bytestring
-    , errors
-    , holborn-api
-    , hspec-wai >= 0.6.5
-    , hspec-wai-json >= 0.6.0
-    , http-client
-    , http-types
-    , process
-    , process
-    , tasty >= 0.10
-    , tasty-hspec >= 1.1.0
-    , tasty-hunit >= 0.9.0
-    , tasty-quickcheck >= 0.8
-    , text
-    , transformers
-  default-language: Haskell2010
+  ghc-options:         -Wall -Werror -eventlog
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+                     , NamedFieldPuns
+                     , RecordWildCards
+                     , GeneralizedNewtypeDeriving
+                     , MonadFailDesugaring
