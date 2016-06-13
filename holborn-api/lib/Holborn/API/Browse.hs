@@ -35,8 +35,6 @@ import qualified Data.Time as Time
 type Owner = Text
 type Repo = Text
 
--- TODO: Update this to use CaptureAll
--- Until we have that browsing will be brokwn
 type API =
          Header "x-dex-name" Username
          :> Capture "owner" Owner
@@ -99,7 +97,9 @@ treeCommitBlob _maybeUsername owner repo pathspec = do
                       where "user".id = "user_repo".user_id and "user".username = ? and "user_repo".name = ?
                |] (owner, repo, owner, repo)
 
-    -- TODO wait for CaptureAll combinator so we can construct the correct path here
+    -- TODO: constructing this URL manually is still not great. A
+    -- secondary concern is that we're decoding, then re-encoding JSON
+    -- here. Might be easier to pipe through backend responses unmodified.
     let repoUrlBrokenAndHardcoded =
           "http://"
           <> repoHostname <> ":" <> fromShow repoPort
