@@ -11,10 +11,10 @@
 
 
 module Holborn.Repo.HttpProtocol
-       ( repoServer
-       , repoAPI
-       , diskLocationToPath
+       ( diskLocationToPath
        , DiskLocation(..)
+       , GitProtocolAPI
+       , gitProtocolAPI
        ) where
 
 import           HolbornPrelude
@@ -29,30 +29,12 @@ import           Pipes.Core (Consumer, Producer, Pipe)
 import           Pipes.GZip (decompress)
 import           Pipes.Safe (SafeT)
 import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
-import           Servant ((:>), (:<|>)(..), Capture, QueryParam, Proxy(..), Server, Raw)
+import           Servant ((:>), (:<|>)(..), QueryParam, Server, Raw)
 import           Text.Printf (printf)
 import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 
-import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
-import Holborn.Repo.Config (Config(..))
-import Holborn.Repo.GitLayer (makeRepository)
 import Holborn.JSON.RepoMeta (RepoId)
 import Holborn.Repo.RepoInit (repoInit)
-
-
--- | The git pull & push repository API.
---
--- Repositories have a repoId, and each repository has an API for browsing and
--- one for the Git HTTP protocol.
-type RepoAPI =
-    "v1"
-    :> "repos"
-    :> Capture "repoId" RepoId
-    :> (BrowseAPI :<|> GitProtocolAPI)
-
-
-repoAPI :: Proxy RepoAPI
-repoAPI = Proxy
 
 
 -- | Data type to describe where the repository lives on disk. Will
@@ -61,14 +43,6 @@ data DiskLocation = DiskLocation { repoRoot :: FilePath, repoId :: RepoId }
 
 diskLocationToPath :: DiskLocation -> String
 diskLocationToPath DiskLocation{..} = repoRoot <> "/" <> textToString (toUrlPiece repoId)
-
-
-repoServer :: Config -> Server RepoAPI
-repoServer Config{repoRoot} repoId =
-    codeBrowser repo :<|> gitProtocolAPI diskLocation
-    where
-      diskLocation = DiskLocation repoRoot repoId
-      repo = makeRepository repoId (diskLocationToPath diskLocation)
 
 
 -- | The core git protocol for a single repository.
