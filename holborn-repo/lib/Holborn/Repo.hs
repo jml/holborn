@@ -12,13 +12,13 @@ import Servant ((:>), (:<|>)(..), Capture, Proxy(..), Server)
 
 import Holborn.JSON.RepoMeta (RepoId)
 import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
-import Holborn.Repo.Config (Config(..))
+import Holborn.Repo.Config (Config)
+import Holborn.Repo.Filesystem (diskLocationToPath, getLocation)
+
 import Holborn.Repo.GitLayer (makeRepository)
 import Holborn.Repo.HttpProtocol
-  ( DiskLocation(..),
-    GitProtocolAPI
+  ( GitProtocolAPI
   , gitProtocolAPI
-  , diskLocationToPath
   )
 
 
@@ -36,8 +36,8 @@ repoAPI :: Proxy RepoAPI
 repoAPI = Proxy
 
 repoServer :: Config -> Server RepoAPI
-repoServer Config{repoRoot} repoId =
+repoServer config repoId =
     codeBrowser repo :<|> gitProtocolAPI diskLocation
     where
-      diskLocation = DiskLocation repoRoot repoId
+      diskLocation = getLocation config repoId
       repo = makeRepository repoId (diskLocationToPath diskLocation)

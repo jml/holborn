@@ -26,14 +26,13 @@ import           Holborn.Repo.Config (Config(..), rawPort)
 import           Holborn.Repo.Process (streamIO, proc)
 import qualified Holborn.Logging as Log
 import           Holborn.JSON.SSHRepoCommunication (RepoCall(..), SSHCommandLine(..))
-import Holborn.Repo.RepoInit (repoInit)
-import Holborn.Repo.HttpProtocol (DiskLocation(..), diskLocationToPath)
+import Holborn.Repo.Filesystem (DiskLocation, diskLocationToPath, getLocation, repoInit)
 
 
 gitPack :: String -> DiskLocation -> Producer ByteString IO () -> Consumer ByteString IO () -> IO ()
-gitPack packCommand diskLocation@DiskLocation{..} from to = do
+gitPack packCommand diskLocation from to = do
     -- TOOD error handling & logging
-    void $ repoInit repoRoot repoId
+    void $ repoInit diskLocation
     void $ streamIO (proc packCommand [diskLocationToPath diskLocation]) from to
 
 
@@ -61,20 +60,22 @@ getRepoParser = do
 -- | Accept connection, parse the exact repository, then dispatch to
 -- git.
 accept :: Config -> (Socket, SockAddr) -> IO ()
-accept Config{repoRoot} (sock, _) = do
+accept config (sock, _) = do
     let from = fromSocket sock 4096
     let to = toSocket sock
     (header, fromRest) <- runStateT getRepoParser from
     Log.debug header
     void $ case header of
         Just (WritableRepoCall (GitUploadPack _ _) repoId) ->
-            gitUploadPack (DiskLocation repoRoot repoId) fromRest to
+            gitUploadPack (getLocation' repoId) fromRest to
         Just (WritableRepoCall (GitReceivePack _ _) repoId) ->
-            gitReceivePack (DiskLocation repoRoot repoId) fromRest to
+            gitReceivePack (getLocation' repoId) fromRest to
             -- TODO: This doesn't appear to abort the connection, which is
             -- what we want it to do.
         _ -> terror $ "Bad header: " <> show header
     return ()
+  where
+    getLocation' = getLocation config
 
 serveRaw :: Config -> IO ()
 serveRaw config = runSafeT (serve HostAny (fromShow . rawPort $ config) (accept config))

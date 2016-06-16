@@ -16,14 +16,14 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Holborn.Repo
-                     , Holborn.Repo.HttpProtocol
-                     , Holborn.Repo.RawProtocol
-                     , Holborn.Repo.Config
-                     , Holborn.Repo.Process
-                     , Holborn.Repo.GitLayer
                      , Holborn.Repo.Browse
+                     , Holborn.Repo.Config
+                     , Holborn.Repo.Filesystem
+                     , Holborn.Repo.GitLayer
                      , Holborn.Repo.HtmlFormatTokens
-                     , Holborn.Repo.RepoInit
+                     , Holborn.Repo.HttpProtocol
+                     , Holborn.Repo.Process
+                     , Holborn.Repo.RawProtocol
   hs-source-dirs:      lib
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude

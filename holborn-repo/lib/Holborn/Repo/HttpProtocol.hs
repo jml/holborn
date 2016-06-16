@@ -11,9 +11,7 @@
 
 
 module Holborn.Repo.HttpProtocol
-       ( diskLocationToPath
-       , DiskLocation(..)
-       , GitProtocolAPI
+       ( GitProtocolAPI
        , gitProtocolAPI
        ) where
 
@@ -33,16 +31,7 @@ import           Servant ((:>), (:<|>)(..), QueryParam, Server, Raw)
 import           Text.Printf (printf)
 import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 
-import Holborn.JSON.RepoMeta (RepoId)
-import Holborn.Repo.RepoInit (repoInit)
-
-
--- | Data type to describe where the repository lives on disk. Will
--- probably be extended to handle implicit clones.
-data DiskLocation = DiskLocation { repoRoot :: FilePath, repoId :: RepoId }
-
-diskLocationToPath :: DiskLocation -> String
-diskLocationToPath DiskLocation{..} = repoRoot <> "/" <> textToString (toUrlPiece repoId)
+import Holborn.Repo.Filesystem (DiskLocation, diskLocationToPath, repoInit)
 
 
 -- | The core git protocol for a single repository.
@@ -84,10 +73,8 @@ gitProtocolAPI diskLocation =
   :<|> gitServe GitReceivePack diskLocation
 
 
-
-
 smartHandshake :: DiskLocation -> Maybe GitService -> Application
-smartHandshake diskLocation@DiskLocation{..} service =
+smartHandshake diskLocation service =
     handshakeApp
   where
     handshakeApp :: Application
@@ -96,7 +83,7 @@ smartHandshake diskLocation@DiskLocation{..} service =
         -- cloning of empty repositories. The user will see:
         -- "warning: You appear to have cloned an empty repository."
         -- TODO: error logging
-        void (repoInit repoRoot repoId)
+        void (repoInit diskLocation)
         respond $ maybe backupResponse gitResponse service
 
     gitResponse :: GitService -> Response
