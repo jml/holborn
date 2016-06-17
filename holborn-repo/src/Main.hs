@@ -12,7 +12,7 @@ import Servant (serve)
 import qualified Env
 import Control.Concurrent (forkIO)
 
-import Holborn.Repo.HttpProtocol (repoServer, repoAPI)
+import Holborn.Repo (repoServer, repoAPI)
 import Holborn.Repo.Config (Config(..), warpSettings)
 import Holborn.Repo.RawProtocol (serveRaw)
 import qualified Network.Wai.Middleware.RequestLogger as RL

@@ -1,17 +1,36 @@
--- | Initialize a bare repository on disk. The contract is that by the
--- time a push arrives at our doorstep either API or the SSH
--- terminator have vetted that the push is valid. See note [1] at end
--- of this file for why we're not locking.
+-- | Governs how we map from repository IDs to files on disk.
 --
--- Lazy initializion happens in two contexts:
+-- We use 'Config' to turn 'RepoIds' received from clients into opaque
+-- 'DiskLocation' values that can then be used to create, fork, and open
+-- repositories.
+--
+-- ** Lazy initalization
+--
+-- We are planning on implementing a feature such that we will initialize
+-- user's repositories for them, rather than them having to initialize them on
+-- our servers.
+--
+-- This will happen in two contexts:
 -- 1/ user pushes to a new repository
 -- 2/ user does an implicit fork (communicated by API or the SSH header)
+--
+-- At the user level, an implicit fork happens when they push to a public
+-- repository that they don't have write access to.
 --
 -- We care about the difference because a lazy init for an implicit
 -- fork can be made much more efficient by cloning the other repo
 -- first.
-module Holborn.Repo.RepoInit
-  ( repoInit
+--
+-- Note that holborn-repo has no notion of access. The contract is that by the
+-- time a push arrives at our doorstep either API or the SSH terminator have
+-- vetted that the push is valid. See note[1] at end of this file for why
+-- we're not locking.
+
+module Holborn.Repo.Filesystem
+  ( DiskLocation
+  , diskLocationToPath
+  , getLocation
+  , repoInit
   , forkInit
   ) where
 
@@ -19,11 +38,27 @@ import HolbornPrelude
 import System.Process (proc, readCreateProcessWithExitCode, CreateProcess(cwd))
 import System.Exit (ExitCode(..))
 import Data.Text (unpack)
+
 import Holborn.JSON.RepoMeta (RepoId)
+import Holborn.Repo.Config (Config(..))
+import Web.HttpApiData (ToHttpApiData(..))
 
 
-repoInit :: FilePath -> RepoId -> IO (Maybe ())
-repoInit repoRoot repoId = do
+-- | Opaque data type to describe where the repository lives on disk. Will
+-- probably be extended to handle implicit clones.
+data DiskLocation = DiskLocation { repoRoot :: FilePath, repoId :: RepoId }
+
+-- | Get the disk location for a repository.
+getLocation :: Config -> RepoId -> DiskLocation
+getLocation Config{repoRoot} repoId = DiskLocation repoRoot repoId
+
+-- | Get the absolute path on disk that a DiskLocation corresponds to.
+diskLocationToPath :: DiskLocation -> String
+diskLocationToPath DiskLocation{..} = repoRoot <> "/" <> textToString (toUrlPiece repoId)
+
+-- | Initialize a bare Git repository at the given location.
+repoInit :: DiskLocation -> IO (Maybe ())
+repoInit DiskLocation{..} = do
     -- http://git-scm.com/docs/git-init
     -- "Running git init in an existing repository is safe.
     -- It will not overwrite things that are already there.
@@ -41,12 +76,12 @@ repoInit repoRoot repoId = do
 
 -- | Not used yet but added so I don't lose my research into git
 -- behaviour.
-forkInit :: FilePath -> RepoId -> RepoId -> IO (Maybe ())
-forkInit repoRoot existingRepoId repoId = do
+forkInit :: DiskLocation -> RepoId -> IO (Maybe DiskLocation)
+forkInit (DiskLocation repoRoot existingRepoId) repoId = do
     let clone' = (proc "git" ["clone", "--bare", "--local", unpack (show existingRepoId), unpack (show repoId)]) { cwd = Just repoRoot }
     (exitCode, _, _) <- readCreateProcessWithExitCode clone' ""
     pure $ case exitCode of
-      ExitSuccess -> Just ()
+      ExitSuccess -> Just (DiskLocation repoRoot repoId)
       _ -> Nothing
 
 

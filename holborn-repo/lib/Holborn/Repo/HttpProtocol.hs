@@ -11,10 +11,8 @@
 
 
 module Holborn.Repo.HttpProtocol
-       ( repoServer
-       , repoAPI
-       , diskLocationToPath
-       , DiskLocation(..)
+       ( GitProtocolAPI
+       , gitProtocolAPI
        ) where
 
 import           HolbornPrelude
@@ -29,46 +27,11 @@ import           Pipes.Core (Consumer, Producer, Pipe)
 import           Pipes.GZip (decompress)
 import           Pipes.Safe (SafeT)
 import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
-import           Servant ((:>), (:<|>)(..), Capture, QueryParam, Proxy(..), Server, Raw)
+import           Servant ((:>), (:<|>)(..), QueryParam, Server, Raw)
 import           Text.Printf (printf)
 import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 
-import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
-import Holborn.Repo.Config (Config(..))
-import Holborn.Repo.GitLayer (makeRepository)
-import Holborn.JSON.RepoMeta (RepoId)
-import Holborn.Repo.RepoInit (repoInit)
-
-
--- | The git pull & push repository API.
---
--- Repositories have a repoId, and each repository has an API for browsing and
--- one for the Git HTTP protocol.
-type RepoAPI =
-    "v1"
-    :> "repos"
-    :> Capture "repoId" RepoId
-    :> (BrowseAPI :<|> GitProtocolAPI)
-
-
-repoAPI :: Proxy RepoAPI
-repoAPI = Proxy
-
-
--- | Data type to describe where the repository lives on disk. Will
--- probably be extended to handle implicit clones.
-data DiskLocation = DiskLocation { repoRoot :: FilePath, repoId :: RepoId }
-
-diskLocationToPath :: DiskLocation -> String
-diskLocationToPath DiskLocation{..} = repoRoot <> "/" <> textToString (toUrlPiece repoId)
-
-
-repoServer :: Config -> Server RepoAPI
-repoServer Config{repoRoot} repoId =
-    codeBrowser repo :<|> gitProtocolAPI diskLocation
-    where
-      diskLocation = DiskLocation repoRoot repoId
-      repo = makeRepository repoId (diskLocationToPath diskLocation)
+import Holborn.Repo.Filesystem (DiskLocation, diskLocationToPath, repoInit)
 
 
 -- | The core git protocol for a single repository.
@@ -110,10 +73,8 @@ gitProtocolAPI diskLocation =
   :<|> gitServe GitReceivePack diskLocation
 
 
-
-
 smartHandshake :: DiskLocation -> Maybe GitService -> Application
-smartHandshake diskLocation@DiskLocation{..} service =
+smartHandshake diskLocation service =
     handshakeApp
   where
     handshakeApp :: Application
@@ -122,7 +83,7 @@ smartHandshake diskLocation@DiskLocation{..} service =
         -- cloning of empty repositories. The user will see:
         -- "warning: You appear to have cloned an empty repository."
         -- TODO: error logging
-        void (repoInit repoRoot repoId)
+        void (repoInit diskLocation)
         respond $ maybe backupResponse gitResponse service
 
     gitResponse :: GitService -> Response
