@@ -7,7 +7,7 @@ let
 
   # XXX: Depend on custom package for now.
   buildbotWorkerPackage = pkgs.callPackage ../packages/buildbot-worker-0.9.nix {};
-  buildbotWorkerCommand = "${buildbotWorkerPackage}/bin/buildslave";
+  buildbotWorkerCommand = "${buildbotWorkerPackage}/bin/buildbot-worker";
 
   cfg = config.services.buildbot-worker;
   tacFile = pkgs.writeText "buildbot.tac" (
