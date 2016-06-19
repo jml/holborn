@@ -2,11 +2,6 @@
 # binaries are part of standard hackage package set.
 { haskellPackages, haskell, lib, stdenv, fetchFromGitHub }:
 let
-  generateDirLocals = ''
-    python ../tools/ghc_nix.py > .dir-locals.el
-    echo "Regenerated .dir-locals.el to set flycheck GHC paths"
-  '';
-
   capture-all-fork = fetchFromGitHub {
     owner = "jml";
     repo = "servant";
@@ -29,8 +24,7 @@ haskellPackages.override {
       mkDerivation = { pname, ... }@args:
         super.mkDerivation (
           if builtins.substring 0 7 pname == "holborn"
-          then (args // { src = lib.sourceFilesBySuffices args.src [".cabal" ".hs"];
-                          shellHook = generateDirLocals; })
+          then (args // { src = lib.sourceFilesBySuffices args.src [".cabal" ".hs"]; })
           else args
         );
 
