@@ -1,26 +1,21 @@
-.PHONY: all clean
+.PHONY: all check clean
 
-all: hcl/default.nix holborn-api/default.nix holborn-common-types/default.nix holborn-repo/default.nix holborn-syntax/default.nix
+HASKELL_PROJECTS = hcl holborn-api holborn-common-types holborn-repo holborn-prelude holborn-syntax
 
-hcl/default.nix: hcl/hcl.cabal
-	cd hcl && cabal2nix . > default.nix
+cabal_files = $(foreach proj,$(HASKELL_PROJECTS),$(proj)/$(proj).cabal)
+nix_exprs = $(foreach proj,$(HASKELL_PROJECTS),$(proj)/default.nix)
 
-holborn-api/default.nix: holborn-api/holborn-api.cabal
-	cd holborn-api && cabal2nix . > default.nix
+define generate_default_nix
+    $1/default.nix: $1/$1.cabal
+		cd $1 && cabal2nix . > default.nix
+endef
 
-holborn-common-types/default.nix: holborn-common-types/holborn-common-types.cabal
-	cd holborn-common-types && cabal2nix . > default.nix
+all: $(nix_exprs)
 
-holborn-repo/default.nix: holborn-repo/holborn-repo.cabal
-	cd holborn-repo && cabal2nix . > default.nix
-
-holborn-syntax/default.nix: holborn-syntax/holborn-syntax.cabal
-	cd holborn-syntax && cabal2nix . > default.nix
+check:
+	nix-build --no-out-link ./integration-tests
 
 clean:
-	rm -f hcl/default.nix
-	rm -f holborn-api/default.nix
-	rm -f holborn-common-types/default.nix
-	rm -f holborn-repo/default.nix
-	rm -f holborn-syntax/default.nix
+	rm -f $(nix_exprs)
 
+$(foreach proj,$(HASKELL_PROJECTS),$(eval $(call generate_default_nix,$(proj))))
