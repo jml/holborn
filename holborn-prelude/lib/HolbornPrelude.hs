@@ -6,6 +6,7 @@ module HolbornPrelude
   ( -- * Module exports
     module CorePrelude
   , module Data.List
+  , module Control.Applicative
   , module Control.Monad
 
     -- ** Folds and traversals
@@ -88,6 +89,11 @@ module HolbornPrelude
   , Prelude.putChar
   , Prelude.getChar
   , Prelude.readLn
+
+    -- * Holborn extensions and innovations
+    -- ** Error handling
+  , hush
+  , fmapL
   ) where
 
 import CorePrelude
@@ -128,6 +134,7 @@ import Control.Monad hiding
   )
 
 
+import Control.Applicative
 import Data.Foldable (Foldable(..), elem, maximum, minimum)
 import Data.Traversable (Traversable(..))
 import qualified Data.Text as Text
@@ -216,3 +223,14 @@ decodeUtf8 = decodeUtf8With lenientDecode
 
 readMay :: Read a => Text -> Maybe a
 readMay = Safe.readMay . Text.unpack
+
+
+-- | Generic version of 'hush' from Control.Errors
+hush :: Alternative m => Either e a -> m a
+hush (Left _)  = empty
+hush (Right x) = pure x
+
+-- | Map over the Left value of an Either
+fmapL :: (a -> b) -> Either a c -> Either b c
+fmapL f (Left x)  = Left (f x)
+fmapL _ (Right x) = Right x

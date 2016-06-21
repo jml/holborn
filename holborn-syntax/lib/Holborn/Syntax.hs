@@ -18,7 +18,7 @@ module Holborn.Syntax
 
 import HolbornPrelude
 
-import Control.Error (fmapL, note)
+import Control.Error (note)
 import Data.ByteString.Char8 (unpack)
 import Text.Highlighter (lexerFromFilename)
 import Text.Highlighter.Lexer (runLexer)
