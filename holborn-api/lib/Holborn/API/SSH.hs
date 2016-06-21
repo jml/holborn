@@ -33,6 +33,7 @@ import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, logDe
 import Holborn.API.Types (Username)
 import Holborn.JSON.SSHRepoCommunication ( RepoCall(..)
                                          , KeyType(..)
+                                         , GitCommand(..)
                                          , SSHCommandLine(..)
                                          , SSHKey
                                          , RepoAccess(..)
@@ -167,9 +168,9 @@ checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
     case (command, rows) of
         (_, []) -> return $ Left NoSSHKey
         (_, _:_:_) -> return $ Left MultipleSSHKeys
-        (GitReceivePack _ _, [(_, False, True)]) -> return $ Right $ WritableRepoCall command repoId
-        (GitReceivePack _ _, [(keyId, True, True)]) -> return $ Left $ ReadOnlyKey keyId
-        (GitUploadPack _ _, [(_, _, True)]) -> return $ Right $ WritableRepoCall command repoId
+        (SSHCommandLine GitReceivePack _ _, [(_, False, True)]) -> return $ Right $ WritableRepoCall command repoId
+        (SSHCommandLine GitReceivePack _ _, [(keyId, True, True)]) -> return $ Left $ ReadOnlyKey keyId
+        (SSHCommandLine GitUploadPack _ _, [(_, _, True)]) -> return $ Right $ WritableRepoCall command repoId
         (_, [(_, _, False)]) -> return $ Left UnverifiedKey
 
 

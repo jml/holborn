@@ -66,6 +66,7 @@ test-suite holborn-common-types-test
   build-depends:      base >= 4.9 && < 5
                     , holborn-prelude
                     , aeson >= 0.10
+                    , http-api-data
                     , tasty >= 0.11
                     , tasty-hunit
                     , tasty-quickcheck

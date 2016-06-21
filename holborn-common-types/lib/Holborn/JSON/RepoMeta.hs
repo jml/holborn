@@ -4,11 +4,13 @@ module Holborn.JSON.RepoMeta
        ( RepoMeta(..)
        , newValidRepoName
        , ValidRepoName
+       , validRepoNameParser
        , RepoId
        )
        where
 
 import HolbornPrelude
+
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, Value(String))
 import Data.Aeson.Types (typeMismatch)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
@@ -43,18 +45,16 @@ instance Arbitrary ValidRepoName where
         alphabet = startAlphabet <> "-_"
 
 
-validRepoNameParser :: AT.Parser Text
+validRepoNameParser :: AT.Parser ValidRepoName
 validRepoNameParser = do
     s <- AT.satisfy (\x -> isDigit x || isAsciiLower x || isAsciiUpper x)
     rest <- AT.takeWhile (\x -> isDigit x || isAsciiLower x || isAsciiUpper x || x == '_' || x == '-')
-    AT.endOfInput
-    pure (Data.Text.cons s rest)
+    pure $ ValidRepoName (Data.Text.cons s rest)
 
 
-newValidRepoName :: Text -> Maybe ValidRepoName
-newValidRepoName s = case AT.parseOnly validRepoNameParser s of
-    Left _ -> Nothing
-    Right x -> Just (ValidRepoName x)
+newValidRepoName :: Alternative m => Text -> m ValidRepoName
+newValidRepoName s = hush (AT.parseOnly validRepoNameParser s)
+
 
 -- | E.g.
 -- λ  decode "\"repo-name\"" :: Maybe ValidRepoName
