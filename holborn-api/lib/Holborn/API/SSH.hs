@@ -165,13 +165,15 @@ checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
                select 'user',  id from "user" where username = ? and name = ?
                |] (owner, repo, owner, repo)
 
-    case (command, rows) of
-        (_, []) -> return $ Left NoSSHKey
-        (_, _:_:_) -> return $ Left MultipleSSHKeys
-        (SSHCommandLine GitReceivePack _ _, [(_, False, True)]) -> return $ Right $ WritableRepoCall command repoId
-        (SSHCommandLine GitReceivePack _ _, [(keyId, True, True)]) -> return $ Left $ ReadOnlyKey keyId
-        (SSHCommandLine GitUploadPack _ _, [(_, _, True)]) -> return $ Right $ WritableRepoCall command repoId
-        (_, [(_, _, False)]) -> return $ Left UnverifiedKey
+    return $
+      case rows of
+        []                        -> Left NoSSHKey
+        _:_:_                     -> Left MultipleSSHKeys
+        [(_, _, False)]           -> Left UnverifiedKey
+        [(keyId, readOnly, True)] ->
+          case (gitCommand command, readOnly) of
+            (GitReceivePack, True)  -> Left  $ ReadOnlyKey keyId
+            _                       -> Right $ WritableRepoCall command repoId
 
 
 -- | Either route a git request to the correct repo, or give an error saying
