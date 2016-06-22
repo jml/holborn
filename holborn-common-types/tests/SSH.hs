@@ -1,7 +1,6 @@
 module SSH (tests) where
 
 import HolbornPrelude
-import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit
   ( (@=?)
@@ -9,21 +8,17 @@ import Test.Tasty.HUnit
   )
 import Test.Tasty.QuickCheck
   ( (===)
-  , Property
   , testProperty
   )
-
 import Holborn.JSON.SSHRepoCommunication
-  ( RepoCall(..)
+  ( GitCommand(..)
+  , RepoCall(..)
   , SSHCommandLine(..)
   , unparseSSHCommand
   , parseSSHCommand
   )
 import Holborn.JSON.RepoMeta (newValidRepoName)
-
-
-jsonIdentity :: (Eq a, Show a, FromJSON a, ToJSON a) => a -> Property
-jsonIdentity x = Just x === decode (encode x)
+import Helpers (jsonIdentity, httpApiDataIdentity)
 
 tests :: TestTree
 tests =
@@ -33,9 +28,12 @@ tests =
     [ testProperty "unparsed then parsed" $ \x -> Just x === parseSSHCommand (unparseSSHCommand x)
     , testProperty "to JSON and back" $ \x -> jsonIdentity (x :: SSHCommandLine)
     , testCase "standard unparse example" $
-      "git-upload-pack 'org/hello'" @=? unparseSSHCommand (GitUploadPack "org" validRepoName)
+      "git-upload-pack 'org/hello'" @=? unparseSSHCommand (SSHCommandLine GitUploadPack "org" validRepoName)
     , testCase "standard parse example" $
-      Just (GitUploadPack "org" validRepoName) @=? parseSSHCommand "git-upload-pack 'org/hello'"
+      Just (SSHCommandLine GitUploadPack "org" validRepoName) @=? parseSSHCommand "git-upload-pack 'org/hello'"
+    ]
+  , testGroup "GitCommand"
+    [ testProperty "unparsed then parsed" $ \x -> httpApiDataIdentity (x :: GitCommand)
     ]
   , testGroup "RepoCall"
     [ testProperty "to JSON and back" $ \x -> jsonIdentity (x :: RepoCall)

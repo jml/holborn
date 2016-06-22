@@ -3,7 +3,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Holborn.JSON.SSHRepoCommunication
-       ( RepoCall(..)
+       ( GitCommand(..)
+       , unparseGitCommand
+       , RepoCall(..)
        , SSHKey
        , KeyType(..)
        , parseSSHCommand
@@ -17,7 +19,6 @@ module Holborn.JSON.SSHRepoCommunication
 import HolbornPrelude
 
 import Control.Applicative (Alternative(..))
-import Control.Error (rightZ)
 import Data.Aeson (FromJSON(..), ToJSON(..), genericParseJSON, genericToJSON, object, withText, (.=))
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import qualified Data.Attoparsec.Text as AT
@@ -30,9 +31,14 @@ import GHC.Generics (Generic)
 import System.IO (hClose)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
 import System.Process (runInteractiveCommand)
+import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Web.HttpApiData (toUrlPiece)
-import Holborn.JSON.RepoMeta (ValidRepoName, newValidRepoName, RepoId)
 
+import Holborn.JSON.RepoMeta
+  ( ValidRepoName
+  , validRepoNameParser
+  , RepoId
+  )
 
 import Test.QuickCheck
   ( Arbitrary(..)
@@ -42,12 +48,45 @@ import Test.QuickCheck
   )
 
 
+-- | Git offers two kinds of service.
+data GitCommand = GitUploadPack | GitReceivePack deriving (Eq, Show)
+
+gitCommandParser :: AT.Parser GitCommand
+gitCommandParser = ("git-upload-pack" >> pure GitUploadPack) <|> ("git-receive-pack" >> pure GitReceivePack)
+
+unparseGitCommand :: IsString string => GitCommand -> string
+unparseGitCommand serviceType =
+  case serviceType of
+    GitUploadPack -> "git-upload-pack"
+    GitReceivePack -> "git-receive-pack"
+
+instance ToHttpApiData GitCommand where
+    toUrlPiece = unparseGitCommand
+
+instance FromHttpApiData GitCommand where
+  -- | Turn data from HTTP into a GitCommand.
+  --
+  -- e.g.
+  -- > parseUrlPiece "git-upload-pack"
+  -- Right GitUploadPack
+  --
+  -- > parseUrlPiece "git-receive-pack"
+  -- Right GitReceivePack
+  --
+  -- > parseUrlPiece "sandwiches"
+  -- Left "Parse error: sandwiches"
+  parseUrlPiece = fmapL fromString . AT.parseOnly gitCommandParser
+
+instance Arbitrary GitCommand where
+    arbitrary = elements [ GitReceivePack, GitUploadPack ]
+
 
 -- | A user-generated request to interact with a git repository.
 data SSHCommandLine =
-      GitReceivePack { _owner :: Text, _sshCommandLineRepo :: ValidRepoName }
-    | GitUploadPack { _owner :: Text, _sshCommandLineRepo :: ValidRepoName }
-    deriving (Show, Eq)
+  SSHCommandLine { gitCommand :: GitCommand
+                 , _owner :: Text
+                 , _sshCommandLineRepo :: ValidRepoName
+                 } deriving (Show, Eq)
 
 instance FromJSON SSHCommandLine where
   parseJSON = withText "SSH command must be text" parseSSHCommand
@@ -65,41 +104,28 @@ instance ToJSON SSHCommandLine where
 -- remote ssh trying to run random commands) and as such it needs
 -- quickchecking!
 sshCommand :: AT.Parser SSHCommandLine
-sshCommand =
-    upload <|> receive
-  where
-    upload = do
-        void $ AT.string "git-upload-pack '"
-        uncurry GitUploadPack <$> repoPath
-    receive = do
-        void $ AT.string "git-receive-pack '"
-        uncurry GitReceivePack <$> repoPath
-    repoPath = do
-        AT.skipWhile (== '/') -- skip optional leading /
-        org <- AT.takeWhile1 (/= '/')
-        void $ AT.char '/'
-        repoName <- AT.takeWhile1 (/= '\'')
-        void $ AT.char '\''
-        AT.endOfInput
-
-        case newValidRepoName repoName of
-          Nothing -> fail "Invalid repository name"
-          Just x -> pure (org, x)
+sshCommand = do
+  command <- gitCommandParser
+  void $ AT.string " '"
+  AT.skipWhile (== '/') -- skip optional leading /
+  org <- AT.takeWhile1 (/= '/')
+  void $ AT.char '/'
+  repoName <- validRepoNameParser
+  void $ AT.char '\''
+  AT.endOfInput
+  pure $ SSHCommandLine command org repoName
 
 
-parseSSHCommand :: MonadPlus m => Text -> m SSHCommandLine
-parseSSHCommand = rightZ . AT.parseOnly sshCommand
+parseSSHCommand :: Alternative m => Text -> m SSHCommandLine
+parseSSHCommand = hush . AT.parseOnly sshCommand
 
 unparseSSHCommand :: SSHCommandLine -> Text
-unparseSSHCommand (GitReceivePack owner repo) = "git-receive-pack '" <> owner <> "/" <> toUrlPiece repo <> "'"
-unparseSSHCommand (GitUploadPack owner repo) = "git-upload-pack '" <> owner <> "/" <> toUrlPiece repo <> "'"
+unparseSSHCommand (SSHCommandLine command owner repo) =
+  unparseGitCommand command <> " '" <> owner <> "/" <> toUrlPiece repo <> "'"
 
 
 instance Arbitrary SSHCommandLine where
-  arbitrary =
-    constructor <*> pathSegment <*> arbitrary
-    where
-      constructor = elements [ GitReceivePack, GitUploadPack ]
+  arbitrary = SSHCommandLine <$> arbitrary <*> pathSegment <*> arbitrary
 
 -- | Used to generate arbitrary valid owners and repository names.
 -- TODO: Encode this assumption in the types of owner, repo, etc.

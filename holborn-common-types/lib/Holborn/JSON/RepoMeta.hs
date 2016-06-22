@@ -4,13 +4,14 @@ module Holborn.JSON.RepoMeta
        ( RepoMeta(..)
        , newValidRepoName
        , ValidRepoName
+       , validRepoNameParser
        , RepoId
        )
        where
 
 import HolbornPrelude
-import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, Value(String))
-import Data.Aeson.Types (typeMismatch)
+
+import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, Value(String), withText)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import GHC.Generics (Generic)
 import qualified Data.Attoparsec.Text as AT
@@ -43,32 +44,25 @@ instance Arbitrary ValidRepoName where
         alphabet = startAlphabet <> "-_"
 
 
-validRepoNameParser :: AT.Parser Text
+validRepoNameParser :: AT.Parser ValidRepoName
 validRepoNameParser = do
     s <- AT.satisfy (\x -> isDigit x || isAsciiLower x || isAsciiUpper x)
     rest <- AT.takeWhile (\x -> isDigit x || isAsciiLower x || isAsciiUpper x || x == '_' || x == '-')
-    AT.endOfInput
-    pure (Data.Text.cons s rest)
+    pure $ ValidRepoName (Data.Text.cons s rest)
 
 
-newValidRepoName :: Text -> Maybe ValidRepoName
-newValidRepoName s = case AT.parseOnly validRepoNameParser s of
-    Left _ -> Nothing
-    Right x -> Just (ValidRepoName x)
+newValidRepoName :: Alternative m => Text -> m ValidRepoName
+newValidRepoName s = hush (AT.parseOnly validRepoNameParser s)
+
 
 -- | E.g.
 -- λ  decode "\"repo-name\"" :: Maybe ValidRepoName
 -- Just (ValidRepoName "repo-name")
 instance FromJSON ValidRepoName where
-    parseJSON (String s) = case newValidRepoName s of
-        Nothing -> fail ("Not a valid repository name: " ++ Data.Text.unpack s)
-        Just x -> pure x
-    parseJSON x = typeMismatch "Not a valid repo type" x
-
+    parseJSON = withText "RepoName must be text" newValidRepoName
 
 instance ToJSON ValidRepoName where
     toJSON (ValidRepoName s) = String s
-
 
 instance FromField ValidRepoName where
     fromField _ (Just bs) = case newValidRepoName (decodeUtf8 bs) of

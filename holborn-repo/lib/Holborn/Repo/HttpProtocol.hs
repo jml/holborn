@@ -29,38 +29,17 @@ import           Pipes.Safe (SafeT)
 import           Pipes.Shell (pipeCmd, producerCmd, runShell, (>?>))
 import           Servant ((:>), (:<|>)(..), QueryParam, Server, Raw)
 import           Text.Printf (printf)
-import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
+import           Web.HttpApiData (ToHttpApiData(..))
 
+import Holborn.JSON.SSHRepoCommunication (GitCommand(..), unparseGitCommand)
 import Holborn.Repo.Filesystem (DiskLocation, diskLocationToPath, repoInit)
 
 
 -- | The core git protocol for a single repository.
 type GitProtocolAPI =
-       "info" :> "refs" :> QueryParam "service" GitService :> Raw
+       "info" :> "refs" :> QueryParam "service" GitCommand :> Raw
   :<|> "git-upload-pack" :> Raw
   :<|> "git-receive-pack" :> Raw
-
-
-
--- | Git offers two kinds of service.
--- TODO: unify with the GitUploadPack etc stuff in SSHRepoCommunication
--- by moving it to:
--- data GitCommand = GitReceivePack | GitUploadPack
--- data SSHCommandLine = SSHCommandLine GitCommand Text ValidRepoName
-data GitService = GitUploadPack | GitReceivePack deriving (Show)
-
-stringyService :: IsString a => GitService -> a
-stringyService serviceType = case serviceType of
-  GitUploadPack -> "git-upload-pack"
-  GitReceivePack -> "git-receive-pack"
-
-instance ToHttpApiData GitService where
-    toUrlPiece = stringyService
-
-instance FromHttpApiData GitService where
-    parseUrlPiece "git-upload-pack" = pure GitUploadPack
-    parseUrlPiece "git-receive-pack" = pure GitReceivePack
-    parseUrlPiece _ = Left "Invalid git service"
 
 
 data GitResponse = Service | Advertisement
@@ -73,7 +52,7 @@ gitProtocolAPI diskLocation =
   :<|> gitServe GitReceivePack diskLocation
 
 
-smartHandshake :: DiskLocation -> Maybe GitService -> Application
+smartHandshake :: DiskLocation -> Maybe GitCommand -> Application
 smartHandshake diskLocation service =
     handshakeApp
   where
@@ -86,7 +65,7 @@ smartHandshake diskLocation service =
         void (repoInit diskLocation)
         respond $ maybe backupResponse gitResponse service
 
-    gitResponse :: GitService -> Response
+    gitResponse :: GitCommand -> Response
     gitResponse serviceType =
         responseStream
             ok200
@@ -96,7 +75,7 @@ smartHandshake diskLocation service =
     backupResponse :: Response
     backupResponse = terror "no git service specified: I have no idea whether we can reach this state."
 
-    gitPack' :: GitService -> (Builder -> IO ()) -> IO () -> IO ()
+    gitPack' :: GitCommand -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack' serviceType moreData _flush =
         runShell $ (
             banner serviceName
@@ -104,7 +83,7 @@ smartHandshake diskLocation service =
             >> footer) >-> sendChunks moreData
       where
 
-        serviceName = stringyService serviceType
+        serviceName = unparseGitCommand serviceType
 
     -- git requires a service header that just repeats the service it
     -- asked for. It also requires `0000` to indicate a boundary.
@@ -123,7 +102,7 @@ smartHandshake diskLocation service =
     footer = yield ""
 
 
-gitServe :: GitService -> DiskLocation -> Application
+gitServe :: GitCommand -> DiskLocation -> Application
 gitServe serviceType diskLocation = localrespond
   where
     localrespond :: Application
@@ -134,7 +113,7 @@ gitServe serviceType diskLocation = localrespond
           (gitPack diskLocation serviceType (producerRequestBody req))
 
 
-gitHeaders :: GitService -> GitResponse -> RequestHeaders
+gitHeaders :: GitCommand -> GitResponse -> RequestHeaders
 gitHeaders serviceType gitResponse =
     [ ("Content-Type", "application/x-" ++ service ++ "-" ++ suffix)
     , ("Pragma", "no-cache")
@@ -142,19 +121,19 @@ gitHeaders serviceType gitResponse =
     , ("Cache-Control", "no-cache, max-age=0, must-revalidate")
     ]
   where
-    service = stringyService serviceType
+    service = toHeader serviceType
     suffix = case gitResponse of
       Service -> "service"
       Advertisement -> "advertisement"
 
 
-gitPack :: DiskLocation -> GitService -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
+gitPack :: DiskLocation -> GitCommand -> Producer ByteString (SafeT IO) () -> (Builder -> IO ()) -> IO () -> IO ()
 gitPack diskLocation serviceType postDataProducer moreData _flush =
     runShell $
     postDataProducer >?> pipeCmd (service ++ " --stateless-rpc " ++ (diskLocationToPath diskLocation)) >-> filterStdErr
         >-> sendChunks moreData
   where
-    service = stringyService serviceType
+    service = unparseGitCommand serviceType
 
 
 sendChunks :: (Builder -> IO ()) -> Consumer ByteString (SafeT IO) ()
