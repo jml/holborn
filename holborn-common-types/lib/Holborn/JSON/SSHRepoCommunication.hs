@@ -64,7 +64,18 @@ instance ToHttpApiData GitCommand where
     toUrlPiece = unparseGitCommand
 
 instance FromHttpApiData GitCommand where
-    parseUrlPiece piece = fmapL fromString (AT.parseOnly gitCommandParser piece)
+  -- | Turn data from HTTP into a GitCommand.
+  --
+  -- e.g.
+  -- > parseUrlPiece "git-upload-pack"
+  -- Right GitUploadPack
+  --
+  -- > parseUrlPiece "git-receive-pack"
+  -- Right GitReceivePack
+  --
+  -- > parseUrlPiece "sandwiches"
+  -- Left "Parse error: sandwiches"
+  parseUrlPiece = fmapL fromString . AT.parseOnly gitCommandParser
 
 instance Arbitrary GitCommand where
     arbitrary = elements [ GitReceivePack, GitUploadPack ]
