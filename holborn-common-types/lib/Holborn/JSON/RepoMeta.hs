@@ -11,8 +11,7 @@ module Holborn.JSON.RepoMeta
 
 import HolbornPrelude
 
-import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, Value(String))
-import Data.Aeson.Types (typeMismatch)
+import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, Value(String), withText)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import GHC.Generics (Generic)
 import qualified Data.Attoparsec.Text as AT
@@ -60,15 +59,10 @@ newValidRepoName s = hush (AT.parseOnly validRepoNameParser s)
 -- λ  decode "\"repo-name\"" :: Maybe ValidRepoName
 -- Just (ValidRepoName "repo-name")
 instance FromJSON ValidRepoName where
-    parseJSON (String s) = case newValidRepoName s of
-        Nothing -> fail ("Not a valid repository name: " ++ Data.Text.unpack s)
-        Just x -> pure x
-    parseJSON x = typeMismatch "Not a valid repo type" x
-
+    parseJSON = withText "RepoName must be text" newValidRepoName
 
 instance ToJSON ValidRepoName where
     toJSON (ValidRepoName s) = String s
-
 
 instance FromField ValidRepoName where
     fromField _ (Just bs) = case newValidRepoName (decodeUtf8 bs) of
