@@ -231,6 +231,12 @@ hush (Left _)  = empty
 hush (Right x) = pure x
 
 -- | Map over the Left value of an Either
+--
+-- > fmapL (+1) (Left 42)
+-- Left 43
+--
+-- > fmapL (+1) (Right 11)
+-- Right 11
 fmapL :: (a -> b) -> Either a c -> Either b c
 fmapL f (Left x)  = Left (f x)
 fmapL _ (Right x) = Right x
