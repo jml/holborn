@@ -76,6 +76,7 @@ Test-Suite holborn-api-tests
                      , wai
                      , process
                      , http-types
+                     , text
 
   hs-source-dirs:      tests
   ghc-options:         -Wall -eventlog

@@ -8,6 +8,7 @@ import HolbornPrelude
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (FromJSON, ToJSON, decode)
 import Data.ByteString.Lazy (fromStrict)
+import Data.Text (strip)
 import qualified Network.HTTP.Types.Method as Method
 import Network.HTTP.Client.Internal (HttpException(..))
 import Network.Wai (Application)
@@ -101,9 +102,10 @@ stringToBytes = fromStrict . encodeUtf8 . fromString
 
 roundtripViaShell :: String -> PropertyM IO String
 roundtripViaShell input = do
-  output <- run (readCreateProcess (shell $ "echo -n " <> input) "")
-  monitor (counterexample ("output: " <> output))
-  return output
+  output <- run (readCreateProcess (shell $ "echo " <> input) "")
+  let output' = textToString . strip . fromString $ output
+  monitor (counterexample ("output: " <> output'))
+  return output'
 
 
 -- | A given object can be encoded to JSON, echoed via the shell, and then
