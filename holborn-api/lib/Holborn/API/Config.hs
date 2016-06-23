@@ -22,7 +22,6 @@ data Config = Config { port :: Warp.Port
                      , configStaticBaseUrl :: Text
                      , configRepoHostname :: Text
                      , configRepoPort :: Warp.Port
-                     , configRawRepoHostname :: Text
                      , configRawRepoPort :: Warp.Port
                      } deriving Show
 
@@ -54,5 +53,5 @@ loadAppConf Config{..} =
     <*> pure configStaticBaseUrl
     <*> pure configRepoHostname
     <*> pure configRepoPort
-    <*> pure configRawRepoHostname
+    <*> pure configRepoHostname
     <*> pure configRawRepoPort

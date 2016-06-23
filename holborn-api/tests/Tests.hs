@@ -52,7 +52,6 @@ testAppConf = loadAppConf $ Config
   , configStaticBaseUrl = ""
   , configRepoHostname = ""
   , configRepoPort = 0
-  , configRawRepoHostname = ""
   , configRawRepoPort = 0
   }
 

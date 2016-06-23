@@ -1,6 +1,6 @@
 name:                holborn-api
 version:             0.1.0.0
-author:              Tom Hunger
+author:              Tom Hunger and Jonathan Lange
 maintainer:          tehunger@gmail.com
 build-type:          Simple
 cabal-version:       >=1.10
@@ -98,7 +98,7 @@ executable holborn-api-server
                      , servant-server >= 0.5
                      , wai >= 3.0
                      , warp >= 3.1
-                     , envparse >= 0.2
+                     , optparse-applicative
                      , holborn-api
                      , holborn-common-types
                      , wai-cors

@@ -1,10 +1,11 @@
 { mkDerivation, aeson, attoparsec, base, blaze-html, blaze-markup
-, bytestring, either, envparse, errors, exceptions
-, holborn-common-types, holborn-prelude, hspec-wai, hspec-wai-json
-, http-api-data, http-client, http-reverse-proxy, http-types, jwt
-, postgresql-simple, process, QuickCheck, servant-docs
-, servant-server, stdenv, tasty, tasty-hspec, tasty-hunit
-, tasty-quickcheck, text, time, transformers, wai, wai-cors, warp
+, bytestring, either, errors, exceptions, holborn-common-types
+, holborn-prelude, hspec-wai, hspec-wai-json, http-api-data
+, http-client, http-reverse-proxy, http-types, jwt
+, optparse-applicative, postgresql-simple, process, QuickCheck
+, servant-docs, servant-server, stdenv, tasty, tasty-hspec
+, tasty-hunit, tasty-quickcheck, text, time, transformers, wai
+, wai-cors, warp
 }:
 mkDerivation {
   pname = "holborn-api";
@@ -20,8 +21,8 @@ mkDerivation {
     transformers wai warp
   ];
   executableHaskellDepends = [
-    base envparse holborn-common-types holborn-prelude servant-server
-    wai wai-cors warp
+    base holborn-common-types holborn-prelude optparse-applicative
+    servant-server wai wai-cors warp
   ];
   testHaskellDepends = [
     aeson base bytestring errors holborn-common-types holborn-prelude
