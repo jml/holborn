@@ -48,18 +48,16 @@ in
       after = [ "postgresql.service" ];
       path = [ pkgs.openssh ];
 
-      environment = {
-          PORT = "${toString cfg.port}";
-          HOLBORN_PG_DATABASE = "holborn";
-          HOLBORN_PG_USER = "holborn";
-          HOLBORN_BASE_URL = "https://norf.co";
-          HOLBORN_REPO_HOSTNAME = "${cfg.repoServer}";
-          HOLBORN_REPO_PORT = "${toString cfg.repoPort}";
-          HOLBORN_REPO_RAW_HOSTNAME = "${cfg.repoServer}";
-          HOLBORN_REPO_RAW_PORT = "${toString cfg.rawRepoPort}";
-      };
-
-      serviceConfig.ExecStart = "${cfg.package}/bin/holborn-api-server";
+      serviceConfig.ExecStart = ''\
+        ${cfg.package}/bin/holborn-api-server" \
+        --port=${toString cfg.port} \
+        --postgres-database="holborn" \
+        --postgres-user="holborn" \
+        --base-url="https://norf.co" \
+        --repo-hostname="${cfg.repoServer}" \
+        --repo-http-port=${toString cfg.repoPort} \
+        --repo-git-port=${toString cfg.rawRepoPort} \
+      '';
       serviceConfig.User = "holborn-api";
     };
   };

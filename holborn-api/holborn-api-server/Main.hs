@@ -6,42 +6,70 @@ module Main (main) where
 
 import HolbornPrelude
 
-import qualified Env
 import Network.Wai (Application)
 import qualified Network.Wai.Handler.Warp as Warp
 import Servant (serve)
 import Network.Wai.Middleware.Cors (cors, CorsResourcePolicy(..), simpleCorsResourcePolicy, simpleHeaders)
+import Options.Applicative
+  ( ParserInfo
+  , auto
+  , execParser
+  , fullDesc
+  , header
+  , help
+  , helper
+  , info
+  , long
+  , metavar
+  , option
+  , progDesc
+  , str
+  , value
+  )
 
 import Holborn.API (api, server)
 import Holborn.API.Config (AppConf, Config(..), loadAppConf)
 import qualified Holborn.Logging as Log
 
 
-loadConfig :: IO Config
-loadConfig =
-  Env.parse (Env.header "server") $
-  Config
-  <$> Env.var Env.auto
-      "PORT" (Env.def 8002 <> Env.help "Port to listen on")
-  <*> Env.var (Env.str Env.<=< Env.nonempty)
-      "HOLBORN_PG_DATABASE" (Env.def "holborn" <> Env.help "pg database name")
-  <*> Env.var (Env.str Env.<=< Env.nonempty)
-      "HOLBORN_PG_USER" (Env.def "holborn" <> Env.help "pg user")
-  <*> Env.var (Env.auto Env.<=< Env.nonempty)
-      "HOLBORN_PG_PORT" (Env.def 5432 <> Env.help "pg port")
-  <*> Env.var (Env.str Env.<=< Env.nonempty)
-      "HOLBORN_BASE_URL" (Env.def "http://127.0.0.1:8002" <> Env.help "e.g. http://127.0.0.1:8002")
-  <*> Env.var (Env.str Env.<=< Env.nonempty)
-      "HOLBORN_STATIC_BASE_URL" (Env.def "http://127.0.0.1:1337" <> Env.help "e.g. http://127.0.0.1:1337")
-  <*> Env.var (Env.str Env.<=< Env.nonempty)
-      "HOLBORN_REPO_HOSTNAME" (Env.def "127.0.0.1" <> Env.help "Where the holborn-repo server is running. e.g. 127.0.0.1")
-  <*> Env.var Env.auto
-      "HOLBORN_REPO_PORT" (Env.def 8080 <> Env.help "What port the holborn-repo server is listening on. e.g. 8080")
-  <*> Env.var (Env.str Env.<=< Env.nonempty)
-      "HOLBORN_REPO_RAW_HOSTNAME" (Env.def "127.0.0.1" <> Env.help "Where the holborn-repo raw server is running. e.g. 127.0.0.1")
-  <*> Env.var Env.auto
-      "HOLBORN_REPO_RAW_PORT" (Env.def 8081 <> Env.help "What port the holborn-repo raw server is listening on. e.g. 8081")
+options :: ParserInfo Config
+options =
+  info (helper <*> parser) description
+  where
+    parser =
+      Config
+      <$> option auto
+          ( long "port" <> metavar "PORT" <> help "Port to listen on" )
+      <*> option str  -- TODO: reject empty names
+          ( long "postgres-database" <> metavar "DATABASE" <> value "holborn"
+            <> help "Name of PostreSQL database with the holborn data" )
+      <*> option str
+          ( long "postgres-user" <> metavar "USER" <> value "holborn"
+            <> help "Username for the PostgreSQL database" )
+      <*> option auto  -- TODO: Where's the hostname?
+          ( long "postgres-port" <> metavar "PORT" <> value 5432
+            <> help "Port the PostgreSQL database is running on" )
+      <*> option (fromString <$> str)  -- TODO: What happens if the port contradicts the --port flag? Also, how do we use this?
+          ( long "base-url" <> metavar "URL" <> value "http://127.0.0.1:8002"
+            <> help "URL for the REST API server" )
+      <*> option (fromString <$> str)
+          ( long "static-url" <> metavar "URL" <> value "http://127.0.0.1:1337"
+            <> help "URL for the static content of the holborn app" )
+      <*> option (fromString <$> str)
+          ( long "repo-hostname" <> metavar "HOST" <> value "127.0.0.1"
+            <> help "Where the holborn-repo server is running" )
+      <*> option auto
+          ( long "repo-http-port" <> metavar "PORT" <> value 8080
+            <> help "HTTP API port for the holborn-repo server" )
+      <*> option auto
+          ( long "repo-git-port" <> metavar "PORT" <> value 8081
+            <> help "git-serve port for the holborn-repo server" )
 
+    description = concat
+      [ fullDesc
+      , progDesc "Launch API server for holborn"
+      , header "holborn-api - REST interface to the entire holborn project"
+      ]
 
 -- XXX: Duplicated & modified from Holborn.Repo.Config
 -- | Generate warp settings from config
@@ -65,8 +93,7 @@ app conf = serve api (server conf)
 
 main :: IO ()
 main = do
-    conf@Config{..} <- loadConfig
-    print ("Using config:" :: Text)
-    print conf
-    appConf <- loadAppConf conf
-    Warp.runSettings (warpSettings port) (cors devCors (app appConf))
+  conf@Config{port} <- execParser options
+  print $ "Using config: " <> show conf
+  appConf <- loadAppConf conf
+  Warp.runSettings (warpSettings port) (cors devCors (app appConf))

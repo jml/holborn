@@ -12,6 +12,10 @@ let
   apiPort = "8082";
   sshPort = "3333";
 
+  pgPort = "5444";
+  pgUser = "test-user";
+  pgDatabase = "test-db";
+
   holborn-ssh-testconfig = writeText "testconfig" ''
     UsePrivilegeSeparation=no
     HostKey=${holborn-ssh}/etc/ssh_host_rsa_key
@@ -82,31 +86,32 @@ stdenv.mkDerivation {
       # GIT_SSH_COMMAND requires at least git 2.3
       export GIT_SSH_COMMAND="ssh -F ${holborn-ssh-client-config}"
 
-      export HOLBORN_PG_PORT=5444
-      export HOLBORN_PG_USER=test-user
-      export HOLBORN_PG_DATABASE=test-db
-      export PGPORT=$HOLBORN_PG_PORT
-      initdb -D $HOLBORN_PG_DATABASE
-      postgres -D $HOLBORN_PG_DATABASE -p $HOLBORN_PG_PORT &
+      initdb -D ${pgDatabase}
+      postgres -D ${pgDatabase} -p ${pgPort} &
       sleep 2
 
-      createuser $HOLBORN_PG_USER
-      createdb -O $HOLBORN_PG_USER $HOLBORN_PG_DATABASE
-      export PGUSER=$HOLBORN_PG_USER
-      export PGDATABASE=$HOLBORN_PG_DATABASE
+      createuser -p ${pgPort} ${pgUser}
+      createdb -p ${pgPort} -O ${pgUser} ${pgDatabase}
 
-      psql -f ${initial_sql}
-      psql -f ${insertTestKeySql}
+      psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -f ${initial_sql}
+      psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -f ${insertTestKeySql}
 
       # Run ssh + repo server
       ${holborn-ssh}/bin/sshd -D -e -f ${holborn-ssh-testconfig} &
-      export HOLBORN_REPO_HOSTNAME=127.0.0.1
-      export HOLBORN_REPO_PORT=${repoPort}
-      export HOLBORN_REPO_RAW_HOSTNAME=127.0.0.1
-      export HOLBORN_REPO_RAW_PORT=${rawRepoPort}
-      PORT=${apiPort} ${holborn-api}/bin/holborn-api-server &
-      echo "REPO_ROOT ${test-repos}"
-      PORT=${repoPort} RAW_PORT=${rawRepoPort} REPO_ROOT=${test-repos} ${holborn-repo}/bin/holborn-repo &
+
+      ${holborn-api}/bin/holborn-api-server \
+        --port=${apiPort} \
+        --postgres-database=${pgDatabase} \
+        --postgres-user=${pgUser} \
+        --postgres-port=${pgPort} \
+        --repo-hostname=127.0.0.1 \
+        --repo-http-port=${repoPort} \
+        --repo-git-port=${rawRepoPort} &
+
+      ${holborn-repo}/bin/holborn-repo \
+        --http-port=${repoPort} \
+        --git-port=${rawRepoPort} \
+        --repo-root=${test-repos} &
 
       # Wait for server to become ready
       hcl-wait-for-port ${sshPort} --timeout 5

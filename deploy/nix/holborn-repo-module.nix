@@ -40,14 +40,13 @@ in
       after = [ "postgresql.service" ];
       path = [ pkgs.git ];
 
-      environment = {
-          REPO_ROOT = "/tmp";
-          PORT = "${toString cfg.port}";
-          RAW_PORT = "${toString cfg.rawPort}";
-      };
-
       serviceConfig.DevicePolicy = "closed";
-      serviceConfig.ExecStart = "${cfg.package}/bin/holborn-repo";
+      serviceConfig.ExecStart = ''\
+        ${cfg.package}/bin/holborn-repo \
+        --repo-root=/tmp \
+        --http-port=${toString cfg.port} \
+        --git-port=${toString cfg.rawPort} \
+        '';
       serviceConfig.User = "holborn-repo";
     };
   };

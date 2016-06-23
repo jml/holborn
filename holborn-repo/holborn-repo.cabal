@@ -95,6 +95,6 @@ executable holborn-repo
                      , servant-server >= 0.5
                      , wai
                      , warp
-                     , envparse >=0.2
+                     , optparse-applicative
                      , time >=1.5
                      , wai-extra
