@@ -30,8 +30,8 @@ stdenv.mkDerivation {
       trap 'kill $(jobs -p)' EXIT
 
       # Wait for HTTP server to become ready
-      ${hcl}/bin/hcl-wait-for-port ${toString repoPort} --timeout 5
-      ${hcl}/bin/hcl-wait-for-port ${toString rawPort} --timeout 5
+      ${hcl}/bin/hcl-wait-for-port --port ${toString repoPort} --timeout 5
+      ${hcl}/bin/hcl-wait-for-port --port ${toString rawPort} --timeout 5
 
       # Clone the test repository
       mkdir $out

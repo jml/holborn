@@ -22,6 +22,7 @@ executable hcl-wait-for-port
                      , holborn-prelude
                      , turtle >=1.2
                      , network-simple >=0.4
+                     , optparse-applicative
   hs-source-dirs:      src
   ghc-options:         -Wall -Werror -threaded
   main-is:             wait-for-port.hs

@@ -114,10 +114,10 @@ stdenv.mkDerivation {
         --repo-root=${test-repos} &
 
       # Wait for server to become ready
-      hcl-wait-for-port ${sshPort} --timeout 5
-      hcl-wait-for-port ${repoPort} --timeout 5
-      hcl-wait-for-port ${rawRepoPort} --timeout 5
-      hcl-wait-for-port ${apiPort} --timeout 5
+      hcl-wait-for-port --port ${sshPort} --timeout 5
+      hcl-wait-for-port --port ${repoPort} --timeout 5
+      hcl-wait-for-port --port ${rawRepoPort} --timeout 5
+      hcl-wait-for-port --port ${apiPort} --timeout 5
 
       # Clone the test repository
       mkdir $out

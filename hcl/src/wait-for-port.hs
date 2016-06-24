@@ -3,18 +3,42 @@ module Main (main) where
 
 import HolbornPrelude
 
-import Turtle
+import Turtle hiding (option, options)
 import Control.Concurrent (threadDelay)
-import System.Exit (exitWith)
 import Network.Simple.TCP (connectSock)
+import Options.Applicative
+  ( ParserInfo
+  , auto
+  , execParser
+  , fullDesc
+  , header
+  , help
+  , helper
+  , info
+  , long
+  , metavar
+  , option
+  , progDesc
+  , short
+  )
+import System.Exit (exitWith)
 
-parser :: Parser (Int, Int)
-parser = (,) <$> argInt "port" "port to check"
-             <*> optInt "timeout" 't' "timeout in seconds before failing"
+
+options :: ParserInfo (Int, Int)
+options = info (helper <*> parser) description
+  where
+    parser = (,) <$> option auto ( long "port" <> metavar "PORT" <> help "port to check" )
+                 <*> option auto ( long "timeout" <> short 't' <> metavar "TIMEOUT"
+                                   <> help "seconcds to wait before failing" )
+    description = concat
+      [ fullDesc
+      , progDesc "Wait for --timeout seconds for a port to become active, then fail if it didn't. Retries once a second."
+      , header "wait-for-port - wait for a port to become active"
+      ]
 
 main :: IO ()
 main = do
-    (port, timeout) <- options "Wait for a port to become active for --timeout seconds, then fail if it didn't. Retries once a second." parser
+    (port, timeout) <- execParser options
     check port timeout >>= exitWith
 
   where
