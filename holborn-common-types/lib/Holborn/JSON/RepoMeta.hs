@@ -3,13 +3,14 @@
 {-# LANGUAGE KindSignatures #-}
 
 module Holborn.JSON.RepoMeta
-       ( RepoMeta(..)
-       , newRepoName
-       , RepoName
-       , repoNameParser
-       , RepoId
-       )
-       where
+  ( RepoMeta(..)
+  , RepoName
+  , newRepoName
+  , repoNameParser
+  , OwnerName
+  , newOwnerName
+  , RepoId
+  ) where
 
 import HolbornPrelude
 
@@ -22,7 +23,7 @@ import qualified Data.Text
 import Database.PostgreSQL.Simple.FromField (FromField(..))
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(..))
 import Test.QuickCheck (Arbitrary(..), elements, listOf1)
-import Web.HttpApiData (ToHttpApiData(..))
+import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 
 
 type RepoId = Int
@@ -31,6 +32,7 @@ data Names = Repo | Owner
 data Name (name :: Names) = Name Text deriving (Eq, Ord, Show)
 
 type RepoName = Name 'Repo
+type OwnerName = Name 'Owner
 
 instance Arbitrary (Name a) where
     arbitrary =
@@ -49,7 +51,12 @@ nameParser = do
 newName :: Alternative m => Text -> m (Name a)
 newName s = hush (AT.parseOnly nameParser s)
 
--- | The way to "escape" RepoName when e.g. building a path segment
+-- | How we turn names that appear in URLs & query parameters into Name
+-- (OwnerName, RepoName) objects.
+instance FromHttpApiData (Name a) where
+    parseUrlPiece s = fmapL fromString (AT.parseOnly nameParser s)
+
+-- | The way to "escape" names when e.g. building a path segment
 -- is via `show` so we need to show the underlying text, not
 -- `RepoName x`.
 instance ToHttpApiData (Name a) where
@@ -82,6 +89,8 @@ newRepoName = newName
 repoNameParser :: AT.Parser RepoName
 repoNameParser = nameParser
 
+newOwnerName :: Alternative m => Text -> m OwnerName
+newOwnerName = newName
 
 -- | This is what we're sending to users who query repository meta
 -- data. GH return this:
@@ -94,7 +103,7 @@ data RepoMeta = RepoMeta
     , _RepoMeta_number_commits :: Int -- git rev-list --count master
     , _RepoMeta_number_objects :: Int -- git count-objects
     , _RepoMeta_size :: Int -- git count-objects
-    , _RepoMeta_owner :: Text -- TODO make owner a validated newtype (ValidOwner)
+    , _RepoMeta_owner :: OwnerName
     -- TODO newest commit
     -- TODO branches, tags, ..., everything needed to render the landing page
     } deriving (Show, Generic)

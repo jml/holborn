@@ -6,6 +6,7 @@
 --
 -- Test e.g.:
 --   curl 127.0.0.1:8002/v1/browse -H "content-type: application/json" -d'{"repo": "jml/holborn", "path": ""}'
+
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -25,24 +26,21 @@ import Holborn.API.Config (AppConf(..))
 import Holborn.API.Types (Username)
 import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, toServantHandler, throwHandlerError, jsonGet', query, logDebug)
 import Holborn.JSON.Browse (BrowseMetaResponse(..))
-import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..))
+import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..), OwnerName, RepoName)
 import Holborn.ServantTypes (RenderedJson)
 
 -- Following imports needed for RPC which we should do in a more
 -- clever way (e.g. cereal library will be 100x faster)
 import qualified Data.Time as Time
 
-type Owner = Text
-type Repo = Text
-
 type API =
          Header "x-dex-name" Username
-         :> Capture "owner" Owner
-         :> Capture "repo" Repo
+         :> Capture "owner" OwnerName
+         :> Capture "repo" RepoName
          :> Get '[JSON] BrowseMetaResponse
     :<|> Header "x-dex-name" Username
-         :> Capture "owner" Owner
-         :> Capture "repo" Repo
+         :> Capture "owner" OwnerName
+         :> Capture "repo" RepoName
          :> CaptureAll "pathspec" Text
          :> Get '[JSON, RenderedJson] Value
 
@@ -59,7 +57,7 @@ server conf =
   :<|> treeCommitBlob
 
 
-browse :: Maybe Username -> Owner -> Repo -> APIHandler BrowseError BrowseMetaResponse
+browse :: Maybe Username -> OwnerName -> RepoName -> APIHandler BrowseError BrowseMetaResponse
 browse _maybeUsername owner repo = do
     AppConf{repoHostname, repoPort} <- getConfig
     [(_ :: String, repoId :: RepoId)] <- query [sql|
@@ -85,7 +83,7 @@ browse _maybeUsername owner repo = do
 
 -- Tree, commit & blob are passed straight through if they meet the
 -- authentication requirements.
-treeCommitBlob :: Maybe Username -> Owner -> Repo -> [Text] -> APIHandler BrowseError Value
+treeCommitBlob :: Maybe Username -> OwnerName -> RepoName -> [Text] -> APIHandler BrowseError Value
 treeCommitBlob _maybeUsername owner repo pathspec = do
     -- TODO read repoHostname from DB (we already have a column)
     AppConf{repoHostname, repoPort} <- getConfig

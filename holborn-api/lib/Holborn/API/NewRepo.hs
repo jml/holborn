@@ -18,7 +18,7 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
 import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, throwHandlerError, query)
 import Holborn.JSON.NewRepo (NewRepoRequest(..))
-import Holborn.JSON.RepoMeta (RepoMeta(..))
+import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName)
 import Holborn.API.Types (Username)
 
 
@@ -53,8 +53,8 @@ newRepo _username NewRepoRequest{..} = do
         |] (_NewRepoRequest_owner, _NewRepoRequest_owner)
 
     case result of
-         [("org" :: String, orgId :: Int, owner :: Text)] -> newOrgRepo orgId owner
-         [("user" :: String, userId' :: Int, owner :: Text)] -> newUserRepo userId' owner
+         [("org" :: String, orgId :: Int, owner :: OwnerName)] -> newOrgRepo orgId owner
+         [("user" :: String, userId' :: Int, owner :: OwnerName)] -> newUserRepo userId' owner
          [] -> throwHandlerError OwnerNotFound
          _ -> terror "Unexpected number of rows in newRepo"
 

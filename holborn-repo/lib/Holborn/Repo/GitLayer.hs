@@ -25,6 +25,7 @@ import HolbornPrelude
 import Control.Error (bimapExceptT, syncIO)
 import Control.Monad.Reader (ReaderT)
 import Control.Monad.Trans.Except (ExceptT)
+import Data.Maybe (fromJust)
 import Data.Tagged (Tagged(..))
 import qualified Data.Text as Text
 import qualified Git
@@ -54,7 +55,7 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Holborn.Repo.HtmlFormatTokens ()
 import Holborn.Syntax (annotateCode)
 import Holborn.ServantTypes (RenderedJson)
-import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..))
+import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..), newOwnerName)
 
 -- | A git repository
 -- | TODO: this seems to have the same function as HttpProtocol.DiskLocation?
@@ -432,7 +433,9 @@ notImplementedYet feature = terror $ "Not implemented yet: " ++ feature
 -- (which is much rarer than reading).
 fillRepoMeta :: Repository -> GitM IO RepoMeta
 fillRepoMeta Repo{..} =
-  return $ RepoMeta _repoId 10 11 12 "owner-filled-by-api" -- Fake data 10 11 12
+  return $ RepoMeta _repoId 10 11 12 ownerName
+  where
+    ownerName = fromJust (newOwnerName "owner-filled-by-api") -- Fake data 10 11 12
 
 instance ToMarkup RepoMeta where
   toMarkup RepoMeta{..} = do
