@@ -6,13 +6,13 @@ import Helpers (jsonIdentity)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
-import Holborn.JSON.RepoMeta (ValidRepoName)
+import Holborn.JSON.RepoMeta (RepoName)
 
 
 tests :: TestTree
 tests =
   testGroup "Holborn.JSON.RepoMeta"
-  [ testGroup "ValidRepoName"
-    [ testProperty "To JSON and back" $ \x -> jsonIdentity (x :: ValidRepoName)
+  [ testGroup "RepoName"
+    [ testProperty "To JSON and back" $ \x -> jsonIdentity (x :: RepoName)
     ]
   ]

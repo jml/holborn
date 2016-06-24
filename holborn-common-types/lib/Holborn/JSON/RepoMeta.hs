@@ -2,9 +2,9 @@
 
 module Holborn.JSON.RepoMeta
        ( RepoMeta(..)
-       , newValidRepoName
-       , ValidRepoName
-       , validRepoNameParser
+       , newRepoName
+       , RepoName
+       , repoNameParser
        , RepoId
        )
        where
@@ -23,56 +23,56 @@ import Test.QuickCheck (Arbitrary(..), elements, listOf1)
 import Web.HttpApiData (ToHttpApiData(..))
 
 
-newtype ValidRepoName = ValidRepoName Text deriving (Eq, Ord, Show)
+newtype RepoName = RepoName Text deriving (Eq, Ord, Show)
 
 
 type RepoId = Int
 
--- The way to "escape" ValidRepoName when e.g. building a path segment
+-- The way to "escape" RepoName when e.g. building a path segment
 -- is via `show` so we need to show the underlying text, not
--- `ValidRepoName x`.
-instance ToHttpApiData ValidRepoName where
-    toUrlPiece (ValidRepoName x) = x
+-- `RepoName x`.
+instance ToHttpApiData RepoName where
+    toUrlPiece (RepoName x) = x
 
 
-instance Arbitrary ValidRepoName where
+instance Arbitrary RepoName where
     arbitrary =
-      (ValidRepoName . fromString) <$> validString
+      (RepoName . fromString) <$> validString
       where
         validString = (:) <$> elements startAlphabet <*> listOf1 (elements alphabet)
         startAlphabet = ['A'..'Z'] <> ['a'..'z'] <> ['0'..'9']
         alphabet = startAlphabet <> "-_"
 
 
-validRepoNameParser :: AT.Parser ValidRepoName
-validRepoNameParser = do
+repoNameParser :: AT.Parser RepoName
+repoNameParser = do
     s <- AT.satisfy (\x -> isDigit x || isAsciiLower x || isAsciiUpper x)
     rest <- AT.takeWhile (\x -> isDigit x || isAsciiLower x || isAsciiUpper x || x == '_' || x == '-')
-    pure $ ValidRepoName (Data.Text.cons s rest)
+    pure $ RepoName (Data.Text.cons s rest)
 
 
-newValidRepoName :: Alternative m => Text -> m ValidRepoName
-newValidRepoName s = hush (AT.parseOnly validRepoNameParser s)
+newRepoName :: Alternative m => Text -> m RepoName
+newRepoName s = hush (AT.parseOnly repoNameParser s)
 
 
 -- | E.g.
--- λ  decode "\"repo-name\"" :: Maybe ValidRepoName
--- Just (ValidRepoName "repo-name")
-instance FromJSON ValidRepoName where
-    parseJSON = withText "RepoName must be text" newValidRepoName
+-- λ  decode "\"repo-name\"" :: Maybe RepoName
+-- Just (RepoName "repo-name")
+instance FromJSON RepoName where
+    parseJSON = withText "RepoName must be text" newRepoName
 
-instance ToJSON ValidRepoName where
-    toJSON (ValidRepoName s) = String s
+instance ToJSON RepoName where
+    toJSON (RepoName s) = String s
 
-instance FromField ValidRepoName where
-    fromField _ (Just bs) = case newValidRepoName (decodeUtf8 bs) of
+instance FromField RepoName where
+    fromField _ (Just bs) = case newRepoName (decodeUtf8 bs) of
         Just x -> pure x
-        Nothing -> terror ("Could not parse valid repo name. " <> decodeUtf8 bs)
+        Nothing -> terror ("Could not parse repo name. " <> decodeUtf8 bs)
     fromField _ Nothing = terror "FromField Permissions should always decode correctly"
 
 
-instance ToField ValidRepoName where
-    toField (ValidRepoName s) = Escape (encodeUtf8 s)
+instance ToField RepoName where
+    toField (RepoName s) = Escape (encodeUtf8 s)
 
 
 -- | This is what we're sending to users who query repository meta
