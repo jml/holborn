@@ -29,6 +29,7 @@ executable hcl-wait-for-port
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
+                     , NamedFieldPuns
                      , MonadFailDesugaring
 
 executable hcl-unused
@@ -41,4 +42,5 @@ executable hcl-unused
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
+                     , NamedFieldPuns
                      , MonadFailDesugaring
