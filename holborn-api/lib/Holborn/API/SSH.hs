@@ -148,7 +148,7 @@ data SSHAccessError
 -- | Determine whether the user identified by their SSH key can access a repo.
 checkRepoAccess' :: CheckRepoAccessRequest -> SSHHandler (Either SSHAccessError RepoCall)
 checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
-    let (owner, repo) = (_owner command, _sshCommandLineRepo command)
+    let (SSHCommandLine command' owner repo) = command
 
     rows <- query [sql|
                    select id, pk.readonly, pk.verified
@@ -171,9 +171,9 @@ checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
         _:_:_                     -> Left MultipleSSHKeys
         [(_, _, False)]           -> Left UnverifiedKey
         [(keyId, readOnly, True)] ->
-          case (gitCommand command, readOnly) of
+          case (command', readOnly) of
             (GitReceivePack, True)  -> Left  $ ReadOnlyKey keyId
-            _                       -> Right $ WritableRepoCall command repoId
+            _                       -> Right $ WritableRepoCall command' repoId
 
 
 -- | Either route a git request to the correct repo, or give an error saying

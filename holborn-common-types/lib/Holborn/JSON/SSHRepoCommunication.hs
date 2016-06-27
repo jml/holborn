@@ -45,7 +45,7 @@ import Holborn.JSON.RepoMeta
 
 
 -- | Git offers two kinds of service.
-data GitCommand = GitUploadPack | GitReceivePack deriving (Eq, Show)
+data GitCommand = GitUploadPack | GitReceivePack deriving (Eq, Show, Generic)
 
 gitCommandParser :: AT.Parser GitCommand
 gitCommandParser = ("git-upload-pack" >> pure GitUploadPack) <|> ("git-receive-pack" >> pure GitReceivePack)
@@ -76,6 +76,8 @@ instance FromHttpApiData GitCommand where
 instance Arbitrary GitCommand where
     arbitrary = elements [ GitReceivePack, GitUploadPack ]
 
+instance FromJSON GitCommand
+instance ToJSON GitCommand
 
 -- | A user-generated request to interact with a git repository.
 data SSHCommandLine =
@@ -125,7 +127,7 @@ instance Arbitrary SSHCommandLine where
 
 -- | Permission to interact with a git repository.
 data RepoCall =
-      WritableRepoCall { _command  :: SSHCommandLine, _repoId :: RepoId }
+      WritableRepoCall { _command  :: GitCommand, _repoId :: RepoId }
     deriving (Eq, Show, Generic)
 
 instance FromJSON RepoCall where
