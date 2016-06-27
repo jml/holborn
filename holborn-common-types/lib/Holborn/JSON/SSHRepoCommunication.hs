@@ -13,7 +13,6 @@ module Holborn.JSON.SSHRepoCommunication
        , parseSSHKey
        , unparseSSHKey
        , SSHCommandLine(..)
-       , RepoAccess(..)
        ) where
 
 import HolbornPrelude
@@ -82,8 +81,8 @@ instance ToJSON GitCommand
 -- | A user-generated request to interact with a git repository.
 data SSHCommandLine =
   SSHCommandLine { gitCommand :: GitCommand
-                 , _owner :: OwnerName
-                 , _sshCommandLineRepo :: RepoName
+                 , ownerName :: OwnerName
+                 , repoName :: RepoName
                  } deriving (Show, Eq)
 
 instance FromJSON SSHCommandLine where
@@ -138,13 +137,6 @@ instance ToJSON RepoCall where
 
 instance Arbitrary RepoCall where
   arbitrary = WritableRepoCall <$> arbitrary <*> arbitrary
-
-
--- | Routing to a git repository.
-data RepoAccess = AccessGranted Hostname Port RepoCall deriving (Show)
-
-type Hostname = Text
-type Port = Int
 
 
 -- | SSH key type

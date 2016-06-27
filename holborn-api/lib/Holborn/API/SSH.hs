@@ -36,7 +36,6 @@ import Holborn.JSON.SSHRepoCommunication ( RepoCall(..)
                                          , GitCommand(..)
                                          , SSHCommandLine(..)
                                          , SSHKey
-                                         , RepoAccess(..)
                                          , unparseSSHKey
                                          )
 import Holborn.JSON.RepoMeta (RepoId)
@@ -148,8 +147,6 @@ data SSHAccessError
 -- | Determine whether the user identified by their SSH key can access a repo.
 checkRepoAccess' :: CheckRepoAccessRequest -> SSHHandler (Either SSHAccessError RepoCall)
 checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
-    let (SSHCommandLine command' owner repo) = command
-
     rows <- query [sql|
                    select id, pk.readonly, pk.verified
                    from "public_key" as pk where id = ?
@@ -159,6 +156,7 @@ checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
     -- TODO - the following is just a placeholder query so we can get
     -- a repoId. It works but needs error handling (return e.g. 404
     -- when repo wasn't found).
+    let (SSHCommandLine command' owner repo) = command
     [(_ :: String, repoId :: RepoId)] <- query [sql|
                select 'org', id from "org" where orgname = ? and name = ?
                UNION
@@ -175,6 +173,12 @@ checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
             (GitReceivePack, True)  -> Left  $ ReadOnlyKey keyId
             _                       -> Right $ WritableRepoCall command' repoId
 
+
+-- | Routing to a git repository.
+data RepoAccess = AccessGranted Hostname Port RepoCall deriving (Show)
+
+type Hostname = Text
+type Port = Int
 
 -- | Either route a git request to the correct repo, or give an error saying
 -- why not.
