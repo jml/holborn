@@ -145,7 +145,7 @@ data SSHAccessError
 
 
 -- | Determine whether the user identified by their SSH key can access a repo.
-checkRepoAccess' :: CheckRepoAccessRequest -> SSHHandler (Either SSHAccessError RepoCall)
+checkRepoAccess' :: CheckRepoAccessRequest -> SSHHandler (Either SSHAccessError RepoAccess)
 checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
     rows <- query [sql|
                    select id, pk.readonly, pk.verified
@@ -153,25 +153,32 @@ checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
                |] (Only key_id)
     logDebug (key_id, command, rows)
 
-    -- TODO - the following is just a placeholder query so we can get
-    -- a repoId. It works but needs error handling (return e.g. 404
-    -- when repo wasn't found).
-    let (SSHCommandLine command' owner repo) = command
-    [(_ :: String, repoId :: RepoId)] <- query [sql|
-               select 'org', id from "org" where orgname = ? and name = ?
-               UNION
-               select 'user',  id from "user" where username = ? and name = ?
-               |] (owner, repo, owner, repo)
+    case rows of
+      []                        -> pure $ Left NoSSHKey
+      _:_:_                     -> pure $ Left MultipleSSHKeys
+      [(_, _, False)]           -> pure $ Left UnverifiedKey
+      [(keyId, readOnly, True)] ->
+        case (gitCommand command, readOnly) of
+          (GitReceivePack, True)  -> pure $ Left $ ReadOnlyKey keyId
+          _                       -> Right <$> routeRepoRequest command
 
-    return $
-      case rows of
-        []                        -> Left NoSSHKey
-        _:_:_                     -> Left MultipleSSHKeys
-        [(_, _, False)]           -> Left UnverifiedKey
-        [(keyId, readOnly, True)] ->
-          case (command', readOnly) of
-            (GitReceivePack, True)  -> Left  $ ReadOnlyKey keyId
-            _                       -> Right $ WritableRepoCall command' repoId
+
+-- | Given an SSH command line, return enough data to route the git traffic to
+-- the correct repo on the correct repo server.
+routeRepoRequest :: SSHCommandLine -> APIHandler err RepoAccess
+routeRepoRequest (SSHCommandLine command owner repo) = do
+  -- TODO - the following is just a placeholder query so we can get
+  -- a repoId. It works but needs error handling (return e.g. 404
+  -- when repo wasn't found).
+  [(_ :: String, repoId :: RepoId)] <- query [sql|
+    select 'org', id from "org" where orgname = ? and name = ?
+    UNION
+    select 'user',  id from "user" where username = ? and name = ?
+    |] (owner, repo, owner, repo)
+  -- TODO: multi-repo-server: Currently, we hardcode a single repo server in
+  -- the config. Should instead get the details from the database here.
+  AppConf{rawRepoHostname, rawRepoPort} <- getConfig
+  pure $ AccessGranted rawRepoHostname rawRepoPort (WritableRepoCall command repoId)
 
 
 -- | Routing to a git repository.
@@ -179,13 +186,6 @@ data RepoAccess = AccessGranted Hostname Port RepoCall deriving (Show)
 
 type Hostname = Text
 type Port = Int
-
--- | Either route a git request to the correct repo, or give an error saying
--- why not.
-routeRepoRequest :: CheckRepoAccessRequest -> SSHHandler (Either SSHAccessError RepoAccess)
-routeRepoRequest request = do
-    AppConf{rawRepoHostname, rawRepoPort} <- getConfig
-    fmap (AccessGranted rawRepoHostname rawRepoPort) <$> checkRepoAccess' request
 
 
 -- | Encode a JSON object so that it can be echoed on the shell.
@@ -235,7 +235,7 @@ renderAccess (Right (AccessGranted hostname port repoCall)) =
 
 checkRepoAccess :: CheckRepoAccessRequest -> SSHHandler CheckRepoAccessResponse
 checkRepoAccess request = do
-    route <- routeRepoRequest request
+    route <- checkRepoAccess' request
     return . CheckRepoAccessResponse . Just . renderAccess $ route
 
 
