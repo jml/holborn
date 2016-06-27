@@ -31,20 +31,16 @@ import GHC.Generics (Generic)
 import System.IO (hClose)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
 import System.Process (runInteractiveCommand)
+import Test.QuickCheck (Arbitrary(..), elements)
 import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Web.HttpApiData (toUrlPiece)
 
 import Holborn.JSON.RepoMeta
-  ( RepoName
+  ( OwnerName
+  , ownerNameParser
+  , RepoName
   , repoNameParser
   , RepoId
-  )
-
-import Test.QuickCheck
-  ( Arbitrary(..)
-  , Gen
-  , elements
-  , listOf1
   )
 
 
@@ -84,7 +80,7 @@ instance Arbitrary GitCommand where
 -- | A user-generated request to interact with a git repository.
 data SSHCommandLine =
   SSHCommandLine { gitCommand :: GitCommand
-                 , _owner :: Text
+                 , _owner :: OwnerName
                  , _sshCommandLineRepo :: RepoName
                  } deriving (Show, Eq)
 
@@ -108,7 +104,7 @@ sshCommand = do
   command <- gitCommandParser
   void $ AT.string " '"
   AT.skipWhile (== '/') -- skip optional leading /
-  org <- AT.takeWhile1 (/= '/')
+  org <- ownerNameParser
   void $ AT.char '/'
   repoName <- repoNameParser
   void $ AT.char '\''
@@ -121,19 +117,10 @@ parseSSHCommand = hush . AT.parseOnly sshCommand
 
 unparseSSHCommand :: SSHCommandLine -> Text
 unparseSSHCommand (SSHCommandLine command owner repo) =
-  unparseGitCommand command <> " '" <> owner <> "/" <> toUrlPiece repo <> "'"
-
+  unparseGitCommand command <> " '" <> toUrlPiece owner <> "/" <> toUrlPiece repo <> "'"
 
 instance Arbitrary SSHCommandLine where
-  arbitrary = SSHCommandLine <$> arbitrary <*> pathSegment <*> arbitrary
-
--- | Used to generate arbitrary valid owners and repository names.
--- TODO: Encode this assumption in the types of owner, repo, etc.
-pathSegment :: Gen Text
-pathSegment =
-  fromString <$> listOf1 (elements alphabet)
-  where
-    alphabet = ['A'..'Z'] <> ['a'..'z'] <> ['0'..'9'] <> "-_."
+  arbitrary = SSHCommandLine <$> arbitrary <*> arbitrary <*> arbitrary
 
 
 -- | Permission to interact with a git repository.

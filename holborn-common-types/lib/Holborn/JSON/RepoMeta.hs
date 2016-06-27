@@ -9,6 +9,7 @@ module Holborn.JSON.RepoMeta
   , repoNameParser
   , OwnerName
   , newOwnerName
+  , ownerNameParser
   , RepoId
   ) where
 
@@ -90,6 +91,9 @@ repoNameParser = nameParser
 
 newOwnerName :: Alternative m => Text -> m OwnerName
 newOwnerName = newName
+
+ownerNameParser :: AT.Parser OwnerName
+ownerNameParser = nameParser
 
 -- | This is what we're sending to users who query repository meta
 -- data. GH return this:
