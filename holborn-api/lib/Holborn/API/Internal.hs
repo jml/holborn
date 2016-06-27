@@ -5,8 +5,6 @@
 module Holborn.API.Internal
   ( APIHandler
   , runAPIHandler
-  -- | Get the application configuration
-  , getConfig
   -- | Manipulate the database
   , query
   , execute
@@ -14,6 +12,7 @@ module Holborn.API.Internal
   , jsonGet'
   -- | Repository server access
   , RepoAccess(..)
+  , pickRepoServer
   , repoApiUrl
   , routeRepoRequest
   -- | Logging
@@ -182,6 +181,14 @@ data RepoAccess = AccessGranted Hostname Port RepoCall deriving (Show)
 type Hostname = Text
 type Port = Int
 
+-- | Pick a repository server for storing a new repository
+pickRepoServer :: APIHandler err Text
+-- TODO: multi-repo-server: Getting repo server from config (which assumes
+-- only one), should instead actually pick from a set of repo servers.
+pickRepoServer = do
+  AppConf{repoHostname, repoPort} <- getConfig
+  pure $ repoHostname <> ":" <> fromShow repoPort
+
 -- | Get the URL for the REST endpoint that serves the 'owner/repo'
 -- repository. i.e. a URL for a holborn-repo server.
 repoApiUrl :: OwnerName -> RepoName -> APIHandler err Text
@@ -221,6 +228,7 @@ routeRepoRequest (SSHCommandLine command owner repo) = do
   -- the config. Should instead get the details from the database here.
   AppConf{rawRepoHostname, rawRepoPort} <- getConfig
   pure $ AccessGranted rawRepoHostname rawRepoPort (WritableRepoCall command repoId)
+
 
 -- | Log something for debugging
 logDebug :: (Show s, Stack.HasCallStack) => s -> APIHandler err ()

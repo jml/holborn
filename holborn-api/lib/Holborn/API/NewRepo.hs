@@ -19,7 +19,7 @@ import Holborn.API.Config (AppConf(..))
 import Holborn.API.Internal
   ( APIHandler
   , JSONCodeableError(..)
-  , getConfig
+  , pickRepoServer
   , toServantHandler
   , throwHandlerError
   , query
@@ -79,12 +79,3 @@ newRepo _username NewRepoRequest{..} = do
             insert into "user_repo" (name, description, user_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (_NewRepoRequest_name, _NewRepoRequest_description, userId, repoServer)
        pure (RepoMeta repoId 0 0 0 owner)
-
-
--- | Pick a repository server for storing a new repository
-pickRepoServer :: APIHandler err Text
--- TODO: multi-repo-server: Getting repo server from config (which assumes
--- only one), should instead actually pick from a set of repo servers.
-pickRepoServer = do
-  AppConf{repoHostname, repoPort} <- getConfig
-  pure $ repoHostname <> ":" <> fromShow repoPort
