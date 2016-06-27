@@ -13,7 +13,9 @@ module Holborn.API.Internal
   -- | Call backends
   , jsonGet'
   -- | Repository server access
+  , RepoAccess(..)
   , repoApiUrl
+  , routeRepoRequest
   -- | Logging
   , logDebug
   -- | Integrate with Servant
@@ -42,6 +44,10 @@ import Servant (ServantErr(..), (:~>)(Nat), toUrlPiece)
 import Holborn.API.Config (AppConf(..))
 import Holborn.Logging (debugWithCallStack)
 import Holborn.JSON.RepoMeta (OwnerName, RepoId, RepoName)
+import Holborn.JSON.SSHRepoCommunication
+  ( RepoCall(..)
+  , SSHCommandLine(SSHCommandLine)
+  )
 
 import qualified GHC.Stack as Stack
 
@@ -169,6 +175,13 @@ jsonGet' endpoint = do
     let rJson = r { requestHeaders = [(hAccept, "application/json")] }
     APIHandler $ liftIO (httpLbs rJson httpManager) >>= \response -> return (eitherDecode' (responseBody response))
 
+
+-- | Routing to a git repository.
+data RepoAccess = AccessGranted Hostname Port RepoCall deriving (Show)
+
+type Hostname = Text
+type Port = Int
+
 -- | Get the URL for the REST endpoint that serves the 'owner/repo'
 -- repository. i.e. a URL for a holborn-repo server.
 repoApiUrl :: OwnerName -> RepoName -> APIHandler err Text
@@ -192,6 +205,22 @@ repoApiUrl owner repo = do
   AppConf{repoHostname, repoPort} <- getConfig
   pure $ "http://" <> repoHostname <> ":" <> fromShow repoPort <> "/" <> toUrlPiece repoId
 
+-- | Given an SSH command line, return enough data to route the git traffic to
+-- the correct repo on the correct repo server.
+routeRepoRequest :: SSHCommandLine -> APIHandler err RepoAccess
+routeRepoRequest (SSHCommandLine command owner repo) = do
+  -- TODO - the following is just a placeholder query so we can get
+  -- a repoId. It works but needs error handling (return e.g. 404
+  -- when repo wasn't found).
+  [(_ :: String, repoId :: RepoId)] <- query [sql|
+    select 'org', id from "org" where orgname = ? and name = ?
+    UNION
+    select 'user',  id from "user" where username = ? and name = ?
+    |] (owner, repo, owner, repo)
+  -- TODO: multi-repo-server: Currently, we hardcode a single repo server in
+  -- the config. Should instead get the details from the database here.
+  AppConf{rawRepoHostname, rawRepoPort} <- getConfig
+  pure $ AccessGranted rawRepoHostname rawRepoPort (WritableRepoCall command repoId)
 
 -- | Log something for debugging
 logDebug :: (Show s, Stack.HasCallStack) => s -> APIHandler err ()

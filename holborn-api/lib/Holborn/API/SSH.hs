@@ -29,16 +29,22 @@ import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, logDebug, query, toServantHandler)
+import Holborn.API.Internal
+  ( APIHandler
+  , JSONCodeableError(..)
+  , RepoAccess(..)
+  , logDebug
+  , query
+  , routeRepoRequest
+  , toServantHandler
+  )
 import Holborn.API.Types (Username)
-import Holborn.JSON.SSHRepoCommunication ( RepoCall(..)
-                                         , KeyType(..)
+import Holborn.JSON.SSHRepoCommunication ( KeyType(..)
                                          , GitCommand(..)
                                          , SSHCommandLine(..)
                                          , SSHKey
                                          , unparseSSHKey
                                          )
-import Holborn.JSON.RepoMeta (RepoId)
 
 
 -- | Main internal API (only used by our openssh version ATM).
@@ -161,31 +167,6 @@ checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
         case (gitCommand command, readOnly) of
           (GitReceivePack, True)  -> pure $ Left $ ReadOnlyKey keyId
           _                       -> Right <$> routeRepoRequest command
-
-
--- | Given an SSH command line, return enough data to route the git traffic to
--- the correct repo on the correct repo server.
-routeRepoRequest :: SSHCommandLine -> APIHandler err RepoAccess
-routeRepoRequest (SSHCommandLine command owner repo) = do
-  -- TODO - the following is just a placeholder query so we can get
-  -- a repoId. It works but needs error handling (return e.g. 404
-  -- when repo wasn't found).
-  [(_ :: String, repoId :: RepoId)] <- query [sql|
-    select 'org', id from "org" where orgname = ? and name = ?
-    UNION
-    select 'user',  id from "user" where username = ? and name = ?
-    |] (owner, repo, owner, repo)
-  -- TODO: multi-repo-server: Currently, we hardcode a single repo server in
-  -- the config. Should instead get the details from the database here.
-  AppConf{rawRepoHostname, rawRepoPort} <- getConfig
-  pure $ AccessGranted rawRepoHostname rawRepoPort (WritableRepoCall command repoId)
-
-
--- | Routing to a git repository.
-data RepoAccess = AccessGranted Hostname Port RepoCall deriving (Show)
-
-type Hostname = Text
-type Port = Int
 
 
 -- | Encode a JSON object so that it can be echoed on the shell.
