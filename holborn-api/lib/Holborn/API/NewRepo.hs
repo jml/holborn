@@ -16,7 +16,14 @@ import Servant
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, throwHandlerError, query)
+import Holborn.API.Internal
+  ( APIHandler
+  , JSONCodeableError(..)
+  , getConfig
+  , toServantHandler
+  , throwHandlerError
+  , query
+  )
 import Holborn.JSON.NewRepo (NewRepoRequest(..))
 import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName)
 import Holborn.API.Types (Username)
@@ -60,15 +67,24 @@ newRepo _username NewRepoRequest{..} = do
 
   where
     newOrgRepo orgId owner = do
-       -- TODO: FAKE: Hardcoding repo server details
+       repoServer <- pickRepoServer
        [Only (repoId :: Int)] <- query [sql|
             insert into "org_repo" (name, description, org_id, hosted_on) values (?, ?, ?, ?) returning id
-            |] (_NewRepoRequest_name, _NewRepoRequest_description, orgId, "127.0.0.1:8080" :: Text)
+            |] (_NewRepoRequest_name, _NewRepoRequest_description, orgId, repoServer)
        pure (RepoMeta repoId 0 0 0 owner)
 
     newUserRepo userId owner = do
-       -- TODO: FAKE: Hardcoding repo server details.
+       repoServer <- pickRepoServer
        [Only (repoId :: Int)] <- query [sql|
             insert into "user_repo" (name, description, user_id, hosted_on) values (?, ?, ?, ?) returning id
-            |] (_NewRepoRequest_name, _NewRepoRequest_description, userId, "127.0.0.1:8080" :: Text)
+            |] (_NewRepoRequest_name, _NewRepoRequest_description, userId, repoServer)
        pure (RepoMeta repoId 0 0 0 owner)
+
+
+-- | Pick a repository server for storing a new repository
+pickRepoServer :: APIHandler err Text
+-- TODO: multi-repo-server: Getting repo server from config (which assumes
+-- only one), should instead actually pick from a set of repo servers.
+pickRepoServer = do
+  AppConf{repoHostname, repoPort} <- getConfig
+  pure $ repoHostname <> ":" <> fromShow repoPort
