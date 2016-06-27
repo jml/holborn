@@ -56,9 +56,8 @@ newName s = hush (AT.parseOnly nameParser s)
 instance FromHttpApiData (Name a) where
     parseUrlPiece s = fmapL fromString (AT.parseOnly nameParser s)
 
--- | The way to "escape" names when e.g. building a path segment
--- is via `show` so we need to show the underlying text, not
--- `RepoName x`.
+-- | The way to "escape" names when building path segments, headers or query
+-- parameters.
 instance ToHttpApiData (Name a) where
     toUrlPiece (Name x) = x
 

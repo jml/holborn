@@ -433,9 +433,11 @@ notImplementedYet feature = terror $ "Not implemented yet: " ++ feature
 -- (which is much rarer than reading).
 fillRepoMeta :: Repository -> GitM IO RepoMeta
 fillRepoMeta Repo{..} =
+  -- Fake data 10 11 12
   return $ RepoMeta _repoId 10 11 12 ownerName
   where
-    ownerName = fromJust (newOwnerName "owner-filled-by-api") -- Fake data 10 11 12
+    -- Fake data owner-filled-by-api
+    ownerName = fromJust (newOwnerName "owner-filled-by-api")
 
 instance ToMarkup RepoMeta where
   toMarkup RepoMeta{..} = do
