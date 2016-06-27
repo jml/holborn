@@ -17,7 +17,7 @@ import Holborn.JSON.SSHRepoCommunication
   , unparseSSHCommand
   , parseSSHCommand
   )
-import Holborn.JSON.RepoMeta (newValidRepoName)
+import Holborn.JSON.RepoMeta (newRepoName)
 import Helpers (jsonIdentity, httpApiDataIdentity)
 
 tests :: TestTree
@@ -40,4 +40,4 @@ tests =
     ]
   ]
   where
-    Just validRepoName = newValidRepoName "hello"
+    Just validRepoName = newRepoName "hello"

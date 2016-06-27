@@ -9,11 +9,11 @@ import HolbornPrelude
 import Data.Aeson (FromJSON(..), genericParseJSON)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import GHC.Generics (Generic)
-import Holborn.JSON.RepoMeta (ValidRepoName)
+import Holborn.JSON.RepoMeta (OwnerName, RepoName)
 
 data NewRepoRequest = NewRepoRequest
-    { _NewRepoRequest_owner :: Text
-    , _NewRepoRequest_name :: ValidRepoName
+    { _NewRepoRequest_owner :: OwnerName
+    , _NewRepoRequest_name :: RepoName
     , _NewRepoRequest_description :: Text
     , _NewRepoRequest_private :: Bool
     , _NewRepoRequest_initialize :: Bool

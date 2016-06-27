@@ -35,8 +35,8 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Web.HttpApiData (toUrlPiece)
 
 import Holborn.JSON.RepoMeta
-  ( ValidRepoName
-  , validRepoNameParser
+  ( RepoName
+  , repoNameParser
   , RepoId
   )
 
@@ -85,7 +85,7 @@ instance Arbitrary GitCommand where
 data SSHCommandLine =
   SSHCommandLine { gitCommand :: GitCommand
                  , _owner :: Text
-                 , _sshCommandLineRepo :: ValidRepoName
+                 , _sshCommandLineRepo :: RepoName
                  } deriving (Show, Eq)
 
 instance FromJSON SSHCommandLine where
@@ -110,7 +110,7 @@ sshCommand = do
   AT.skipWhile (== '/') -- skip optional leading /
   org <- AT.takeWhile1 (/= '/')
   void $ AT.char '/'
-  repoName <- validRepoNameParser
+  repoName <- repoNameParser
   void $ AT.char '\''
   AT.endOfInput
   pure $ SSHCommandLine command org repoName
