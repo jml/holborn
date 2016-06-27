@@ -159,14 +159,15 @@ checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
                |] (Only key_id)
     logDebug (key_id, command, rows)
 
+    let SSHCommandLine command' owner name = command
     case rows of
       []                        -> pure $ Left NoSSHKey
       _:_:_                     -> pure $ Left MultipleSSHKeys
       [(_, _, False)]           -> pure $ Left UnverifiedKey
       [(keyId, readOnly, True)] ->
-        case (gitCommand command, readOnly) of
+        case (command', readOnly) of
           (GitReceivePack, True)  -> pure $ Left $ ReadOnlyKey keyId
-          _                       -> Right <$> routeRepoRequest command
+          _                       -> Right <$> routeRepoRequest command' owner name
 
 
 -- | Encode a JSON object so that it can be echoed on the shell.

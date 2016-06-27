@@ -45,7 +45,7 @@ import Holborn.Logging (debugWithCallStack)
 import Holborn.JSON.RepoMeta (OwnerName, RepoId, RepoName)
 import Holborn.JSON.SSHRepoCommunication
   ( RepoCall(..)
-  , SSHCommandLine(SSHCommandLine)
+  , GitCommand
   )
 
 import qualified GHC.Stack as Stack
@@ -214,8 +214,8 @@ repoApiUrl owner repo = do
 
 -- | Given an SSH command line, return enough data to route the git traffic to
 -- the correct repo on the correct repo server.
-routeRepoRequest :: SSHCommandLine -> APIHandler err RepoAccess
-routeRepoRequest (SSHCommandLine command owner repo) = do
+routeRepoRequest :: GitCommand -> OwnerName -> RepoName -> APIHandler err RepoAccess
+routeRepoRequest command owner repo = do
   -- TODO - the following is just a placeholder query so we can get
   -- a repoId. It works but needs error handling (return e.g. 404
   -- when repo wasn't found).
