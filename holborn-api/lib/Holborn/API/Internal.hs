@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeOperators      #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Internal logic for how API requests work.
 module Holborn.API.Internal
@@ -11,6 +12,8 @@ module Holborn.API.Internal
   , execute
   -- | Call backends
   , jsonGet'
+  -- | Repository server access
+  , repoApiUrl
   -- | Logging
   , logDebug
   -- | Integrate with Servant
@@ -31,12 +34,14 @@ import Control.Monad.Trans.Except (ExceptT, throwE)
 import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
 import Data.Aeson (FromJSON, Value, eitherDecode', encode, object, (.=))
 import qualified Database.PostgreSQL.Simple as PostgreSQL
+import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Network.HTTP.Client (parseUrl, httpLbs, requestHeaders, responseBody)
 import Network.HTTP.Types.Header (hAccept)
-import Servant (ServantErr(..), (:~>)(Nat))
+import Servant (ServantErr(..), (:~>)(Nat), toUrlPiece)
 
 import Holborn.API.Config (AppConf(..))
 import Holborn.Logging (debugWithCallStack)
+import Holborn.JSON.RepoMeta (OwnerName, RepoId, RepoName)
 
 import qualified GHC.Stack as Stack
 
@@ -142,15 +147,15 @@ getConfig = APIHandler ask
 
 -- | Query the database
 query :: (PostgreSQL.ToRow values, PostgreSQL.FromRow row) => PostgreSQL.Query -> values -> APIHandler err [row]
-query sql values = do
+query sqlQuery values = do
   AppConf{conn} <- getConfig
-  APIHandler $ liftIO $ PostgreSQL.query conn sql values
+  APIHandler $ liftIO $ PostgreSQL.query conn sqlQuery values
 
 -- | Execute an operation on the database, returning the number of rows affected.
 execute :: PostgreSQL.ToRow values => PostgreSQL.Query -> values -> APIHandler err Int64
-execute sql values = do
+execute sqlQuery values = do
   AppConf{conn} <- getConfig
-  APIHandler $ liftIO $ PostgreSQL.execute conn sql values
+  APIHandler $ liftIO $ PostgreSQL.execute conn sqlQuery values
 
 
 -- | Call a backend, asking for a JSON response.
@@ -163,6 +168,29 @@ jsonGet' endpoint = do
     r <- parseUrl (textToString endpoint)
     let rJson = r { requestHeaders = [(hAccept, "application/json")] }
     APIHandler $ liftIO (httpLbs rJson httpManager) >>= \response -> return (eitherDecode' (responseBody response))
+
+-- | Get the URL for the REST endpoint that serves the 'owner/repo'
+-- repository. i.e. a URL for a holborn-repo server.
+repoApiUrl :: OwnerName -> RepoName -> APIHandler err Text
+repoApiUrl owner repo = do
+  -- TODO: Because this is implemented only in terms of other things in
+  -- Internal, it should probably be in a separate module, as it represents a
+  -- higher layer. See
+  -- https://bitbucket.org/holbornlondon/holborn/pull-requests/66/wip-notes-on-extracting-repo-layer/diff
+  -- for discussion of this.
+  [(_ :: String, repoId :: RepoId)] <- query [sql|
+    select "org_repo".id from "org_repo", "org"
+    where "org".id = "org_repo".org_id and "org".orgname = ? and "org_repo".name = ?
+    UNION
+    select "user_repo".id from "user_repo", "user"
+    where "user".id = "user_repo".user_id and "user".username = ? and "user_repo".name = ?
+    |] (owner, repo, owner, repo)
+
+  -- TODO: multi-repo-server: Currently our config hardcodes that we have a
+  -- single repo server. In future, we would look up the host details from the
+  -- database too.
+  AppConf{repoHostname, repoPort} <- getConfig
+  pure $ "http://" <> repoHostname <> ":" <> fromShow repoPort <> "/" <> toUrlPiece repoId
 
 
 -- | Log something for debugging
