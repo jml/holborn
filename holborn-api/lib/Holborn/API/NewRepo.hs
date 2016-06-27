@@ -60,12 +60,14 @@ newRepo _username NewRepoRequest{..} = do
 
   where
     newOrgRepo orgId owner = do
+       -- TODO: FAKE: Hardcoding repo server details
        [Only (repoId :: Int)] <- query [sql|
             insert into "org_repo" (name, description, org_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (_NewRepoRequest_name, _NewRepoRequest_description, orgId, "127.0.0.1:8080" :: Text)
        pure (RepoMeta repoId 0 0 0 owner)
 
     newUserRepo userId owner = do
+       -- TODO: FAKE: Hardcoding repo server details.
        [Only (repoId :: Int)] <- query [sql|
             insert into "user_repo" (name, description, user_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (_NewRepoRequest_name, _NewRepoRequest_description, userId, "127.0.0.1:8080" :: Text)

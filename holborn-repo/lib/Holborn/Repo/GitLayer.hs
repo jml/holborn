@@ -420,7 +420,7 @@ instance ToMarkup Tree where
       makeLink url path = H.a ! A.href (H.toValue ("/v1/repos/" <> url)) $ toMarkup path
 
 
--- XXX: Move this to some more common library
+-- TODO: Move this to some more common library
 notImplementedYet :: Text -> a
 notImplementedYet feature = terror $ "Not implemented yet: " ++ feature
 
@@ -433,13 +433,14 @@ notImplementedYet feature = terror $ "Not implemented yet: " ++ feature
 -- (which is much rarer than reading).
 fillRepoMeta :: Repository -> GitM IO RepoMeta
 fillRepoMeta Repo{..} =
-  -- Fake data 10 11 12
+  -- TODO: FAKE: Fake data 10 11 12
   return $ RepoMeta _repoId 10 11 12 ownerName
   where
-    -- Fake data owner-filled-by-api
+    -- TODO: FAKE: Fake data owner-filled-by-api
     ownerName = fromJust (newOwnerName "owner-filled-by-api")
 
 instance ToMarkup RepoMeta where
   toMarkup RepoMeta{..} = do
     H.h1 "debug rendering for root metadata"
+    -- TODO: FAKE: Hardcodes master
     H.a ! A.href (H.toValue ("/v1/repos/" <> toUrlPiece _RepoMeta_id <> "/git/trees/master")) $ "tree-root"

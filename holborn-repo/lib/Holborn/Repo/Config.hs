@@ -19,7 +19,6 @@ data Config = Config
     }
 
 
--- XXX: Duplicated & modified from holborn-syntax Main
 -- | Generate warp settings from config
 --
 -- Serve from a port and print out where we're serving from.

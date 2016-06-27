@@ -12,9 +12,9 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Holborn.API.Browse
-       ( API
-       , server
-       ) where
+  ( API
+  , server
+  ) where
 
 import HolbornPrelude
 
@@ -75,6 +75,7 @@ browse _maybeUsername owner repo = do
         Left err -> do
             logDebug ("Error when decoding JSON from repo backend at" :: String, repoUrl, err)
             throwHandlerError NotFound
+    -- TODO: FAKE: Fake description in repository metadata
     return BrowseMetaResponse
       { _BrowseMetaResponse_repo_meta = repoMeta { _RepoMeta_owner = owner }
       , _BrowseMetaResponse_description = "fake description"
