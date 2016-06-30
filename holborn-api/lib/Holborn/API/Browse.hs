@@ -12,21 +12,28 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Holborn.API.Browse
-       ( API
-       , server
-       ) where
+  ( API
+  , server
+  ) where
 
 import HolbornPrelude
 
 import Data.Aeson (object, (.=), Value)
 import Servant
 
-import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
 import Holborn.API.Types (Username)
-import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, toServantHandler, throwHandlerError, jsonGet', query, logDebug)
+import Holborn.API.Internal
+  ( APIHandler
+  , JSONCodeableError(..)
+  , toServantHandler
+  , throwHandlerError
+  , jsonGet'
+  , repoApiUrl
+  , logDebug
+  )
 import Holborn.JSON.Browse (BrowseMetaResponse(..))
-import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..), OwnerName, RepoName)
+import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName, RepoName)
 import Holborn.ServantTypes (RenderedJson)
 
 -- Following imports needed for RPC which we should do in a more
@@ -59,22 +66,14 @@ server conf =
 
 browse :: Maybe Username -> OwnerName -> RepoName -> APIHandler BrowseError BrowseMetaResponse
 browse _maybeUsername owner repo = do
-    AppConf{repoHostname, repoPort} <- getConfig
-    [(_ :: String, repoId :: RepoId)] <- query [sql|
-               select 'org', "org_repo".id from "org_repo", "org"
-                      where "org".id = "org_repo".org_id and "org".orgname = ? and "org_repo".name = ?
-               UNION
-               select 'user',  "user_repo".id from "user_repo", "user"
-                      where "user".id = "user_repo".user_id and "user".username = ? and "user_repo".name = ?
-               |] (owner, repo, owner, repo)
-
-    let repoUrl = "http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> toUrlPiece repoId
+    repoUrl <- repoApiUrl owner repo
     r <- jsonGet' repoUrl
     repoMeta <- case r of
         Right x -> pure x
         Left err -> do
             logDebug ("Error when decoding JSON from repo backend at" :: String, repoUrl, err)
             throwHandlerError NotFound
+    -- TODO: FAKE: Fake description in repository metadata
     return BrowseMetaResponse
       { _BrowseMetaResponse_repo_meta = repoMeta { _RepoMeta_owner = owner }
       , _BrowseMetaResponse_description = "fake description"
@@ -85,25 +84,11 @@ browse _maybeUsername owner repo = do
 -- authentication requirements.
 treeCommitBlob :: Maybe Username -> OwnerName -> RepoName -> [Text] -> APIHandler BrowseError Value
 treeCommitBlob _maybeUsername owner repo pathspec = do
-    -- TODO read repoHostname from DB (we already have a column)
-    AppConf{repoHostname, repoPort} <- getConfig
-    [(_ :: String, repoId :: RepoId)] <- query [sql|
-               select 'org', "org_repo".id from "org_repo", "org"
-                      where "org".id = "org_repo".org_id and "org".orgname = ? and "org_repo".name = ?
-               UNION
-               select 'user',  "user_repo".id from "user_repo", "user"
-                      where "user".id = "user_repo".user_id and "user".username = ? and "user_repo".name = ?
-               |] (owner, repo, owner, repo)
-
+    repoUrl <- repoApiUrl owner repo
     -- TODO: constructing this URL manually is still not great. A
     -- secondary concern is that we're decoding, then re-encoding JSON
     -- here. Might be easier to pipe through backend responses unmodified.
-    let repoUrlBrokenAndHardcoded =
-          "http://"
-          <> repoHostname <> ":" <> fromShow repoPort
-          <> "/v1/repos/"
-          <> toUrlPiece repoId
-          <> "/" <> intercalate "/" pathspec
+    let repoUrlBrokenAndHardcoded = repoUrl <> "/" <> intercalate "/" pathspec
     r <- jsonGet' repoUrlBrokenAndHardcoded
     r' <- case r of
         Right x -> pure x

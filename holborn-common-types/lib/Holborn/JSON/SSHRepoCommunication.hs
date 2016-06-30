@@ -13,7 +13,6 @@ module Holborn.JSON.SSHRepoCommunication
        , parseSSHKey
        , unparseSSHKey
        , SSHCommandLine(..)
-       , RepoAccess(..)
        ) where
 
 import HolbornPrelude
@@ -31,25 +30,21 @@ import GHC.Generics (Generic)
 import System.IO (hClose)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
 import System.Process (runInteractiveCommand)
+import Test.QuickCheck (Arbitrary(..), elements)
 import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Web.HttpApiData (toUrlPiece)
 
 import Holborn.JSON.RepoMeta
-  ( RepoName
+  ( OwnerName
+  , ownerNameParser
+  , RepoName
   , repoNameParser
   , RepoId
   )
 
-import Test.QuickCheck
-  ( Arbitrary(..)
-  , Gen
-  , elements
-  , listOf1
-  )
-
 
 -- | Git offers two kinds of service.
-data GitCommand = GitUploadPack | GitReceivePack deriving (Eq, Show)
+data GitCommand = GitUploadPack | GitReceivePack deriving (Eq, Show, Generic)
 
 gitCommandParser :: AT.Parser GitCommand
 gitCommandParser = ("git-upload-pack" >> pure GitUploadPack) <|> ("git-receive-pack" >> pure GitReceivePack)
@@ -80,12 +75,14 @@ instance FromHttpApiData GitCommand where
 instance Arbitrary GitCommand where
     arbitrary = elements [ GitReceivePack, GitUploadPack ]
 
+instance FromJSON GitCommand
+instance ToJSON GitCommand
 
 -- | A user-generated request to interact with a git repository.
 data SSHCommandLine =
   SSHCommandLine { gitCommand :: GitCommand
-                 , _owner :: Text
-                 , _sshCommandLineRepo :: RepoName
+                 , ownerName :: OwnerName
+                 , repoName :: RepoName
                  } deriving (Show, Eq)
 
 instance FromJSON SSHCommandLine where
@@ -108,7 +105,7 @@ sshCommand = do
   command <- gitCommandParser
   void $ AT.string " '"
   AT.skipWhile (== '/') -- skip optional leading /
-  org <- AT.takeWhile1 (/= '/')
+  org <- ownerNameParser
   void $ AT.char '/'
   repoName <- repoNameParser
   void $ AT.char '\''
@@ -121,24 +118,15 @@ parseSSHCommand = hush . AT.parseOnly sshCommand
 
 unparseSSHCommand :: SSHCommandLine -> Text
 unparseSSHCommand (SSHCommandLine command owner repo) =
-  unparseGitCommand command <> " '" <> owner <> "/" <> toUrlPiece repo <> "'"
-
+  unparseGitCommand command <> " '" <> toUrlPiece owner <> "/" <> toUrlPiece repo <> "'"
 
 instance Arbitrary SSHCommandLine where
-  arbitrary = SSHCommandLine <$> arbitrary <*> pathSegment <*> arbitrary
-
--- | Used to generate arbitrary valid owners and repository names.
--- TODO: Encode this assumption in the types of owner, repo, etc.
-pathSegment :: Gen Text
-pathSegment =
-  fromString <$> listOf1 (elements alphabet)
-  where
-    alphabet = ['A'..'Z'] <> ['a'..'z'] <> ['0'..'9'] <> "-_."
+  arbitrary = SSHCommandLine <$> arbitrary <*> arbitrary <*> arbitrary
 
 
 -- | Permission to interact with a git repository.
 data RepoCall =
-      WritableRepoCall { _command  :: SSHCommandLine, _repoId :: RepoId }
+      WritableRepoCall { _command  :: GitCommand, _repoId :: RepoId }
     deriving (Eq, Show, Generic)
 
 instance FromJSON RepoCall where
@@ -149,13 +137,6 @@ instance ToJSON RepoCall where
 
 instance Arbitrary RepoCall where
   arbitrary = WritableRepoCall <$> arbitrary <*> arbitrary
-
-
--- | Routing to a git repository.
-data RepoAccess = AccessGranted Hostname Port RepoCall deriving (Show)
-
-type Hostname = Text
-type Port = Int
 
 
 -- | SSH key type

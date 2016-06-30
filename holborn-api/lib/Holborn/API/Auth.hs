@@ -1,8 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Holborn.API.Auth
-       ( getUserId
-       ) where
+  ( getUserId
+  ) where
 
 import HolbornPrelude
 
@@ -16,10 +16,13 @@ import Holborn.API.Types (Username)
 type UserId = Int
 
 
--- ExceptT trying to auth the user
+-- | Get the UserId for Username, ensuring that they are logged in.
+--
+-- Returns MissingAuthToken or InvalidAuthToken error (via ExceptT) otherwise.
 getUserId :: Maybe Username -> APIHandler a UserId
 getUserId Nothing = throwAPIError MissingAuthToken
 getUserId (Just username) = do
+    -- TODO: FAKE: Hardcodes email@test
     rows <- query [sql|
         insert into "user"  (username, email) select ?, 'email@test' where not exists (select 1 from "user" where username = ?);
         select id from "user" where username = ?

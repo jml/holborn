@@ -29,17 +29,22 @@ import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Holborn.API.Config (AppConf(..))
-import Holborn.API.Internal (APIHandler, JSONCodeableError(..), getConfig, logDebug, query, toServantHandler)
+import Holborn.API.Internal
+  ( APIHandler
+  , JSONCodeableError(..)
+  , RepoAccess(..)
+  , logDebug
+  , query
+  , routeRepoRequest
+  , toServantHandler
+  )
 import Holborn.API.Types (Username)
-import Holborn.JSON.SSHRepoCommunication ( RepoCall(..)
-                                         , KeyType(..)
+import Holborn.JSON.SSHRepoCommunication ( KeyType(..)
                                          , GitCommand(..)
                                          , SSHCommandLine(..)
                                          , SSHKey
-                                         , RepoAccess(..)
                                          , unparseSSHKey
                                          )
-import Holborn.JSON.RepoMeta (RepoId)
 
 
 -- | Main internal API (only used by our openssh version ATM).
@@ -146,42 +151,23 @@ data SSHAccessError
 
 
 -- | Determine whether the user identified by their SSH key can access a repo.
-checkRepoAccess' :: CheckRepoAccessRequest -> SSHHandler (Either SSHAccessError RepoCall)
+checkRepoAccess' :: CheckRepoAccessRequest -> SSHHandler (Either SSHAccessError RepoAccess)
 checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
-    let (owner, repo) = (_owner command, _sshCommandLineRepo command)
-
     rows <- query [sql|
                    select id, pk.readonly, pk.verified
                    from "public_key" as pk where id = ?
                |] (Only key_id)
     logDebug (key_id, command, rows)
 
-    -- TODO - the following is just a placeholder query so we can get
-    -- a repoId. It works but needs error handling (return e.g. 404
-    -- when repo wasn't found).
-    [(_ :: String, repoId :: RepoId)] <- query [sql|
-               select 'org', id from "org" where orgname = ? and name = ?
-               UNION
-               select 'user',  id from "user" where username = ? and name = ?
-               |] (owner, repo, owner, repo)
-
-    return $
-      case rows of
-        []                        -> Left NoSSHKey
-        _:_:_                     -> Left MultipleSSHKeys
-        [(_, _, False)]           -> Left UnverifiedKey
-        [(keyId, readOnly, True)] ->
-          case (gitCommand command, readOnly) of
-            (GitReceivePack, True)  -> Left  $ ReadOnlyKey keyId
-            _                       -> Right $ WritableRepoCall command repoId
-
-
--- | Either route a git request to the correct repo, or give an error saying
--- why not.
-routeRepoRequest :: CheckRepoAccessRequest -> SSHHandler (Either SSHAccessError RepoAccess)
-routeRepoRequest request = do
-    AppConf{rawRepoHostname, rawRepoPort} <- getConfig
-    fmap (AccessGranted rawRepoHostname rawRepoPort) <$> checkRepoAccess' request
+    let SSHCommandLine command' owner name = command
+    case rows of
+      []                        -> pure $ Left NoSSHKey
+      _:_:_                     -> pure $ Left MultipleSSHKeys
+      [(_, _, False)]           -> pure $ Left UnverifiedKey
+      [(keyId, readOnly, True)] ->
+        case (command', readOnly) of
+          (GitReceivePack, True)  -> pure $ Left $ ReadOnlyKey keyId
+          _                       -> Right <$> routeRepoRequest command' owner name
 
 
 -- | Encode a JSON object so that it can be echoed on the shell.
@@ -231,7 +217,7 @@ renderAccess (Right (AccessGranted hostname port repoCall)) =
 
 checkRepoAccess :: CheckRepoAccessRequest -> SSHHandler CheckRepoAccessResponse
 checkRepoAccess request = do
-    route <- routeRepoRequest request
+    route <- checkRepoAccess' request
     return . CheckRepoAccessResponse . Just . renderAccess $ route
 
 
