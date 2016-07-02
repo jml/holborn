@@ -194,14 +194,17 @@ getRepoId owner repo = do
   -- TODO - the following is just a placeholder query so we can get
   -- a repoId. It works but needs error handling (return e.g. 404
   -- when repo wasn't found).
-  [(_ :: String, repoId :: RepoId)] <- query [sql|
+  rows <- query [sql|
     select "org_repo".id from "org_repo", "org"
     where "org".id = "org_repo".org_id and "org".orgname = ? and "org_repo".name = ?
     UNION
     select "user_repo".id from "user_repo", "user"
     where "user".id = "user_repo".user_id and "user".username = ? and "user_repo".name = ?
     |] (owner, repo, owner, repo)
-  return repoId
+  case rows of
+    [[repoId :: RepoId]] -> pure repoId
+    [] -> terror $ "ERROR: no repository found for " <> show owner <> "/" <> show repo
+    _ -> terror $ "ERROR: " <> show (length rows) <> " found for " <> show owner <> "/" <> show repo
 
 -- | Get the URL for the REST endpoint that serves the 'owner/repo'
 -- repository. i.e. a URL for a holborn-repo server.
