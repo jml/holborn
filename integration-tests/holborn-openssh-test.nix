@@ -1,9 +1,9 @@
-{ haskell, haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText, postgresql, writeScript, openssh, lib, procps }:
+{ haskell, haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText, postgresql, writeScript, openssh, lib
+, helpers }:
 
 let
   holborn-repo = haskellPackages.callPackage ../holborn-repo {};
   holborn-api = haskellPackages.callPackage ../holborn-api {};
-  test-repos = callPackage ./test-repo.nix {};
   holborn-ssh = callPackage ../nix/holborn-ssh.nix {};
   hcl = haskell.lib.dontHaddock (haskellPackages.callPackage ../hcl {});
 
@@ -49,7 +49,7 @@ let
     '';
   };
 
-  # Insert the pubkey into the database for testing
+  # Insert the public key into the database for testing
   insertTestKeySql =
     let pubkey = builtins.readFile "${testKey}/testkey.pub";
     in writeText "insertTestKey.sql" ''
@@ -66,10 +66,30 @@ let
          , false
          );
   '';
+
+  repoId = 100;
+  ownerName = "org";
+  repoName = "hello";
+  test-repos = helpers.repo-store "test-repos" [ { id = repoId; repo = helpers.test-repo; } ];
+
+  insertRepositorySql = writeText "insertRepository.sql" ''
+  -- Assume alice creates the repo, and that alice has id 1
+  insert into "org" (orgname, created_by_id) values
+       ( '${ownerName}'
+       , 1
+       );
+  insert into "org_repo" (name, description, org_id, hosted_on) values
+       ( '${repoName}'
+       , 'test repository owned by ${ownerName}'
+       , 1
+       , '127.0.0.1:${repoPort}'
+       );
+  '';
+
 in
 stdenv.mkDerivation {
   name = "holborn-openssh-test";
-  buildInputs = [ git holborn-ssh postgresql hcl procps holborn-api holborn-repo test-repos ];
+  buildInputs = [ git holborn-ssh postgresql hcl holborn-api holborn-repo test-repos ];
   srcs = ./.;
   phases = "unpackPhase buildPhase";
   buildPhase = ''
@@ -89,6 +109,7 @@ stdenv.mkDerivation {
 
       psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -qf ${initial_sql}
       psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -qf ${insertTestKeySql}
+      psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -qf ${insertRepositorySql}
 
       # Run ssh + repo server
       ${holborn-ssh}/bin/sshd -D -e -f ${holborn-ssh-testconfig} &
@@ -117,10 +138,12 @@ stdenv.mkDerivation {
       mkdir $out
       pushd $out
       # GIT_SSH_COMMAND requires at least git 2.3
-      GIT_SSH_COMMAND="ssh -F ${holborn-ssh-client-config}" GIT_TRACE=2 git clone --verbose ssh://127.0.0.1:${sshPort}/org/hello >> $out/integration-test-log
+      GIT_SSH_COMMAND="ssh -F ${holborn-ssh-client-config}" GIT_TRACE=2 git clone --verbose ssh://127.0.0.1:${sshPort}/${ownerName}/${repoName}
       popd
 
       # The same content?
-      diff ${test-repos}/org/hello/hello $out/hello/hello
+      expected=$(${git}/bin/git --git-dir ${helpers.test-repo}/.git rev-parse HEAD)
+      observed=$(${git}/bin/git --git-dir $out/${repoName}/.git rev-parse HEAD)
+      [[ $expected == $observed ]]
   '';
 }
