@@ -3,9 +3,10 @@
 with (import <nixpkgs> {}).pkgs;
 let
   hp = callPackage ../nix/all-packages.nix {};
+  helpers = callPackage ./helpers.nix {};
 in
 {
-  http = callPackage ./holborn-protocol-test-1.nix { haskellPackages = hp; };
+  http = callPackage ./holborn-protocol-test-1.nix { haskellPackages = hp; helpers = helpers; };
   buildEverything = callPackage ./build-everything.nix { haskellPackages = hp; };
   # TODO openssh integration test is broken until we can guarantee a user with
   # shell access when building on NixOS.

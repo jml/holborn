@@ -1,12 +1,14 @@
-{ haskell, haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText }:
+{ haskell, haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText
+, helpers }:
 let
   holborn-repo = haskellPackages.callPackage ../holborn-repo {};
   hcl = haskell.lib.dontHaddock (haskellPackages.callPackage ../hcl {});
 
-  test-repos = callPackage ./test-repo.nix {};
-
   repoPort = 8080;
   rawPort = 8081;
+
+  repoId = 100;
+  test-repos = helpers.repo-store "test-repos" [ { id = repoId; repo = helpers.test-repo; } ];
 in
 stdenv.mkDerivation {
   name = "integration-protocol-test-1";
@@ -33,10 +35,12 @@ stdenv.mkDerivation {
       # Clone the test repository
       mkdir $out
       pushd $out
-      GIT_TRACE=2 ${git}/bin/git clone --verbose http://127.0.0.1:${toString repoPort}/v1/repos/100
+      GIT_TRACE=2 ${git}/bin/git clone --verbose http://127.0.0.1:${toString repoPort}/v1/repos/${toString repoId}
       popd
 
       # The same content?
-      diff ${test-repos}/100/hello $out/100/hello
+      expected=$(${git}/bin/git --git-dir ${helpers.test-repo}/.git rev-parse HEAD)
+      observed=$(${git}/bin/git --git-dir $out/${toString repoId}/.git rev-parse HEAD)
+      [[ $expected == $observed ]]
   '';
 }
