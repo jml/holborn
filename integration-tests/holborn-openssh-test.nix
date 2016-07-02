@@ -23,7 +23,6 @@ let
     Port=${sshPort}
     PidFile=/dev/null
     HolbornApiEndpoint=http://127.0.0.1:${apiPort}
-    LogLevel=DEBUG1
   '';
 
   # ssh tries to create an ~/.ssh directory if it's not given a config file,
@@ -54,10 +53,9 @@ let
   insertTestKeySql =
     let pubkey = builtins.readFile "${testKey}/testkey.pub";
     in writeText "insertTestKey.sql" ''
-    insert into "user" (username, signup_email, password) values
+    insert into "user" (username, email) values
          ( 'alice'
          , 'alice@example.com'
-         , '$2y$04$iTvtwfwFymYDEk9EmC4rkeDD5VD21KgdAfC7Fseqh7CyWXaSIhR8u'
          );
     insert into public_key (name, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly) values
          ( 'testkey'
@@ -67,7 +65,6 @@ let
          , true
          , false
          );
-     select * from public_key;
   '';
 in
 stdenv.mkDerivation {
@@ -76,15 +73,12 @@ stdenv.mkDerivation {
   srcs = ./.;
   phases = "unpackPhase buildPhase";
   buildPhase = ''
-      set -ex
+      set -e
       echo "*** holborn-openssh-test"
       trap 'kill $(jobs -p)' EXIT # kill everything before exit
 
       # Make this script more readable by placing git into PATH
       export PATH=$PATH:${git}/bin:${holborn-ssh}/bin
-
-      # GIT_SSH_COMMAND requires at least git 2.3
-      export GIT_SSH_COMMAND="ssh -F ${holborn-ssh-client-config}"
 
       initdb -D ${pgDatabase}
       postgres -D ${pgDatabase} -p ${pgPort} &
@@ -93,8 +87,8 @@ stdenv.mkDerivation {
       createuser -p ${pgPort} ${pgUser}
       createdb -p ${pgPort} -O ${pgUser} ${pgDatabase}
 
-      psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -f ${initial_sql}
-      psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -f ${insertTestKeySql}
+      psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -qf ${initial_sql}
+      psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -qf ${insertTestKeySql}
 
       # Run ssh + repo server
       ${holborn-ssh}/bin/sshd -D -e -f ${holborn-ssh-testconfig} &
@@ -122,7 +116,8 @@ stdenv.mkDerivation {
       # Clone the test repository
       mkdir $out
       pushd $out
-      git clone --verbose ssh://127.0.0.1:${sshPort}/org/hello >> $out/integration-test-log
+      # GIT_SSH_COMMAND requires at least git 2.3
+      GIT_SSH_COMMAND="ssh -F ${holborn-ssh-client-config}" GIT_TRACE=2 git clone --verbose ssh://127.0.0.1:${sshPort}/org/hello >> $out/integration-test-log
       popd
 
       # The same content?

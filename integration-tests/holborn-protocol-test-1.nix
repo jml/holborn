@@ -14,14 +14,11 @@ stdenv.mkDerivation {
   srcs = ./.;
   phases = "unpackPhase buildPhase";
   buildPhase = ''
-      set -ex
+      set -e
       echo "*** holborn-protocol-test-1"
 
-      # Make this script more readable by placing git into PATH
-      export PATH=$PATH:${git}/bin
-
-      # Run server
-      ${holborn-repo}/bin/holborn-repo \
+      # Run server (holborn-repo expects git to be available on the PATH)
+      PATH=$PATH:${git}/bin ${holborn-repo}/bin/holborn-repo \
         --http-port=${toString repoPort} \
         --git-port=${toString rawPort} \
         --repo-root=${test-repos} &
@@ -36,11 +33,10 @@ stdenv.mkDerivation {
       # Clone the test repository
       mkdir $out
       pushd $out
-      GIT_TRACE=2 git clone --verbose http://127.0.0.1:${toString repoPort}/v1/repos/100 >> $out/integration-test-log
+      GIT_TRACE=2 ${git}/bin/git clone --verbose http://127.0.0.1:${toString repoPort}/v1/repos/100
       popd
 
       # The same content?
-      ls $out
       diff ${test-repos}/100/hello $out/100/hello
   '';
 }
