@@ -189,6 +189,20 @@ pickRepoServer = do
   AppConf{repoHostname, repoPort} <- getConfig
   pure $ repoHostname <> ":" <> fromShow repoPort
 
+getRepoId :: OwnerName -> RepoName -> APIHandler err RepoId
+getRepoId owner repo = do
+  -- TODO - the following is just a placeholder query so we can get
+  -- a repoId. It works but needs error handling (return e.g. 404
+  -- when repo wasn't found).
+  [(_ :: String, repoId :: RepoId)] <- query [sql|
+    select "org_repo".id from "org_repo", "org"
+    where "org".id = "org_repo".org_id and "org".orgname = ? and "org_repo".name = ?
+    UNION
+    select "user_repo".id from "user_repo", "user"
+    where "user".id = "user_repo".user_id and "user".username = ? and "user_repo".name = ?
+    |] (owner, repo, owner, repo)
+  return repoId
+
 -- | Get the URL for the REST endpoint that serves the 'owner/repo'
 -- repository. i.e. a URL for a holborn-repo server.
 repoApiUrl :: OwnerName -> RepoName -> APIHandler err Text
@@ -198,14 +212,7 @@ repoApiUrl owner repo = do
   -- higher layer. See
   -- https://bitbucket.org/holbornlondon/holborn/pull-requests/66/wip-notes-on-extracting-repo-layer/diff
   -- for discussion of this.
-  [(_ :: String, repoId :: RepoId)] <- query [sql|
-    select "org_repo".id from "org_repo", "org"
-    where "org".id = "org_repo".org_id and "org".orgname = ? and "org_repo".name = ?
-    UNION
-    select "user_repo".id from "user_repo", "user"
-    where "user".id = "user_repo".user_id and "user".username = ? and "user_repo".name = ?
-    |] (owner, repo, owner, repo)
-
+  repoId <- getRepoId owner repo
   -- TODO: multi-repo-server: Currently our config hardcodes that we have a
   -- single repo server. In future, we would look up the host details from the
   -- database too.
@@ -216,14 +223,7 @@ repoApiUrl owner repo = do
 -- the correct repo on the correct repo server.
 routeRepoRequest :: GitCommand -> OwnerName -> RepoName -> APIHandler err RepoAccess
 routeRepoRequest command owner repo = do
-  -- TODO - the following is just a placeholder query so we can get
-  -- a repoId. It works but needs error handling (return e.g. 404
-  -- when repo wasn't found).
-  [(_ :: String, repoId :: RepoId)] <- query [sql|
-    select 'org', id from "org" where orgname = ? and name = ?
-    UNION
-    select 'user',  id from "user" where username = ? and name = ?
-    |] (owner, repo, owner, repo)
+  repoId <- getRepoId owner repo
   -- TODO: multi-repo-server: Currently, we hardcode a single repo server in
   -- the config. Should instead get the details from the database here.
   AppConf{rawRepoHostname, rawRepoPort} <- getConfig
