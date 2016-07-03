@@ -149,7 +149,6 @@ in
 
     systemd.services.buildbot-worker = {
       description = "buildbot worker";
-      # TODO: Toggle nix packages based on this.
       path = [ buildbotWorkerPackage ] ++ cfg.extraPackages ++
         (if cfg.enableNixBuilds
          then  [ pkgs.nix ] else [ ]);
