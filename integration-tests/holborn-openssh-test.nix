@@ -1,4 +1,4 @@
-{ haskell, haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText, postgresql, writeScript, openssh, lib
+{ haskell, haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText, postgresql, writeScriptBin, openssh, lib
 , helpers }:
 
 let
@@ -14,7 +14,6 @@ let
 
   pgPort = "5444";
   pgUser = "test-user";
-  pgDatabase = "test-db";
 
   holborn-ssh-testconfig = writeText "testconfig" ''
     UsePrivilegeSeparation=no
@@ -78,8 +77,9 @@ let
        ( '${ownerName}'
        , 1
        );
-  insert into "org_repo" (name, description, org_id, hosted_on) values
-       ( '${repoName}'
+  insert into "org_repo" (id, name, description, org_id, hosted_on) values
+       ( ${toString repoId}
+       , '${repoName}'
        , 'test repository owned by ${ownerName}'
        , 1
        , '127.0.0.1:${repoPort}'
@@ -87,33 +87,30 @@ let
   '';
 
 in
-stdenv.mkDerivation {
-  name = "holborn-openssh-test";
-  buildInputs = [ git holborn-ssh postgresql hcl holborn-api holborn-repo test-repos ];
-  srcs = ./.;
-  phases = "unpackPhase buildPhase";
-  buildPhase = ''
+writeScriptBin "holborn-openssh-test" ''
       set -e
       echo "*** holborn-openssh-test"
-      trap 'kill $(jobs -p)' EXIT # kill everything before exit
+      pg_database=$(mktemp -d)
+      working_dir=$(mktemp -d)
+      trap 'kill $(jobs -p); rm -rf $working_dir' EXIT # kill everything before exit
 
-      initdb -D ${pgDatabase}
-      postgres -D ${pgDatabase} -p ${pgPort} &
+      ${postgresql}/bin/initdb -D $pg_database
+      ${postgresql}/bin/postgres -D $pg_database -p ${pgPort} &
       sleep 2
 
-      createuser -p ${pgPort} ${pgUser}
-      createdb -p ${pgPort} -O ${pgUser} ${pgDatabase}
+      ${postgresql}/bin/createuser -p ${pgPort} ${pgUser}
+      ${postgresql}/bin/createdb -p ${pgPort} -O ${pgUser} $pg_database
 
-      psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -qf ${initial_sql}
-      psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -qf ${insertTestKeySql}
-      psql -p ${pgPort} -U ${pgUser} -d ${pgDatabase} -qf ${insertRepositorySql}
+      ${postgresql}/bin/psql -p ${pgPort} -U ${pgUser} -d $pg_database -qf ${initial_sql}
+      ${postgresql}/bin/psql -p ${pgPort} -U ${pgUser} -d $pg_database -qf ${insertTestKeySql}
+      ${postgresql}/bin/psql -p ${pgPort} -U ${pgUser} -d $pg_database -qf ${insertRepositorySql}
 
       # Run ssh + repo server
       ${holborn-ssh}/bin/sshd -D -e -f ${holborn-ssh-testconfig} &
 
       ${holborn-api}/bin/holborn-api-server \
         --port=${apiPort} \
-        --postgres-database=${pgDatabase} \
+        --postgres-database=$pg_database \
         --postgres-user=${pgUser} \
         --postgres-port=${pgPort} \
         --repo-hostname=127.0.0.1 \
@@ -128,21 +125,20 @@ stdenv.mkDerivation {
         --repo-root=${test-repos} &
 
       # Wait for server to become ready
-      hcl-wait-for-port --port ${sshPort} --timeout 5
-      hcl-wait-for-port --port ${repoPort} --timeout 5
-      hcl-wait-for-port --port ${rawRepoPort} --timeout 5
-      hcl-wait-for-port --port ${apiPort} --timeout 5
+      ${hcl}/bin/hcl-wait-for-port --port ${sshPort} --timeout 5
+      ${hcl}/bin/hcl-wait-for-port --port ${repoPort} --timeout 5
+      ${hcl}/bin/hcl-wait-for-port --port ${rawRepoPort} --timeout 5
+      ${hcl}/bin/hcl-wait-for-port --port ${apiPort} --timeout 5
 
       # Clone the test repository
-      mkdir $out
-      pushd $out
+      pushd $working_dir
       # GIT_SSH_COMMAND requires at least git 2.3
       GIT_SSH_COMMAND="${holborn-ssh}/bin/ssh -F ${holborn-ssh-client-config}" GIT_TRACE=2 ${git}/bin/git clone --verbose ssh://127.0.0.1:${sshPort}/${ownerName}/${repoName}
+      observed=$(${git}/bin/git --git-dir ${repoName}/.git rev-parse HEAD)
       popd
 
       # The same content?
       expected=$(${git}/bin/git --git-dir ${helpers.test-repo}/.git rev-parse HEAD)
-      observed=$(${git}/bin/git --git-dir $out/${repoName}/.git rev-parse HEAD)
       [[ $expected == $observed ]]
-  '';
-}
+      echo "SUCCESS"
+''
