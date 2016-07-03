@@ -97,9 +97,6 @@ stdenv.mkDerivation {
       echo "*** holborn-openssh-test"
       trap 'kill $(jobs -p)' EXIT # kill everything before exit
 
-      # Make this script more readable by placing git into PATH
-      export PATH=$PATH:${git}/bin:${holborn-ssh}/bin
-
       initdb -D ${pgDatabase}
       postgres -D ${pgDatabase} -p ${pgPort} &
       sleep 2
@@ -123,7 +120,9 @@ stdenv.mkDerivation {
         --repo-http-port=${repoPort} \
         --repo-git-port=${rawRepoPort} &
 
-      ${holborn-repo}/bin/holborn-repo \
+      # holborn-repo has an undocumented run-time dependency on git, and expects
+      # it to be in the path.
+      PATH=$PATH:${git}/bin ${holborn-repo}/bin/holborn-repo \
         --http-port=${repoPort} \
         --git-port=${rawRepoPort} \
         --repo-root=${test-repos} &
@@ -138,7 +137,7 @@ stdenv.mkDerivation {
       mkdir $out
       pushd $out
       # GIT_SSH_COMMAND requires at least git 2.3
-      GIT_SSH_COMMAND="ssh -F ${holborn-ssh-client-config}" GIT_TRACE=2 git clone --verbose ssh://127.0.0.1:${sshPort}/${ownerName}/${repoName}
+      GIT_SSH_COMMAND="${holborn-ssh}/bin/ssh -F ${holborn-ssh-client-config}" GIT_TRACE=2 ${git}/bin/git clone --verbose ssh://127.0.0.1:${sshPort}/${ownerName}/${repoName}
       popd
 
       # The same content?
