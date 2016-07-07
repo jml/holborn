@@ -94,6 +94,7 @@ module HolbornPrelude
     -- ** Error handling
   , hush
   , fmapL
+  , note
   ) where
 
 import CorePrelude
@@ -135,6 +136,7 @@ import Control.Monad hiding
 
 
 import Control.Applicative
+import Control.Monad.Except (MonadError, throwError)
 import Data.Foldable (Foldable(..), elem, maximum, minimum)
 import Data.Traversable (Traversable(..))
 import qualified Data.Text as Text
@@ -229,6 +231,10 @@ readMay = Safe.readMay . Text.unpack
 hush :: Alternative m => Either e a -> m a
 hush (Left _)  = empty
 hush (Right x) = pure x
+
+-- | Generic version of 'note' from Control.Errors
+note :: (MonadError e m) => e -> Maybe a -> m a
+note err = maybe (throwError err) pure
 
 -- | Map over the Left value of an Either
 --

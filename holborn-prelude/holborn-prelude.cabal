@@ -9,6 +9,7 @@ library
   exposed-modules:     HolbornPrelude
   build-depends:       base >=4.9 && <5
                      , basic-prelude >= 0.5.2
+                     , mtl
                      , safe >= 0.3.9
                      , text >= 1.2.2
 
