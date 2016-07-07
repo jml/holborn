@@ -102,7 +102,7 @@ rec {
 
         services.dex = {
           enable = true;
-          package = (pkgs.callPackage ../nix/dex.nix { goPackages = pkgs.go16Packages; });
+          package = (pkgs.callPackage ../nix/dex.nix {});
           overlordDBURL = "postgres://dex-rw@127.0.0.1/dex?sslmode=disable";
           overlordAdminAPISecret = "lyErb98S0KpcUJ9AYM3jWlkPLxhvD5czolgJqpjls3jdBslhYqmZUOYhPoi8leiSoLvB6fVZ3xA9KdhZC7UA0COdbhgGORyGLlIq2DY/2xxkPm8UItARTqjSbAfVpqSVzSd1ZEhoNUi+iWNTdTVVArZN2Dg20geMNZEzlx/KqyM=";
           overlordKeySecrets = ["RKLSntSuSsg6Ki8AKmo3WaAw1m3KqTxC3bnGF5i9jCk="];
@@ -129,13 +129,6 @@ rec {
         security.acme.certs."norf.co" = {
           webroot = "/var/www/challenges";
           email = "tehunger@gmail.com";
-        };
-
-        # For SSL:
-        services.nginx.enable = true;
-        services.nginx.config = import ./nix/nginx.conf.nix {
-          inherit frontend;
-          proxy_port = ports.API;
         };
     });
 }

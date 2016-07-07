@@ -7,6 +7,8 @@
 -- * timeouts
 -- * logging
 -- * exposing stats
+-- * make dex store username on top of email (https://github.com/coreos/dex/issues/113)
+--   alternative: make people choose username lazily after signup
 --
 -- If the user has authenticated with dex we'll store some credentials
 -- and forward the following headers (values after : are examples).
@@ -40,13 +42,14 @@ import Network.HTTP.ReverseProxy (defaultOnExc, waiProxyTo, WaiProxyResponse(..)
 import Network.HTTP.Types (status302)
 import Network.OAuth.OAuth2 (authorizationUrl, OAuth2(..), appendQueryParam, AccessToken(idToken), fetchAccessToken)
 import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application)
-import Network.Wai.Handler.Warp (run)
+import Network.Wai.Handler.Warp (setPort, defaultSettings)
 import Web.Cookie (parseCookies, renderSetCookie, def, setCookieName, setCookieValue, setCookiePath, setCookieSecure)
 import Servant (serve, (:<|>)(..), (:>), Raw, Server, QueryParam, Header, Get, NoContent(..), JSON)
 import Servant.Server (ServantErr(..), err302, err401)
 import Data.Proxy (Proxy(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import qualified Data.HashMap.Strict as HashMap
+import Network.Wai.Handler.WarpTLS (runTLS, tlsSettings)
 
 
 import Holborn.Proxy.Config (loadConfig, Config(..), oauth2FromConfig)
@@ -81,7 +84,7 @@ redirectToToAuth oauth2Conf _ respond =
 redirectSetAuthCookie :: Config -> UserCookie -> ExceptT ServantErr IO NoContent
 redirectSetAuthCookie Config{configPublicHost} userCookie =
     -- TODO redirectUrl should be a type etc.
-    let redirectUrl = "http://" <> configPublicHost <> "/"
+    let redirectUrl = configPublicHost
         authCookie = def { setCookieName = "auth_cookie", setCookieValue = userCookie, setCookiePath = Just "/", setCookieSecure = False }
         setCookie = (BSL.toStrict . toLazyByteString . renderSetCookie) authCookie
     in throwE (err302 { errHeaders = [("Set-Cookie", setCookie), ("location", redirectUrl)] }) >> pure NoContent
@@ -108,7 +111,7 @@ handleOauth2Callback config@Config{..} manager jar maybeCode = do
                 userCookie <- liftIO (make jar)
                 liftIO (set jar userCookie creds)
                 redirectSetAuthCookie config userCookie
-            Left _ -> authProblem "could not parse id_token"
+            Left err -> authProblem ("could not parse id_token: " <> (show err))
       Left err -> liftIO (print err) >> authProblem "token problem"
 
   where
@@ -126,7 +129,7 @@ handleOauth2Callback config@Config{..} manager jar maybeCode = do
               case decodeCompact (BSL.fromStrict id_) of
                 Right jwt ->
                   case emailEtcClaims (jwtClaimsSet (jwt :: JWT)) of
-                    Nothing -> Left "missing claims"
+                    Nothing -> Left (textToString ("missing claims. Token: " <> (show jwt)))
                     Just claims ->
                       case claims of
                         Success creds -> Right creds
@@ -137,9 +140,9 @@ handleOauth2Callback config@Config{..} manager jar maybeCode = do
       emailEtcClaims claimsSet = do
           let c = _unregisteredClaims claimsSet
           email <- fmap fromJSON (HashMap.lookup "email" c)
-          email_verified <- fmap fromJSON (HashMap.lookup "email_verified" c)
+          email_verified <- (fmap fromJSON (HashMap.lookup "email_verified" c)) <|> Just (Success False)
           name <- fmap fromJSON (HashMap.lookup "name" c)
-          pure $ TrustedCreds <$> email <*>  email_verified <*> name
+          pure $ TrustedCreds <$> email <*> email_verified <*> name
 
 
 handleProxying :: (AuthJar jar) => Config -> Manager -> jar -> Maybe Text -> Application
@@ -187,4 +190,7 @@ main = do
     -- what the security trade-offs are here.
     jar <- newMemoryJar
     manager <- newManager defaultManagerSettings
-    run configPort (app config manager jar)
+
+    -- TODO 14th: run tls port, install this thing on norf.co
+    let settings = setPort configSslPort defaultSettings
+    runTLS (tlsSettings configSslFullChain configSslKey) settings  (app config manager jar)
