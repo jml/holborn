@@ -12,6 +12,7 @@ module Holborn.JSON.SSHRepoCommunication
        , unparseSSHCommand
        , parseSSHKey
        , unparseSSHKey
+       , unparseKeyType
        , SSHCommandLine(..)
        ) where
 

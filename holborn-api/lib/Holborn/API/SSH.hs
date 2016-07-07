@@ -39,12 +39,14 @@ import Holborn.API.Internal
   , toServantHandler
   )
 import Holborn.API.Types (Username)
-import Holborn.JSON.SSHRepoCommunication ( KeyType(..)
-                                         , GitCommand(..)
-                                         , SSHCommandLine(..)
-                                         , SSHKey
-                                         , unparseSSHKey
-                                         )
+import Holborn.JSON.SSHRepoCommunication
+  ( KeyType(..)
+  , GitCommand(..)
+  , SSHCommandLine(..)
+  , SSHKey
+  , unparseKeyType
+  , unparseSSHKey
+  )
 
 
 -- | Main internal API (only used by our openssh version ATM).
@@ -106,9 +108,7 @@ instance MimeRender PlainText SSHKeys where
 checkKey :: CheckKeyRequest -> SSHHandler CheckKeyResponse
 checkKey request@CheckKeyRequest{..} = do
     logDebug ("checkKey" :: Text, request)
-    let comparison_pubkey = case key_type of
-            RSA -> "ssh-rsa " <> key
-            DSA -> "ssh-dsa " <> key
+    let comparison_pubkey = unparseKeyType key_type <>  " " <> key
     logDebug ("actual db check" :: String, comparison_pubkey)
     rows <- query [sql|
                    select pk.id, pk.verified
