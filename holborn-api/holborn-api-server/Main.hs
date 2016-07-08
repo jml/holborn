@@ -10,6 +10,7 @@ import Network.Wai (Application)
 import qualified Network.Wai.Handler.Warp as Warp
 import Servant (serve)
 import Network.Wai.Middleware.Cors (cors, CorsResourcePolicy(..), simpleCorsResourcePolicy, simpleHeaders)
+import qualified Network.Wai.Middleware.RequestLogger as RL
 import Options.Applicative
   ( ParserInfo
   , auto
@@ -96,4 +97,4 @@ main = do
   conf@Config{port} <- execParser options
   print $ "Using config: " <> show conf
   appConf <- loadAppConf conf
-  Warp.runSettings (warpSettings port) (cors devCors (app appConf))
+  Warp.runSettings (warpSettings port) (RL.logStdoutDev (cors devCors (app appConf)))

@@ -5,7 +5,7 @@
 , optparse-applicative, postgresql-simple, process, QuickCheck
 , servant-docs, servant-server, stdenv, tasty, tasty-hspec
 , tasty-hunit, tasty-quickcheck, text, time, transformers, wai
-, wai-cors, warp
+, wai-cors, wai-extra, warp
 }:
 mkDerivation {
   pname = "holborn-api";
@@ -22,7 +22,7 @@ mkDerivation {
   ];
   executableHaskellDepends = [
     base holborn-common-types holborn-prelude optparse-applicative
-    servant-server wai wai-cors warp
+    servant-server wai wai-cors wai-extra warp
   ];
   testHaskellDepends = [
     aeson base bytestring errors holborn-common-types holborn-prelude
