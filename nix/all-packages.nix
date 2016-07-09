@@ -30,10 +30,11 @@ haskellPackages.override {
 
       hcl = self.callPackage ../hcl {};
       holborn-api = self.callPackage ../holborn-api {};
+      holborn-common-types = self.callPackage ../holborn-common-types {};
       holborn-prelude = self.callPackage ../holborn-prelude {};
       holborn-repo = self.callPackage ../holborn-repo {};
+      holborn-ssh = self.callPackage ../holborn-ssh {};
       holborn-syntax = self.callPackage ../holborn-syntax {};
-      holborn-common-types = self.callPackage ../holborn-common-types {};
 
       language-python = self.callPackage ./language-python.nix {};
       unexceptionalio = self.callPackage ./unexceptionalio.nix {};
