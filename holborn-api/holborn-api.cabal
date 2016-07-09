@@ -97,6 +97,7 @@ executable holborn-api-server
                      , holborn-prelude
                      , servant-server >= 0.5
                      , wai >= 3.0
+                     , wai-extra
                      , warp >= 3.1
                      , optparse-applicative
                      , holborn-api

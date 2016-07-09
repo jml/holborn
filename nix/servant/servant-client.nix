@@ -5,6 +5,7 @@
 , string-conversions, text, transformers, transformers-compat, wai
 , warp
 , forked-servant
+, stdenv
 }:
 mkDerivation rec {
   pname = "servant-client";

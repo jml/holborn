@@ -7,19 +7,11 @@
 #   vagrant plugin install vagrant-nixos-plugin
 
 Vagrant.configure(2) do |config|
-  # NixOS 15.09
-  config.vm.box = "zimbatm/nixos-15.09-x86_64"
+  config.vm.box = "rodamber/nixos-16.03-x86_64"
 
-  # holborn-ui
-  config.vm.network "forwarded_port",
-                    guest: 1337,
-                    host: 1337,
-                    protocol: "tcp"
-
-  config.vm.network "forwarded_port",
-                    guest: 8002,
-                    host: 8002,
-                    protocol: "tcp"
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 4096
+  end
 
   config.vm.provision :nixos,
     run: 'always',

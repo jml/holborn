@@ -5,8 +5,6 @@ let t = writeText "local-nixconf.conf" ''
 ''; in
 {
   nixpkgs.config = {
-    # Doesn't seem to allow me to use holborn-syntax. Is there actually a way
-    # to do this?
     allowUnfree = true;
   };
 
@@ -17,14 +15,18 @@ let t = writeText "local-nixconf.conf" ''
     postgresql
     git
     tmux
+    gnumake
     # ghc?
     # open-haddock?
     # nox?
     # stuff for purescript
   ];
 
-  # Allow default pulp server and default holborn-api.
-  networking.firewall.allowedTCPPorts = [ 1337 8002 ];
+  # Allow default pulp server, default holborn-api, and default holborn-repo.
+  #
+  # The SSH docker image won't be able to reach holborn-api and holborn-repo
+  # on the main host if these aren't enabled.
+  networking.firewall.allowedTCPPorts = [ 1337 8002 8080 8081 ];
 
   # Assumes bash, which is slightly wrong, since this variable is used in all
   # shells.
