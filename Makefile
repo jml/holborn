@@ -15,6 +15,7 @@ all: $(nix_exprs)
 check:
 	nix-build --no-out-link ./integration-tests
 	nix-shell -p '(import ./integration-tests).openssh' --command "holborn-openssh-test"
+	nix-shell -p '(import ./integration-tests).ssh-authz' --command "holborn-ssh-authz-test"
 
 clean:
 	rm -f $(nix_exprs)

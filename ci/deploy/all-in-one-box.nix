@@ -62,6 +62,8 @@ in
     buildmasterPort = workerPort;
     enableNixBuilds = true;
     allowUnfree = true;
+    # Some of our tests run docker, so we need permission to run.
+    extraGroups = [ "docker" ];
     extraPackages = [
       # We need git to be able to get the source code to build it!
       pkgs.git
@@ -71,8 +73,13 @@ in
       pkgs.direnv
       # direnv uses bash
       pkgs.bash
+      # Test scripts use docker.
+      pkgs.docker
     ];
   };
+
+  # Needed by the worker to run certain tests.
+  virtualisation.docker.enable = true;
 
   # TODO: Only bind web service to loopback device.
   services.buildbot = {
@@ -128,5 +135,8 @@ in
   };
 
   services.sshd.enable = true;
-  networking.firewall.allowedTCPPorts = [ 22 80 443 ];
+
+  # We expose the 8000+ ports so that things run in docker containers (i.e.
+  # SSH) can contact the docker host. Needed on worker only.
+  networking.firewall.allowedTCPPorts = [ 22 80 443 8002 8080 8081 ];
 }
