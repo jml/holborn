@@ -15,6 +15,7 @@ let t = writeText "local-nixconf.conf" ''
     postgresql
     git
     tmux
+    docker
     gnumake
     # ghc?
     # open-haddock?
@@ -37,4 +38,9 @@ let t = writeText "local-nixconf.conf" ''
     cp ${t} ~/.nixpkgs/config.nix
   '';
 
+  virtualisation.docker.enable = true;
+
+  users.extraUsers.vagrant = {
+    extraGroups = [ "docker" ];
+  };
 }
