@@ -25,7 +25,6 @@ import Test.Tasty.QuickCheck
 import Holborn.API (api, server)
 import Holborn.API.Config (AppConf, Config(..), loadAppConf)
 import Holborn.API.Internal (APIError(..), APIHandler, jsonGet', runAPIHandler)
-import Holborn.API.SSH (shellEncode)
 import Holborn.API.Types (newPassword)
 import Holborn.JSON.SSHRepoCommunication (RepoCall)
 
@@ -95,34 +94,10 @@ apiTests =
   ]
 
 
-stringToBytes :: String -> LByteString
-stringToBytes = fromStrict . encodeUtf8 . fromString
-
-
-roundtripViaShell :: String -> PropertyM IO String
-roundtripViaShell input = do
-  output <- run (readCreateProcess (shell $ "echo " <> input) "")
-  let output' = textToString . strip . fromString $ output
-  monitor (counterexample ("output: " <> output'))
-  return output'
-
-
--- | A given object can be encoded to JSON, echoed via the shell, and then
--- decoded to get the original object back.
-prop_roundTripsViaShell :: (Eq a, Show a, FromJSON a, ToJSON a) => a -> PropertyM IO ()
-prop_roundTripsViaShell input = do
-  output <- roundtripViaShell (textToString (shellEncode input))
-  let parsed = decode (stringToBytes output)
-  monitor (counterexample ("parsed: " <> textToString (show parsed)))
-  assert (parsed == Just input)
-
-
 tests :: TestTree
 tests =
   testGroup "Holborn.API"
   [ testCase "password not shown" $ do
         pwd <- newPassword "hello"
         show pwd @?= "*hidden-password*"
-  , testProperty "repo call roundtrips through shell" $ \x ->
-        monadicIO $ prop_roundTripsViaShell (x :: RepoCall)
   ]

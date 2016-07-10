@@ -15,9 +15,6 @@ module Holborn.API.SSH
   ( API
   , api
   , server
-    -- | Exported for testing
-  , shellEncode
-  , shellQuote
     -- | The following are library functions used by command-line tools.
     -- Perhaps they should be moved to another module.
   , KeyId
@@ -31,10 +28,9 @@ module Holborn.API.SSH
 import HolbornPrelude
 
 import GHC.Generics (Generic)
-import qualified Data.Text as Text
-import Data.ByteString.Lazy (fromChunks, toStrict)
+import Data.ByteString.Lazy (fromChunks)
 import Data.Proxy (Proxy(..))
-import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object, encode)
+import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object)
 import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(..), PlainText, Server, enter)
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
@@ -177,33 +173,6 @@ checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
         case (command', readOnly) of
           (GitReceivePack, True)  -> pure $ Left $ ReadOnlyKey keyId
           _                       -> Right <$> routeRepoRequest command' owner name
-
-
--- | Encode a JSON object so that it can be echoed on the shell.
---
--- We want this because our customized SSH server operates by executing a
--- command returned from this API server in the shell.
-shellEncode :: (ToJSON a) => a -> Text
-shellEncode = shellQuote . decodeUtf8 . toStrict . encode
-
-
--- | Surround 'str' in single quotes, and wrap every literal single quote
--- in a double quotes that are outside the single quotes.
---
--- e.g. the literal:
---     foo 'bar' baz
---
--- becomes:
---     'foo '"'"'bar'"'"' baz'
---
--- which would be echoed as:
---     foo 'bar' baz
-shellQuote :: Text -> Text
-shellQuote str = "'" <> escape str <> "'"
-  where
-    escape = escapeBackslashes . escapeSingleQuotes
-    escapeSingleQuotes = Text.replace "'" "'\"'\"'"
-    escapeBackslashes = Text.replace "\\" "\\\\"
 
 
 accessRepo :: CheckRepoAccessRequest -> SSHHandler RepoAccess
