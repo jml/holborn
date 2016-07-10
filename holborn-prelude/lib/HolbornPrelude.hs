@@ -95,6 +95,9 @@ module HolbornPrelude
   , hush
   , fmapL
   , note
+
+    -- ** Debugging
+  , printErr
   ) where
 
 import CorePrelude
@@ -147,6 +150,7 @@ import qualified Prelude
 import Data.Text.Encoding (encodeUtf8, decodeUtf8With)
 import Data.Text.Encoding.Error (lenientDecode)
 import qualified Safe
+import System.IO (hPutStrLn, stderr)
 
 -- | > map = fmap
 map :: (Functor f) => (a -> b) -> f a -> f b
@@ -166,6 +170,9 @@ concat = mconcat
 intercalate :: Monoid w => w -> [w] -> w
 intercalate xs xss = mconcat (Data.List.intersperse xs xss)
 
+-- | Print to standard error.
+printErr :: Text -> IO ()
+printErr = hPutStrLn stderr . textToString
 
 -- | Compute the sum of a finite list of numbers.
 sum :: Num a => [a] -> a
