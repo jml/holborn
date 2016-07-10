@@ -64,10 +64,7 @@ import Holborn.JSON.SSHRepoCommunication
 -- | Main internal API (only used by our openssh version ATM).
 type API =
     "ssh" :> (
-       "check-key"
-       :> ReqBody '[JSON] CheckKeyRequest
-       :> Post '[JSON] CheckKeyResponse
-       :<|> "access-repo"
+       "access-repo"
        :> ReqBody '[JSON] CheckRepoAccessRequest
        :> Post '[JSON] RepoAccess
        :<|> Capture "user" Username
@@ -84,8 +81,8 @@ api = Proxy
 
 
 server :: AppConf -> Server API
-server conf = enter (toServantHandler conf) $ checkKey
-    :<|> accessRepo
+server conf = enter (toServantHandler conf) $
+    accessRepo
     :<|> listKeys
     :<|> authorizedKeys
 
@@ -122,28 +119,6 @@ instance MimeRender PlainText SSHKeys where
   -- | Turn a list of SSH keys into a line-separated plaintext dump that would
   -- serve as an authorized_keys file.
   mimeRender _ = fromChunks . map ((<> "\n") . unparseSSHKey) . map snd . unSSHKeys
-
-
--- | Implementation
-checkKey :: CheckKeyRequest -> SSHHandler CheckKeyResponse
-checkKey request@CheckKeyRequest{..} = do
-    logDebug ("checkKey" :: Text, request)
-    let comparison_pubkey = unparseKeyType key_type <>  " " <> key
-    logDebug ("actual db check" :: String, comparison_pubkey)
-    rows <- query [sql|
-                   select pk.id, pk.verified
-                   from "public_key" as pk  where comparison_pubkey = ?
-               |] (Only comparison_pubkey)
-    logDebug rows
-
-    return $ case rows of
-       [(keyId, True)] -> CheckKeyResponse (Just keyId)
-       -- PUPPY: We currently don't have any support for verifying SSH keys.
-       -- To help us test our server in the mean-time, just pretend that every
-       -- key is verified. In the future, non-verified keys will not be
-       -- allowed to access the system.
-       [(keyId, False)] -> CheckKeyResponse (Just keyId)
-       _ -> terror "TODO return error for checkKey"
 
 
 -- | List all the verified SSH keys for a user.
@@ -247,20 +222,6 @@ instance FromJSON CheckKeyRequest
 instance ToJSON CheckKeyRequest
 
 type KeyId = Int
-
-
-data CheckKeyResponse = CheckKeyResponse
-    { _key_id :: Maybe KeyId -- TODO might be more useful to return Either with error message?
-    } deriving (Show, Generic)
-
-instance ToJSON CheckKeyResponse where
-    toJSON (CheckKeyResponse (Just key_id_)) =
-        object [ "allowed"  .= True
-               , "key_id" .= key_id_
-               ]
-    toJSON (CheckKeyResponse Nothing) =
-        object [ "allowed"  .= False
-               ]
 
 
 data CheckRepoAccessRequest = CheckRepoAccessRequest
