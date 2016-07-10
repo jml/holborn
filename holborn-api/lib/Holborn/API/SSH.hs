@@ -24,7 +24,6 @@ module Holborn.API.SSH
     -- | Need these for API requests
   , CheckKeyRequest(..)
   , CheckRepoAccessRequest(..)
-  , CheckRepoAccessResponse(..)
     -- | Need these for authentication requests
   , SSHKeys(unSSHKeys)
   ) where
@@ -68,9 +67,6 @@ type API =
        "check-key"
        :> ReqBody '[JSON] CheckKeyRequest
        :> Post '[JSON] CheckKeyResponse
-       :<|> "check-repo-access"
-       :> ReqBody '[JSON] CheckRepoAccessRequest
-       :> Post '[JSON] CheckRepoAccessResponse
        :<|> "access-repo"
        :> ReqBody '[JSON] CheckRepoAccessRequest
        :> Post '[JSON] RepoAccess
@@ -89,7 +85,6 @@ api = Proxy
 
 server :: AppConf -> Server API
 server conf = enter (toServantHandler conf) $ checkKey
-    :<|> checkRepoAccess
     :<|> accessRepo
     :<|> listKeys
     :<|> authorizedKeys
@@ -236,30 +231,6 @@ shellQuote str = "'" <> escape str <> "'"
     escapeBackslashes = Text.replace "\\" "\\\\"
 
 
--- | Emit the Holborn side of the SSH command
-renderAccess :: Either SSHAccessError RepoAccess -> Text
-renderAccess (Left err) = ">&2 echo '" <> toErrorMessage err <> "' && exit 1"
-  where
-    toErrorMessage NoSSHKey = "No SSH key"
-    toErrorMessage MultipleSSHKeys = "Multiple SSH keys"
-    toErrorMessage (ReadOnlyKey keyId) = "SSH key with id " <> show (keyId :: Int) <> " is readonly"
-    toErrorMessage UnverifiedKey = "SSH key not verified"
-renderAccess (Right (AccessGranted hostname port repoCall)) =
-  concat ["(echo -n "
-         , shellEncode repoCall
-         , " && cat) | nc "
-         , hostname
-         , " "
-         , fromShow port
-         ]
-
-
-checkRepoAccess :: CheckRepoAccessRequest -> SSHHandler CheckRepoAccessResponse
-checkRepoAccess request = do
-    route <- checkRepoAccess' request
-    return . CheckRepoAccessResponse . Just . renderAccess $ route
-
-
 accessRepo :: CheckRepoAccessRequest -> SSHHandler RepoAccess
 accessRepo request = do
   route <- checkRepoAccess' request
@@ -299,18 +270,3 @@ data CheckRepoAccessRequest = CheckRepoAccessRequest
 
 instance FromJSON CheckRepoAccessRequest
 instance ToJSON CheckRepoAccessRequest
-
-
-data CheckRepoAccessResponse = CheckRepoAccessResponse
-    { -- | 'Nothing' means no access allowed. Otherwise, the command that the SSH server should run in a shell.
-      _target :: Maybe Text -- e.g. "nc 127.0.0.1:8080"
-    } deriving (Show)
-
-instance ToJSON CheckRepoAccessResponse where
-    toJSON (CheckRepoAccessResponse (Just target)) =
-        object [ "allowed" .= True
-               , "target"  .= target
-               ]
-    toJSON (CheckRepoAccessResponse Nothing) =
-        object [ "allowed" .= False
-               ]
