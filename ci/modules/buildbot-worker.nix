@@ -105,6 +105,15 @@ in
         '';
       };
 
+      extraGroups = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        description = ''
+          Groups that the worker needs to be a member of in order to run the
+          tests.
+        '';
+      };
+
       extraPackages = mkOption {
         type = types.listOf types.package;
         default = [];
@@ -140,6 +149,7 @@ in
       description = "Buildbot worker";
       createHome = true;
       home = cfg.runDirectory;
+      extraGroups = cfg.extraGroups;
       useDefaultShell = true;
     };
 

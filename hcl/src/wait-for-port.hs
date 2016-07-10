@@ -25,7 +25,6 @@ import Options.Applicative
   , value
   )
 import System.Exit (exitWith)
-import System.IO (hPutStrLn, stderr)
 
 
 data Config = Config { port :: Int
@@ -49,9 +48,6 @@ options = info (helper <*> parser) description
       , progDesc "Wait for --timeout seconds for a port to become active, then fail if it didn't. Retries in 50ms then backs off exponentially."
       , header "wait-for-port - wait for a port to become active"
       ]
-
-printErr :: Text -> IO ()
-printErr = hPutStrLn stderr . textToString
 
 serverAddr :: String -> Int -> Text
 serverAddr host port = fromString host <> ":" <> show port

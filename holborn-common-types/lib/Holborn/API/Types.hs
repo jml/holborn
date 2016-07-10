@@ -16,10 +16,10 @@ import Database.PostgreSQL.Simple.ToField (ToField(..))
 import qualified Prelude
 import Data.Aeson (FromJSON(..), ToJSON(..), Value(..))
 import Data.Aeson.Types (typeMismatch)
-import Web.HttpApiData (FromHttpApiData(..))
+import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 
 
-newtype Username = Username Text deriving (Eq, Ord, Show, ToField, FromHttpApiData)
+newtype Username = Username Text deriving (Eq, Ord, Show, ToField, FromHttpApiData, ToHttpApiData, IsString)
 newtype Email = Email Text deriving (Eq, Ord, Show, ToField, FromField)
 newtype Password = Password ByteString deriving (ToField)
 

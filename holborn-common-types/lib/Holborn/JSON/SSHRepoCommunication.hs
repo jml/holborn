@@ -6,12 +6,13 @@ module Holborn.JSON.SSHRepoCommunication
        ( GitCommand(..)
        , unparseGitCommand
        , RepoCall(..)
-       , SSHKey
+       , SSHKey(SSHKey)
        , KeyType(..)
        , parseSSHCommand
        , unparseSSHCommand
        , parseSSHKey
        , unparseSSHKey
+       , parseKeyType
        , unparseKeyType
        , SSHCommandLine(..)
        ) where
@@ -20,6 +21,8 @@ import HolbornPrelude
 
 import Control.Applicative (Alternative(..))
 import Data.Aeson (FromJSON(..), ToJSON(..), genericParseJSON, genericToJSON, object, withText, (.=))
+import Data.Aeson (Value(Object), (.:))
+import Data.Aeson.Types (typeMismatch)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import qualified Data.Attoparsec.Text as AT
 import qualified Data.ByteString as BS
@@ -141,12 +144,16 @@ instance Arbitrary RepoCall where
 
 
 -- | SSH key type
-data KeyType = RSA | DSA deriving (Show, Eq, Ord)
+data KeyType = RSA | DSA deriving (Show, Eq, Ord, Read)
 
 instance FromJSON KeyType where
     parseJSON "RSA" = pure RSA
     parseJSON "DSA" = pure DSA
     parseJSON _ = mzero
+
+instance ToJSON KeyType where
+  toJSON RSA = "RSA"
+  toJSON DSA = "DSA"
 
 
 parseKeyType :: (Alternative m, Eq s, IsString s) => s -> m KeyType
@@ -170,6 +177,12 @@ data SSHKey = SSHKey { _sshKeyType :: KeyType
 instance ToJSON SSHKey where
     -- TODO: Maybe include comment in JSON output?
     toJSON (SSHKey _ key _comment fingerprint) = object ["key" .= decodeUtf8 key, "fingerprint" .= decodeUtf8 fingerprint]
+
+instance FromJSON SSHKey where
+    parseJSON (Object v) = SSHKey RSA <$> (encodeUtf8 <$> v .: "key")
+                                      <*> pure Nothing
+                                      <*> (encodeUtf8 <$> v .: "fingerprint")
+    parseJSON wat = typeMismatch "SSHKey" wat
 
 instance FromField SSHKey where
     fromField f (Just bs) = case parseSSHKey bs of

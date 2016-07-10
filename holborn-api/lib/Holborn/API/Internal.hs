@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -33,9 +34,10 @@ import Control.Monad.Catch (MonadThrow(..))
 import Control.Monad.Fail (MonadFail(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
-import Data.Aeson (FromJSON, Value, eitherDecode', encode, object, (.=))
+import Data.Aeson (FromJSON, ToJSON, Value, eitherDecode', encode, object, (.=))
 import qualified Database.PostgreSQL.Simple as PostgreSQL
 import Database.PostgreSQL.Simple.SqlQQ (sql)
+import GHC.Generics (Generic)
 import Network.HTTP.Client (parseUrl, httpLbs, requestHeaders, responseBody)
 import Network.HTTP.Types.Header (hAccept)
 import Servant (ServantErr(..), (:~>)(Nat), toUrlPiece)
@@ -176,7 +178,10 @@ jsonGet' endpoint = do
 
 
 -- | Routing to a git repository.
-data RepoAccess = AccessGranted Hostname Port RepoCall deriving (Show)
+data RepoAccess = AccessGranted Hostname Port RepoCall deriving (Show, Generic)
+
+instance FromJSON RepoAccess
+instance ToJSON RepoAccess
 
 type Hostname = Text
 type Port = Int

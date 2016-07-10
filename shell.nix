@@ -11,9 +11,9 @@ in
   buildDepends = [
     hp.hcl
     hp.holborn-api
-    hp.holborn-common-types
     hp.holborn-repo
-    hp.holborn-syntax
+    hp.holborn-ssh
+    postgresql
   ];
   license = stdenv.lib.licenses.unfree;
 }).env
