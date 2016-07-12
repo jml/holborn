@@ -212,7 +212,6 @@ main = do
 
     void $ forkIO $ run configPort (serve redirectAndAcmeAPI (redirectAndAcmeServer configPublicHost))
 
-    -- TODO 14th: run tls port, install this thing on norf.co
     let settings = setPort configSslPort defaultSettings
     forever $ do
         runTLS (tlsSettings configSslFullChain configSslKey) settings (app config manager jar) `catch` degradedModeMessage

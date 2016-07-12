@@ -59,7 +59,7 @@ executable holborn-proxy
 
   hs-source-dirs:      src
   ghc-options:         -Wall -Werror -threaded
-  main-is:             haskell-proxy.hs
+  main-is:             holborn-proxy.hs
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
