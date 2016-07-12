@@ -35,6 +35,7 @@ haskellPackages.override {
       holborn-repo = self.callPackage ../holborn-repo {};
       holborn-ssh = self.callPackage ../holborn-ssh {};
       holborn-syntax = self.callPackage ../holborn-syntax {};
+      holborn-proxy = self.callPackage ../holborn-proxy {};
 
       language-python = self.callPackage ./language-python.nix {};
       unexceptionalio = self.callPackage ./unexceptionalio.nix {};

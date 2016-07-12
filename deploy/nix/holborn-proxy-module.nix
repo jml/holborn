@@ -34,6 +34,9 @@ in
         PrivateTmp = true;
         PrivateDevices = true;
         NoNewPrivileges = true;
+
+        # Give server minimum set of capabilities needed to run (bind to ports < 1024)
+        # and disallow escalating caps thereafter.
         AmbientCapabilities = "CAP_NET_BIND_SERVICE";
         CapabilityBoundingSet = "CAP_NET_BIND_SERVICE";
         PermissionsStartOnly = true;
