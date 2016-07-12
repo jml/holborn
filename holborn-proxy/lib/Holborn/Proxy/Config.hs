@@ -2,6 +2,7 @@ module Holborn.Proxy.Config
   ( loadConfig
   , Config(..)
   , oauth2FromConfig
+  , ServiceBaseUrl
   ) where
 
 import BasicPrelude
@@ -11,11 +12,13 @@ import qualified Network.Wai.Handler.Warp as Warp
 import Network.OAuth.OAuth2 (OAuth2(..))
 
 
+type ServiceBaseUrl = ByteString
+
 data Config = Config { configPort :: Warp.Port
                      , configSslPort :: Warp.Port
                      , configSslFullChain :: FilePath
                      , configSslKey :: FilePath
-                     , configPublicHost :: ByteString
+                     , configPublicHost :: ServiceBaseUrl
                      , configUpstreamHost :: ByteString
                      , configUpstreamPort :: Warp.Port
                      , configDexHost :: ByteString

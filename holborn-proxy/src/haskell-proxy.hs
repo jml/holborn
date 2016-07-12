@@ -53,7 +53,7 @@ import Network.Wai.Handler.WarpTLS (runTLS, tlsSettings)
 import Servant.Utils.StaticFiles (serveDirectory)
 import Control.Concurrent (forkIO, threadDelay)
 
-import Holborn.Proxy.Config (loadConfig, Config(..), oauth2FromConfig)
+import Holborn.Proxy.Config (loadConfig, Config(..), oauth2FromConfig, ServiceBaseUrl)
 import Holborn.Proxy.AuthJar (AuthJar(..), UserCookie, TrustedCreds(..), newMemoryJar)
 
 
@@ -81,13 +81,13 @@ proxyServer config manager jar =
     :<|> handleProxying config manager jar
 
 
-redirectAndAcmeServer :: Server RedirectAndAcmeAPI
-redirectAndAcmeServer =
+redirectAndAcmeServer :: ServiceBaseUrl -> Server RedirectAndAcmeAPI
+redirectAndAcmeServer baseUrl =
     serveDirectory "/var/www/challenges"
     :<|> redirectToHTTPS
     where
-      -- TODO set redirect URL from config
-      redirectToHTTPS _ respond = respond (responseLBS status302 [("location", "https://127.0.0.1")] BSL.empty)
+      -- TODO append path from request (e.g. http://bla.co/path -> https://bla.co/path)
+      redirectToHTTPS _ respond = respond (responseLBS status302 [("location", baseUrl)] BSL.empty)
 
 
 -- | Redirect to dex (or whatever we hav configured)
@@ -210,7 +210,7 @@ main = do
     jar <- newMemoryJar
     manager <- newManager defaultManagerSettings
 
-    void $ forkIO $ run 8080 (serve redirectAndAcmeAPI redirectAndAcmeServer)
+    void $ forkIO $ run 8080 (serve redirectAndAcmeAPI (redirectAndAcmeServer configPublicHost))
 
     -- TODO 14th: run tls port, install this thing on norf.co
     let settings = setPort configSslPort defaultSettings
