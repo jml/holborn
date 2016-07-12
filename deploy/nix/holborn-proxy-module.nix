@@ -47,6 +47,7 @@ in
       serviceConfig = {
         PrivateTmp = true;
         PrivateDevices = true;
+        NoNewPrivileges = true;
         AmbientCapabilities = "CAP_NET_BIND_SERVICE";
         CapabilityBoundingSet = "CAP_NET_BIND_SERVICE";
         PermissionsStartOnly = true;
