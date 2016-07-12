@@ -210,7 +210,7 @@ main = do
     jar <- newMemoryJar
     manager <- newManager defaultManagerSettings
 
-    void $ forkIO $ run 8080 (serve redirectAndAcmeAPI (redirectAndAcmeServer configPublicHost))
+    void $ forkIO $ run configPort (serve redirectAndAcmeAPI (redirectAndAcmeServer configPublicHost))
 
     -- TODO 14th: run tls port, install this thing on norf.co
     let settings = setPort configSslPort defaultSettings

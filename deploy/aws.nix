@@ -43,6 +43,7 @@ rec {
         holborn-api = hp.callPackage ../holborn-api {};
         holborn-repo = hp.callPackage ../holborn-repo {};
         holborn-ssh = hp.callPackage ../holborn-ssh {};
+        holborn-proxy = hp.callPackage ../holborn-proxy {};
 
         # TODO - the following three should live holborn-ui:
         node_modules = pkgs.callPackage ../nix/node_modules.nix {};
@@ -99,6 +100,10 @@ rec {
           package = holborn-repo;
           port = ports.REPO;
           rawPort = ports.RAW;
+        };
+
+        services.holborn-proxy = {
+          package = holborn-proxy;
         };
 
         services.dex = {

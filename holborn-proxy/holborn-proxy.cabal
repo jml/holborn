@@ -5,8 +5,6 @@ name:                holborn-proxy
 version:             0.1.0.0
 synopsis:            Reverse proxy
 -- description:
--- license:
-license-file:        LICENSE
 author:              Tom Hunger
 maintainer:          tehunger@gmail.com
 -- copyright:
