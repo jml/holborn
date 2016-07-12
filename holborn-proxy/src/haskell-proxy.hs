@@ -42,7 +42,7 @@ import Network.HTTP.ReverseProxy (defaultOnExc, waiProxyTo, WaiProxyResponse(..)
 import Network.HTTP.Types (status302)
 import Network.OAuth.OAuth2 (authorizationUrl, OAuth2(..), appendQueryParam, AccessToken(idToken), fetchAccessToken)
 import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application)
-import Network.Wai.Handler.Warp (setPort, defaultSettings)
+import Network.Wai.Handler.Warp (run, setPort, defaultSettings)
 import Web.Cookie (parseCookies, renderSetCookie, def, setCookieName, setCookieValue, setCookiePath, setCookieSecure)
 import Servant (serve, (:<|>)(..), (:>), Raw, Server, QueryParam, Header, Get, NoContent(..), JSON)
 import Servant.Server (ServantErr(..), err302, err401)
@@ -50,7 +50,8 @@ import Data.Proxy (Proxy(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import qualified Data.HashMap.Strict as HashMap
 import Network.Wai.Handler.WarpTLS (runTLS, tlsSettings)
-
+import Servant.Utils.StaticFiles (serveDirectory)
+import Control.Concurrent (forkIO, threadDelay)
 
 import Holborn.Proxy.Config (loadConfig, Config(..), oauth2FromConfig)
 import Holborn.Proxy.AuthJar (AuthJar(..), UserCookie, TrustedCreds(..), newMemoryJar)
@@ -61,14 +62,32 @@ type ProxyAPI =
     :<|> Header "Cookie" Text :> Raw
 
 
+type RedirectAndAcmeAPI =
+    ".well-known" :> "acme-challenge" :> Raw
+    :<|> Raw
+
+
 proxyApi :: Proxy ProxyAPI
 proxyApi = Proxy
+
+
+redirectAndAcmeAPI :: Proxy RedirectAndAcmeAPI
+redirectAndAcmeAPI = Proxy
 
 
 proxyServer :: (AuthJar jar) => Config -> Manager -> jar -> Server ProxyAPI
 proxyServer config manager jar =
     handleOauth2Callback config manager jar
     :<|> handleProxying config manager jar
+
+
+redirectAndAcmeServer :: Server RedirectAndAcmeAPI
+redirectAndAcmeServer =
+    serveDirectory "/var/www/challenges"
+    :<|> redirectToHTTPS
+    where
+      -- TODO set redirect URL from config
+      redirectToHTTPS _ respond = respond (responseLBS status302 [("location", "https://127.0.0.1")] BSL.empty)
 
 
 -- | Redirect to dex (or whatever we hav configured)
@@ -191,6 +210,15 @@ main = do
     jar <- newMemoryJar
     manager <- newManager defaultManagerSettings
 
+    void $ forkIO $ run 8080 (serve redirectAndAcmeAPI redirectAndAcmeServer)
+
     -- TODO 14th: run tls port, install this thing on norf.co
     let settings = setPort configSslPort defaultSettings
-    runTLS (tlsSettings configSslFullChain configSslKey) settings  (app config manager jar)
+    forever $ do
+        runTLS (tlsSettings configSslFullChain configSslKey) settings (app config manager jar) `catch` degradedModeMessage
+        threadDelay (1000 * 5000)
+  where
+    degradedModeMessage (err :: IOException) = do
+        putStrLn "Error when running TLS server:"
+        print (show err)
+        putStrLn "Running in degraded mode."

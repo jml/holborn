@@ -30,12 +30,13 @@ in
 
       environment = {
           PORT = "80";
-          #SSL_PORT = "443";
-          HOLBORN_PUBLIC_HOST = "norf.co";
+          SSL_PORT = "443";
+          HOLBORN_PUBLIC_HOST = "https://norf.co";
           HOLBORN_UPSTREAM_HOST = "127.0.0.1:8002";
           HOLBORN_UPSTREAM_PORT = "8002";
-          HOLBORN_DEX_HOST = "norf.co:5556";
-          HOLBORN_OAUTH_CALLBACK = "http://norf.co/oauth2/callback";
+          HOLBORN_DEX_HOST = "http://norf.co:5556";
+          HOLBORN_SSL_FULL_CHAIN=/var/lib/acme/norf.co/full_chain
+          HOLBORN_SSL_KEY=/var/lib/acme/norf.co/key
 
           # The following have been registered on the server running dex-worker like so:
           # dexctl --db-url="postgres://dex-rw@127.0.0.1/dex?sslmode=disable" new-client https://norf.co/oauth2/callback

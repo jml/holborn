@@ -75,6 +75,7 @@ rec {
           ./nix/holborn-openssh-module.nix
           ./nix/holborn-api-module.nix
           ./nix/holborn-repo-module.nix
+          ./nix/holborn-proxy-module.nix
           ./nix/dex-module.nix
         ];
 
