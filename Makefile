@@ -1,6 +1,6 @@
 .PHONY: all check clean
 
-HASKELL_PROJECTS = hcl holborn-api holborn-common-types holborn-repo holborn-prelude holborn-ssh holborn-syntax
+HASKELL_PROJECTS = hcl holborn-api holborn-common-types holborn-repo holborn-prelude holborn-ssh holborn-syntax holborn-proxy
 
 cabal_files = $(foreach proj,$(HASKELL_PROJECTS),$(proj)/$(proj).cabal)
 nix_exprs = $(foreach proj,$(HASKELL_PROJECTS),$(proj)/default.nix)

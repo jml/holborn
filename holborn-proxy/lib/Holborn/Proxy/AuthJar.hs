@@ -11,16 +11,19 @@ module Holborn.Proxy.AuthJar
 
 import BasicPrelude
 import qualified Data.HashMap.Strict as HashMap
-import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar', readTVarIO, TVar)
+import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar', readTVarIO, readTVar, TVar)
 import Control.Concurrent.STM (atomically)
 import GHC.Generics (Generic)
+import System.Entropy (getEntropy)
+import Data.ByteString.Base64 (encode)
 
--- | TrustedCreds are extracted from the id_token returend by
+
+-- | TrustedCreds are extracted from the id_token returned by
 -- fetchAccessToken and are therefore turstworthy.
 data TrustedCreds = TrustedCreds
-  { _email :: Text
-  , _emailVerified :: Bool
-  , _name :: Text
+  { email :: Text
+  , emailVerified :: Bool
+  , name :: Text
   } deriving (Show, Generic)
 
 instance Hashable TrustedCreds
@@ -46,5 +49,5 @@ class AuthJar a where
 -- | An in-memory jar for testing
 instance AuthJar MemoryJar where
     set (MemoryJar jar) key token = atomically (modifyTVar' jar (HashMap.insert key token))
-    get (MemoryJar jar) key = readTVarIO jar >>= \m -> pure (HashMap.lookup key m)
-    make _ = pure "test-cookie" -- TODO random bytes
+    get (MemoryJar jar) key = atomically (readTVar jar) >>= \m -> pure (HashMap.lookup key m)
+    make _ = fmap encode (getEntropy 2048)

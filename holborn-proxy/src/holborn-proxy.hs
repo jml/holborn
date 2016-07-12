@@ -7,8 +7,6 @@
 -- * timeouts
 -- * logging
 -- * exposing stats
--- * make dex store username on top of email (https://github.com/coreos/dex/issues/113)
---   alternative: make people choose username lazily after signup
 --
 -- If the user has authenticated with dex we'll store some credentials
 -- and forward the following headers (values after : are examples).
@@ -30,7 +28,7 @@
 
 module Main (main) where
 
-import BasicPrelude
+import HolbornPrelude
 
 import Crypto.JOSE (decodeCompact)
 import Crypto.JWT (JWT(..), ClaimsSet(_unregisteredClaims))
@@ -180,22 +178,26 @@ handleProxying config@Config{..} manager jar cookie = waiProxyTo doProxy default
     setCredHeaders :: Request -> TrustedCreds -> WaiProxyResponse
     setCredHeaders request' TrustedCreds{..} =
         let headers = requestHeaders request'
-            maybeHeader hdr = (,) hdr <$> lookup hdr headers
             forwardedHeaders =
-              [ ("x-holborn-name", encodeUtf8 _name)
-              , ("x-holborn-email", encodeUtf8 _email)
-              , ("x-holborn-email-verified", encodeUtf8  (show _emailVerified))
+              [ ("x-holborn-name", encodeUtf8 name)
+              , ("x-holborn-email", encodeUtf8 email)
+              , ("x-holborn-email-verified", encodeUtf8  (show emailVerified))
               , ("x-forwarded-for", encodeUtf8  (show (remoteHost request'))) -- TODO maybe needs better encoding
-              ] ++ (catMaybes
-                     [ maybeHeader "Accept"
-                     , maybeHeader "Accept-Encoding"
-                     , maybeHeader "Content-Length"
-                     , maybeHeader "Content-Type"
-                     , maybeHeader "If-Modified-Since"
-                     , maybeHeader "If-None-Match"
-                     , maybeHeader "User-Agent"
-                     ])
+              ] ++ (whitelistHeaders headers
+              [ "Accept"
+              , "Accept-Encoding"
+              , "Content-Length"
+              , "Content-Type"
+              , "If-Modified-Since"
+              , "If-None-Match"
+              , "User-Agent"
+              ] )
         in WPRModifiedRequest (request' {requestHeaders = forwardedHeaders}) (ProxyDest configUpstreamHost configUpstreamPort)
+
+    whitelistHeaders headers whitelist = catMaybes (map maybeHeader whitelist)
+      where
+        maybeHeader hdr = (,) hdr <$> lookup hdr headers
+
 
 
 app :: (AuthJar jar) => Config -> Manager -> jar -> Application
@@ -215,9 +217,9 @@ main = do
     let settings = setPort configSslPort defaultSettings
     forever $ do
         runTLS (tlsSettings configSslFullChain configSslKey) settings (app config manager jar) `catch` degradedModeMessage
-        threadDelay (1000 * 5000)
+        threadDelay (1000 * 5000) -- 5 seconds
   where
     degradedModeMessage (err :: IOException) = do
         putStrLn "Error when running TLS server:"
-        print (show err)
+        printErr (show err)
         putStrLn "Running in degraded mode."

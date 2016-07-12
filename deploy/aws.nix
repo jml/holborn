@@ -1,5 +1,13 @@
 let
     normalSSHPort = 3334;
+    ports = {
+      ssh = 22;
+      loginSSH = 3334;
+      dex = 5556;
+      http = 80;
+      https = 443;
+    };
+    dexPort = 5556;
     region = "eu-west-1";
     common-config = {
         nix.gc.automatic = true;
@@ -27,12 +35,11 @@ rec {
     resources.ec2SecurityGroups.http-ssh = {
         inherit region;
         rules = [
-            { fromPort = 22; toPort = 22; sourceIp = "0.0.0.0/0"; }
-            { fromPort = normalSSHPort; toPort = normalSSHPort; sourceIp = "0.0.0.0/0"; }
-            { fromPort = 80; toPort = 80; sourceIp = "0.0.0.0/0"; }
-            { fromPort = 443; toPort = 443; sourceIp = "0.0.0.0/0"; }
-            { fromPort = 5556; toPort = 5556; sourceIp = "0.0.0.0/0"; }
-            { fromPort = 4180; toPort = 4180; sourceIp = "0.0.0.0/0"; }
+            { fromPort = ports.ssh; toPort = ports.ssh; sourceIp = "0.0.0.0/0"; }
+            { fromPort = ports.loginSSH; toPort = ports.loginSSH; sourceIp = "0.0.0.0/0"; }
+            { fromPort = ports.dex; toPort = ports.dex; sourceIp = "0.0.0.0/0"; }
+            { fromPort = ports.http; toPort = ports.http; sourceIp = "0.0.0.0/0"; }
+            { fromPort = ports.https; toPort = ports.https; sourceIp = "0.0.0.0/0"; }
         ];
     };
 
@@ -80,7 +87,7 @@ rec {
           ./nix/dex-module.nix
         ];
 
-        services.openssh.ports = [ normalSSHPort ];
+        services.openssh.ports = [ ports.loginSSH ];
 
         services.holborn-openssh = {
           package = pkgs.openssh;

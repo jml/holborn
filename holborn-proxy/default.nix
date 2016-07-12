@@ -1,6 +1,7 @@
-{ mkDerivation, aeson, base, basic-prelude, bytestring, cookie
-, envparse, hashable, hoauth2, http-client, http-reverse-proxy
-, http-types, jose, servant, servant-server, stdenv, stm, text
+{ mkDerivation, aeson, base, base64-bytestring, basic-prelude
+, bytestring, cookie, entropy, hashable, hoauth2, http-client
+, http-reverse-proxy, http-types, jose, optparse-applicative
+, servant, servant-server, stdenv, stm, text, transformers
 , unordered-containers, wai, warp, warp-tls
 }:
 mkDerivation {
@@ -10,12 +11,14 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    base basic-prelude envparse hoauth2 warp
+    base basic-prelude entropy hashable hoauth2 optparse-applicative
+    stm unordered-containers warp
   ];
   executableHaskellDepends = [
-    aeson base basic-prelude bytestring cookie hashable hoauth2
-    http-client http-reverse-proxy http-types jose servant
-    servant-server stm text unordered-containers wai warp warp-tls
+    aeson base base64-bytestring basic-prelude bytestring cookie
+    hoauth2 http-client http-reverse-proxy http-types jose servant
+    servant-server text transformers unordered-containers wai warp
+    warp-tls
   ];
   description = "Reverse proxy";
   license = stdenv.lib.licenses.unfree;
