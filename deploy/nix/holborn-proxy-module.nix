@@ -48,6 +48,7 @@ in
         PrivateTmp = true;
         PrivateDevices = true;
         AmbientCapabilities = "CAP_NET_BIND_SERVICE";
+        CapabilityBoundingSet = "CAP_NET_BIND_SERVICE";
         PermissionsStartOnly = true;
         # holborn-proxy the only user with access to the certs:
         ExecStartPre = "${pkgs.coreutils}/bin/chown holborn-proxy:root /var/lib/acme/ -R";
