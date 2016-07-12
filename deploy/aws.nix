@@ -38,9 +38,9 @@ rec {
     let
         hp = pkgs.callPackage ../nix/all-packages.nix {};
         ports = import ./ports.nix;
-        holborn-openssh = pkgs.callPackage ../nix/holborn-ssh.nix {};
         holborn-api = hp.callPackage ../holborn-api {};
         holborn-repo = hp.callPackage ../holborn-repo {};
+        holborn-ssh = hp.callPackage ../holborn-ssh {};
 
         # TODO - the following three should live holborn-ui:
         node_modules = pkgs.callPackage ../nix/node_modules.nix {};
@@ -78,7 +78,8 @@ rec {
         services.openssh.ports = [ normalSSHPort ];
 
         services.holborn-openssh = {
-          package = holborn-openssh;
+          package = pkgs.openssh;
+          holbornSshPackage = holborn-ssh;
           holbornApiEndpoint = "http://127.0.01:${ports.API}";
         };
 
