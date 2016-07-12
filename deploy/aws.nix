@@ -1,13 +1,5 @@
 let
-    normalSSHPort = 3334;
-    ports = {
-      ssh = 22;
-      loginSSH = 3334;
-      dex = 5556;
-      http = 80;
-      https = 443;
-    };
-    dexPort = 5556;
+    ports = import ./ports.nix;
     region = "eu-west-1";
     common-config = {
         nix.gc.automatic = true;
@@ -46,7 +38,6 @@ rec {
     web = { resources, pkgs, lib, config, ... }:
     let
         hp = pkgs.callPackage ../nix/all-packages.nix {};
-        ports = import ./ports.nix;
         holborn-api = hp.callPackage ../holborn-api {};
         holborn-repo = hp.callPackage ../holborn-repo {};
         holborn-ssh = hp.callPackage ../holborn-ssh {};
