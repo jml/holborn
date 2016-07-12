@@ -71,8 +71,8 @@ uri :: ReadM URI
 uri = eitherReader parseUrl
   where
     parseUrl :: String -> Either String URI
-    parseUrl s = case parseURI of
-      Noting -> Left ("Could not parse URL: " <> s)
+    parseUrl s = case parseURI s of
+      Nothing -> Left ("Could not parse URL: " <> s)
       Just uri' -> pure uri'
 
 options :: ParserInfo Config
@@ -103,7 +103,7 @@ options =
           ( long "public-host"
             <> metavar "HOLBORN_PUBLIC_HOST"
             <> help "Public base url including https://"
-            <> value "https://127.0.0.1:8443" )
+            <> let Just defURI = parseURI "https://127.0.0.1:8443" in value defURI )
       <*> option bs
           ( long "upstream-host"
             <> metavar "HOLBORN_UPSTREAM_HOST"
