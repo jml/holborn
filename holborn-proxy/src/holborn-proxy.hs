@@ -32,6 +32,7 @@ import HolbornPrelude
 import Holborn.Proxy.Config (Config(..))
 import Holborn.Proxy.HttpTermination (proxyApp, redirectApp)
 import Network.HTTP.Client (newManager, defaultManagerSettings)
+import qualified Network.Wai.Middleware.RequestLogger as RL
 import Options.Applicative
   ( ParserInfo
   , auto
@@ -54,16 +55,25 @@ import Holborn.Proxy.AuthJar (newMemoryJar)
 import Control.Concurrent (forkIO, threadDelay)
 import Network.Wai.Handler.Warp (run, setPort, defaultSettings)
 import Network.Wai.Handler.WarpTLS (runTLS, tlsSettings)
+import Network.URI (URI, parseURI)
 
 
 loadConfig :: IO Config
 loadConfig = execParser options
 
 bs :: ReadM ByteString
-bs = eitherReader parseUrl
+bs = eitherReader parseBS
   where
-    parseUrl :: String -> Either String ByteString
-    parseUrl s = pure (encodeUtf8 (fromString s))
+    parseBS :: String -> Either String ByteString
+    parseBS s = pure (encodeUtf8 (fromString s))
+
+uri :: ReadM URI
+uri = eitherReader parseUrl
+  where
+    parseUrl :: String -> Either String URI
+    parseUrl s = case parseURI of
+      Noting -> Left ("Could not parse URL: " <> s)
+      Just uri' -> pure uri'
 
 options :: ParserInfo Config
 options =
@@ -89,7 +99,7 @@ options =
           ( long "ssl-key"
             <> metavar "HOLBORN_SSL_KEY"
             <> help "Absolute path to key.pem  (from acme)" )
-      <*> option bs
+      <*> option uri
           ( long "public-host"
             <> metavar "HOLBORN_PUBLIC_HOST"
             <> help "Public base url including https://"
@@ -133,11 +143,11 @@ main = do
     jar <- newMemoryJar
     manager <- newManager defaultManagerSettings
 
-    void $ forkIO $ run configPort (redirectApp configPublicHost)
+    void $ forkIO $ run configPort (RL.logStdoutDev (redirectApp configPublicHost))
 
     let settings = setPort configSslPort defaultSettings
     forever $ do
-        runTLS (tlsSettings configSslFullChain configSslKey) settings (proxyApp config manager jar) `catch` degradedModeMessage
+        runTLS (tlsSettings configSslFullChain configSslKey) settings (RL.logStdoutDev (proxyApp config manager jar)) `catch` degradedModeMessage
         threadDelay (1000 * 5000) -- 5 seconds
   where
     degradedModeMessage (err :: IOException) = do
