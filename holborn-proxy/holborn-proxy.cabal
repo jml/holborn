@@ -75,3 +75,23 @@ executable holborn-proxy
                      , RecordWildCards
                      , GeneralizedNewtypeDeriving
                      , ScopedTypeVariables
+
+test-suite holborn-proxy-tests
+  type:                exitcode-stdio-1.0
+  main-is:             Tests.hs
+  build-depends:       base >=4.9 && <5
+                     , holborn-prelude
+                     , holborn-proxy
+                     , tasty >= 0.10
+                     , tasty-hunit >= 0.9.0
+                     , tasty-quickcheck >= 0.8
+                     , tasty-hspec >= 1.1.0
+  hs-source-dirs:      tests
+  ghc-options:         -Wall -eventlog
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+                     , NamedFieldPuns
+                     , RecordWildCards
+                     , GeneralizedNewtypeDeriving
+                     , MonadFailDesugaring
