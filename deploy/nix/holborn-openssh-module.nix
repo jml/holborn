@@ -77,7 +77,7 @@ in
         chmod 0755 /holborn-authorized-keys
       '';
 
-      serviceConfig.ExecStart = "${cfg.package}/bin/sshd -D -e -f ${ssh-config} -o \"HolbornApiEndpoint=${cfg.holbornApiEndpoint}\"";
+      serviceConfig.ExecStart = "${cfg.package}/bin/sshd -D -e -f ${ssh-config}";
     };
   };
 }
