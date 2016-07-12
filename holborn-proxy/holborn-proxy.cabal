@@ -16,36 +16,21 @@ cabal-version:       >=1.10
 library
   exposed-modules:   Holborn.Proxy.Config
                    , Holborn.Proxy.AuthJar
+                   , Holborn.Proxy.HttpTermination
+
   -- other-modules:
   -- other-extensions:
   build-depends:       base >=4.8 && <5
-                     , basic-prelude
+                     , holborn-prelude
                      , warp >=3.2.1
                      , hoauth2 >=0.5.2
                      , unordered-containers
                      , stm
                      , hashable
-                     , optparse-applicative
                      , entropy
                      , base64-bytestring
-
-  hs-source-dirs:      lib
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-                     , OverloadedStrings
-                     , NamedFieldPuns
-                     , RecordWildCards
-                     , GeneralizedNewtypeDeriving
-                     , ScopedTypeVariables
-
-executable holborn-proxy
-  build-depends:       base >=4.8 && <5
-                     , basic-prelude
-                     , holborn-proxy
                      , hoauth2 >=0.5.2
                      , wai
-                     , warp >=3.2.1
-                     , warp-tls >=3.2.1
                      , http-reverse-proxy >=0.4
                      , http-client
                      , cookie
@@ -58,6 +43,24 @@ executable holborn-proxy
                      , servant
                      , servant-server
                      , transformers
+
+  hs-source-dirs:      lib
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+                     , NamedFieldPuns
+                     , RecordWildCards
+                     , GeneralizedNewtypeDeriving
+                     , ScopedTypeVariables
+
+executable holborn-proxy
+  build-depends:       base >=4.8 && <5
+                     , holborn-prelude
+                     , holborn-proxy
+                     , optparse-applicative
+                     , http-client
+                     , warp >=3.2.1
+                     , warp-tls >=3.2.1
 
   hs-source-dirs:      src
   ghc-options:         -Wall -Werror -threaded

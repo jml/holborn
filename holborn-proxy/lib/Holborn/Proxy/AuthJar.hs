@@ -9,7 +9,8 @@ module Holborn.Proxy.AuthJar
   ) where
 
 
-import BasicPrelude
+import HolbornPrelude
+
 import qualified Data.HashMap.Strict as HashMap
 import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar', readTVarIO, readTVar, TVar)
 import Control.Concurrent.STM (atomically)

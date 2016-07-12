@@ -29,179 +29,100 @@
 module Main (main) where
 
 import HolbornPrelude
-
-import Crypto.JOSE (decodeCompact)
-import Crypto.JWT (JWT(..), ClaimsSet(_unregisteredClaims))
-import Data.Aeson (fromJSON, Result(..))
-import Data.ByteString.Builder (toLazyByteString)
-import qualified Data.ByteString.Lazy as BSL
-import Network.HTTP.Client (newManager, Manager, defaultManagerSettings)
-import Network.HTTP.ReverseProxy (defaultOnExc, waiProxyTo, WaiProxyResponse(..), ProxyDest(..))
-import Network.HTTP.Types (status302)
-import Network.OAuth.OAuth2 (authorizationUrl, OAuth2(..), appendQueryParam, AccessToken(idToken), fetchAccessToken)
-import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application)
-import Network.Wai.Handler.Warp (run, setPort, defaultSettings)
-import Web.Cookie (parseCookies, renderSetCookie, def, setCookieName, setCookieValue, setCookiePath, setCookieSecure)
-import Servant (serve, (:<|>)(..), (:>), Raw, Server, QueryParam, Header, Get, NoContent(..), JSON)
-import Servant.Server (ServantErr(..), err302, err401)
-import Data.Proxy (Proxy(..))
-import Control.Monad.Trans.Except (ExceptT, throwE)
-import qualified Data.HashMap.Strict as HashMap
-import Network.Wai.Handler.WarpTLS (runTLS, tlsSettings)
-import Servant.Utils.StaticFiles (serveDirectory)
+import Holborn.Proxy.Config (Config(..))
+import Holborn.Proxy.HttpTermination (proxyApp, redirectApp)
+import Network.HTTP.Client (newManager, defaultManagerSettings)
+import Options.Applicative
+  ( ParserInfo
+  , auto
+  , execParser
+  , fullDesc
+  , header
+  , help
+  , helper
+  , info
+  , long
+  , metavar
+  , option
+  , progDesc
+  , str
+  , value
+  , ReadM
+  , eitherReader
+  )
+import Holborn.Proxy.AuthJar (newMemoryJar)
 import Control.Concurrent (forkIO, threadDelay)
-
-import Holborn.Proxy.Config (loadConfig, Config(..), oauth2FromConfig, ServiceBaseUrl)
-import Holborn.Proxy.AuthJar (AuthJar(..), UserCookie, TrustedCreds(..), newMemoryJar)
-
-
-type ProxyAPI =
-    "oauth2" :> "callback" :> QueryParam "code" Text :> Get '[JSON] NoContent
-    :<|> Header "Cookie" Text :> Raw
+import Network.Wai.Handler.Warp (run, setPort, defaultSettings)
+import Network.Wai.Handler.WarpTLS (runTLS, tlsSettings)
 
 
-type RedirectAndAcmeAPI =
-    ".well-known" :> "acme-challenge" :> Raw
-    :<|> Raw
+loadConfig :: IO Config
+loadConfig = execParser options
 
-
-proxyApi :: Proxy ProxyAPI
-proxyApi = Proxy
-
-
-redirectAndAcmeAPI :: Proxy RedirectAndAcmeAPI
-redirectAndAcmeAPI = Proxy
-
-
-proxyServer :: (AuthJar jar) => Config -> Manager -> jar -> Server ProxyAPI
-proxyServer config manager jar =
-    handleOauth2Callback config manager jar
-    :<|> handleProxying config manager jar
-
-
-redirectAndAcmeServer :: ServiceBaseUrl -> Server RedirectAndAcmeAPI
-redirectAndAcmeServer baseUrl =
-    serveDirectory "/var/www/challenges"
-    :<|> redirectToHTTPS
-    where
-      -- TODO append path from request (e.g. http://bla.co/path -> https://bla.co/path)
-      redirectToHTTPS _ respond = respond (responseLBS status302 [("location", baseUrl)] BSL.empty)
-
-
--- | Redirect to dex (or whatever we hav configured)
-redirectToToAuth :: OAuth2 -> Application
-redirectToToAuth oauth2Conf _ respond =
-    let redirectUrl = authorizationUrl oauth2Conf `appendQueryParam` [("scope", "openid profile email")]
-    in respond (responseLBS status302 [("location", redirectUrl)] BSL.empty)
-
-
--- | Set the cookie that will identify the user on subsequent
--- requests. Note that it's not HTTPOnly because we want to use it
--- from JS as well.
-redirectSetAuthCookie :: Config -> UserCookie -> ExceptT ServantErr IO NoContent
-redirectSetAuthCookie Config{configPublicHost} userCookie =
-    -- TODO redirectUrl should be a type etc.
-    let redirectUrl = configPublicHost
-        authCookie = def { setCookieName = "auth_cookie", setCookieValue = userCookie, setCookiePath = Just "/", setCookieSecure = False }
-        setCookie = (BSL.toStrict . toLazyByteString . renderSetCookie) authCookie
-    in throwE (err302 { errHeaders = [("Set-Cookie", setCookie), ("location", redirectUrl)] }) >> pure NoContent
-
-
--- | Tell the user what went wrong. At some point we probably want to
--- send a generic 401 and log in parallel for debugging.
-authProblem :: Text -> ExceptT ServantErr IO NoContent
-authProblem msg =
-    throwE (err401 { errBody = BSL.fromStrict (encodeUtf8 msg)}) >> pure NoContent
-
-
-handleOauth2Callback :: (AuthJar jar) => Config -> Manager -> jar -> Maybe Text -> ExceptT ServantErr IO NoContent
-handleOauth2Callback config@Config{..} manager jar maybeCode = do
-    -- Classic Control.Monad.when doesn't work because it's () instead of NoContent
-    _ <- if (maybeCode == Nothing) then authProblem "need code" else pure NoContent
-    let Just code = maybeCode
-    eitherToken <- liftIO (fetchAccessToken manager (oauth2FromConfig config) (encodeUtf8 code))
-    case eitherToken of
-      Right token -> do
-          let trustedCreds = unpackClaims token
-          case trustedCreds of
-            Right creds -> do
-                userCookie <- liftIO (make jar)
-                liftIO (set jar userCookie creds)
-                redirectSetAuthCookie config userCookie
-            Left err -> authProblem ("could not parse id_token: " <> (show err))
-      Left err -> liftIO (print err) >> authProblem "token problem"
-
+bs :: ReadM ByteString
+bs = eitherReader parseUrl
   where
-      -- TODO: unpackClaims is nested too deeply but checked by
-      -- compiler and no IO so I assume it works..
-      unpackClaims :: AccessToken -> Either String TrustedCreds
-      unpackClaims accessToken =
-        case idToken accessToken of
-          Just id_ ->
-              -- PUPPY I don't *think* we need to verify the JWT
-              -- access token because it's been given to us by
-              -- dex. Might be wrong though. If we do need to check we
-              -- need to send a verify request as well and use the
-              -- keys from the response to verify the token.
-              case decodeCompact (BSL.fromStrict id_) of
-                Right jwt ->
-                  case emailEtcClaims (jwtClaimsSet (jwt :: JWT)) of
-                    Nothing -> Left (textToString ("missing claims. Token: " <> (show jwt)))
-                    Just claims ->
-                      case claims of
-                        Success creds -> Right creds
-                        Error err -> Left err
-                _ -> Left "Could not decode claims"
-          Nothing -> Left "missing id_token"
+    parseUrl :: String -> Either String ByteString
+    parseUrl s = pure (encodeUtf8 (fromString s))
 
-      emailEtcClaims claimsSet = do
-          let c = _unregisteredClaims claimsSet
-          email <- fmap fromJSON (HashMap.lookup "email" c)
-          email_verified <- (fmap fromJSON (HashMap.lookup "email_verified" c)) <|> Just (Success False)
-          name <- fmap fromJSON (HashMap.lookup "name" c)
-          pure $ TrustedCreds <$> email <*> email_verified <*> name
-
-
-handleProxying :: (AuthJar jar) => Config -> Manager -> jar -> Maybe Text -> Application
-handleProxying config@Config{..} manager jar cookie = waiProxyTo doProxy defaultOnExc manager
+options :: ParserInfo Config
+options =
+  info (helper <*> parser) description
   where
-    doProxy :: Request -> IO WaiProxyResponse
-    doProxy request = do
-      case cookie >>= \cookie' -> lookup "auth_cookie" (parseCookies (encodeUtf8 cookie')) of
-        Nothing -> pure (WPRApplication (redirectToToAuth (oauth2FromConfig config)))
-        Just authCookie -> do
-            c <- get jar authCookie
-            case c of
-              Just userCookie -> pure (setCredHeaders request userCookie)
-              Nothing -> pure (WPRApplication (redirectToToAuth (oauth2FromConfig config)))
+    parser =
+      Config
+      <$> option auto
+          ( long "port"
+            <> metavar "PORT"
+            <> help "http port to listen on"
+            <> value 8080 )
+      <*> option auto
+          ( long "ssl-port"
+            <> metavar "SSL_PORT"
+            <> help "SSL Port to listen on"
+            <> value 443 )
+      <*> option str
+          ( long "ssl-full-chain"
+            <> metavar "HOLBORN_SSL_FULL_CHAIN"
+            <> help "Absolute path to fullchain.pem (from acme)" )
+      <*> option str
+          ( long "ssl-key"
+            <> metavar "HOLBORN_SSL_KEY"
+            <> help "Absolute path to key.pem  (from acme)" )
+      <*> option bs
+          ( long "public-host"
+            <> metavar "HOLBORN_PUBLIC_HOST"
+            <> help "Public base url including https://"
+            <> value "https://127.0.0.1:8443" )
+      <*> option bs
+          ( long "upstream-host"
+            <> metavar "HOLBORN_UPSTREAM_HOST"
+            <> help "Where to proxy to (including port)"
+            <> value "127.0.0.1:8002" )
+      <*> option auto
+          ( long "upstream-port"
+            <> metavar "HOLBORN_UPSTREAM_PORT"
+            <> help "upstream port"
+            <> value 8002 )
+      <*> option bs
+          ( long "dex-host"
+            <> metavar "HOLBORN_DEX_HOST"
+            <> help "Where dex lives (including port)"
+            <> value "norf.co:5556" )
+      <*> option bs
+          ( long "oauth-client-id"
+            <> metavar "HOLBORN_OAUTH_CLIENT_ID"
+            <> help "OAuth2 client id. Dex prints this when registering a client." )
+      <*> option bs
+          ( long "oauth-client-secret"
+            <> metavar "HOLBORN_OAUTH_CLIENT_SECRET"
+            <> help "OAuth2 client secret. Dex prints this when registering a client." )
 
-    setCredHeaders :: Request -> TrustedCreds -> WaiProxyResponse
-    setCredHeaders request' TrustedCreds{..} =
-        let headers = requestHeaders request'
-            forwardedHeaders =
-              [ ("x-holborn-name", encodeUtf8 name)
-              , ("x-holborn-email", encodeUtf8 email)
-              , ("x-holborn-email-verified", encodeUtf8  (show emailVerified))
-              , ("x-forwarded-for", encodeUtf8  (show (remoteHost request'))) -- TODO maybe needs better encoding
-              ] ++ (whitelistHeaders headers
-              [ "Accept"
-              , "Accept-Encoding"
-              , "Content-Length"
-              , "Content-Type"
-              , "If-Modified-Since"
-              , "If-None-Match"
-              , "User-Agent"
-              ] )
-        in WPRModifiedRequest (request' {requestHeaders = forwardedHeaders}) (ProxyDest configUpstreamHost configUpstreamPort)
-
-    whitelistHeaders headers whitelist = catMaybes (map maybeHeader whitelist)
-      where
-        maybeHeader hdr = (,) hdr <$> lookup hdr headers
-
-
-
-app :: (AuthJar jar) => Config -> Manager -> jar -> Application
-app config manager jar = serve proxyApi (proxyServer config manager jar)
+    description = concat
+      [ fullDesc
+      , progDesc "http/https terminator that also redirects to https and handles ACME requests."
+      , header "holborn-proxy - our all-in-one http terminator"
+      ]
 
 
 main :: IO ()
@@ -212,11 +133,11 @@ main = do
     jar <- newMemoryJar
     manager <- newManager defaultManagerSettings
 
-    void $ forkIO $ run configPort (serve redirectAndAcmeAPI (redirectAndAcmeServer configPublicHost))
+    void $ forkIO $ run configPort (redirectApp configPublicHost)
 
     let settings = setPort configSslPort defaultSettings
     forever $ do
-        runTLS (tlsSettings configSslFullChain configSslKey) settings (app config manager jar) `catch` degradedModeMessage
+        runTLS (tlsSettings configSslFullChain configSslKey) settings (proxyApp config manager jar) `catch` degradedModeMessage
         threadDelay (1000 * 5000) -- 5 seconds
   where
     degradedModeMessage (err :: IOException) = do
