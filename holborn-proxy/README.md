@@ -63,4 +63,4 @@ https://devcenter.heroku.com/articles/ssl-certificate-self
 
 # How to run:
 
-HOLBORN_PUBLIC_HOST=https://127.0.0.1:8443 HOLBORN_UPSTREAM_HOST=127.0.0.1 HOLBORN_UPSTREAM_PORT=8002 HOLBORN_SSL_FULL_CHAIN=server.crt HOLBORN_SSL_KEY=server.key HOLBORN_DEX_HOST=http://norf.co:5556  SSL_PORT=8443  cabal run
+cabal run -- --public-host=https://127.0.0.1:8443 --upstream-host=127.0.0.1 --upstream-port=8002 --ssl-full-chain=server.crt --ssl-key=server.key --dex-host=http://norf.co:5556  --ssl-port=8443 --oauth-client-id="$HOLBORN_OAUTH_CLIENT_ID" --oauth-client-secret="$HOLBORN_OAUTH_CLIENT_SECRET"
