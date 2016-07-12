@@ -15,7 +15,7 @@ import Servant
 
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Holborn.API.Config (AppConf(..))
+import Holborn.API.Config (Config)
 import Holborn.API.Internal
   ( APIHandler
   , JSONCodeableError(..)
@@ -44,7 +44,7 @@ instance JSONCodeableError NewRepoError where
     toJSON OwnerNotFound = (400, object ["message" .= ("Owner not found" :: Text)])
 
 
-server :: AppConf -> Server API
+server :: Config -> Server API
 server conf =
   enter (toServantHandler conf) newRepo
 

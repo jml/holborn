@@ -16,7 +16,7 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Data.Aeson (object, (.=))
 import Servant
 
-import Holborn.API.Config (AppConf(..))
+import Holborn.API.Config (Config)
 import Holborn.JSON.Settings.Profile (ProfileData(..))
 import Holborn.API.Types (Username)
 import Holborn.API.Auth (getUserId)
@@ -38,7 +38,7 @@ instance JSONCodeableError Error where
     toJSON UserNotInDb = (400, object ["message" .= ("unsure about the problem!" :: Text)])
 
 
-server :: AppConf -> Server API
+server :: Config -> Server API
 server conf = enter (toServantHandler conf) $
     getUser
     :<|> getAuthorizedUser

@@ -29,7 +29,7 @@ import Options.Applicative
   )
 
 import Holborn.API (api, server)
-import Holborn.API.Config (AppConf, Config(..), loadAppConf)
+import Holborn.API.Config (Config(..))
 import qualified Holborn.Logging as Log
 
 
@@ -88,13 +88,12 @@ devCors :: a -> Maybe CorsResourcePolicy
 devCors _ = Just (simpleCorsResourcePolicy { corsRequestHeaders = simpleHeaders ++ ["Authorization"] })
 
 
-app :: AppConf -> Application
+app :: Config -> Application
 app conf = serve api (server conf)
 
 
 main :: IO ()
 main = do
   conf@Config{port} <- execParser options
-  print $ "Using config: " <> show conf
-  appConf <- loadAppConf conf
-  Warp.runSettings (warpSettings port) (RL.logStdoutDev (cors devCors (app appConf)))
+  putStrLn $ "Using config: " <> show conf
+  Warp.runSettings (warpSettings port) (RL.logStdoutDev (cors devCors (app conf)))

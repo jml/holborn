@@ -23,7 +23,7 @@ import Test.Tasty.Hspec (testSpec, describe, it)
 import Test.Tasty.QuickCheck
 
 import Holborn.API (api, server)
-import Holborn.API.Config (AppConf, Config(..), loadAppConf)
+import Holborn.API.Config (Config(..))
 import Holborn.API.Internal (APIError(..), APIHandler, jsonGet', runAPIHandler)
 import Holborn.API.Types (newPassword)
 import Holborn.JSON.SSHRepoCommunication (RepoCall)
@@ -41,8 +41,8 @@ resetDB = do
 
 -- | A value of Config that can be used in tests that don't *actually* access
 -- the configuration for anything.
-testAppConf :: IO AppConf
-testAppConf = loadAppConf $ Config
+testAppConf :: Config
+testAppConf = Config
   { port = 9999
   , pgDb = "holborn-test-db"
   , pgUser = "holborn-test-user"
@@ -59,8 +59,7 @@ testApp :: IO Application
 testApp = do
     callCommand "psql -q -f sql/initial.sql holborn-test-db -U holborn-test-user"
     callCommand "psql -q -f sql/sample-data.sql holborn-test-db -U holborn-test-user"
-    appConf <- testAppConf
-    pure (serve api (server appConf))
+    pure (serve api (server testAppConf))
 
 
 authenticatedPost path body = request Method.methodPost path [("GAP-Auth", "alice"), ("content-type", "application/json")] body
@@ -86,8 +85,7 @@ apiTests =
         let badUrl = "413213243214"
         let apiResult = (jsonGet' (fromString badUrl) :: APIHandler Int (Either String Int))
         let expectedException = UnexpectedException (toException (InvalidUrlException badUrl "Invalid URL")) :: APIError Int
-        config <- testAppConf
-        result <- runExceptT (runAPIHandler config apiResult)
+        result <- runExceptT (runAPIHandler testAppConf apiResult)
         case result of
           Left e -> show expectedException @?= show e
           Right _ -> assertFailure $ "Unexpectedly parsed URL: " ++ badUrl
