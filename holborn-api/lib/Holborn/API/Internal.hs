@@ -149,10 +149,7 @@ data AppConf = AppConf
 loadAppConf :: Config -> IO AppConf
 loadAppConf Config{..} =
   AppConf
-    <$> PostgreSQL.connect (PostgreSQL.defaultConnectInfo  { PostgreSQL.connectDatabase = pgDb
-                                                           , PostgreSQL.connectUser = pgUser
-                                                           , PostgreSQL.connectPort = pgPort
-                                                           })
+    <$> PostgreSQL.connect (dbConnection)
     <*> newManager defaultManagerSettings
     <*> pure configRepoHostname
     <*> pure configRepoPort

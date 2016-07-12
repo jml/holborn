@@ -9,6 +9,7 @@ import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (FromJSON, ToJSON, decode)
 import Data.ByteString.Lazy (fromStrict)
 import Data.Text (strip)
+import Database.PostgreSQL.Simple (defaultConnectInfo)
 import qualified Network.HTTP.Types.Method as Method
 import Network.HTTP.Client.Internal (HttpException(..))
 import Network.Wai (Application)
@@ -44,11 +45,7 @@ resetDB = do
 testAppConf :: Config
 testAppConf = Config
   { port = 9999
-  , pgDb = "holborn-test-db"
-  , pgUser = "holborn-test-user"
-  , pgPort = 5432
-  , configBaseUrl = "http://127.0.0.1:9999/"
-  , configStaticBaseUrl = ""
+  , dbConnection = defaultConnectInfo
   , configRepoHostname = ""
   , configRepoPort = 0
   , configRawRepoPort = 0

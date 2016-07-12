@@ -71,7 +71,7 @@ tests:
       - hspec-wai-json >= 0.6.0
       - http-client
       - http-types
-      - process
+      - postgresql-simple
       - process
       - tasty >= 0.10
       - tasty-hspec >= 1.1.0
