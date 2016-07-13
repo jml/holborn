@@ -2,6 +2,7 @@
 
 ```
 nixops deploy
+nixops send-keys
 ```
 
 # Preparing the DB

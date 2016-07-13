@@ -59,6 +59,7 @@ rec {
         deployment.ec2.keyPair = resources.ec2KeyPairs.pair;
         deployment.ec2.securityGroups = [ resources.ec2SecurityGroups.http-ssh ];
 
+        deployment.keys = import ./secrets/keys.nix;
 
         # The following is slightly messy: The AMI ships with SSH
         # running on port 22 but we're moving it to another port so

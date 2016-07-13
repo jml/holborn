@@ -13,8 +13,8 @@ let
     AuthorizedKeysCommandUser=holborn
 
     # PUPPY not sure we can use those keys they should be regenerated.
-    HostKey=${cfg.package}/etc/ssh_host_rsa_key
-    HostKey=${cfg.package}/etc/ssh_host_dsa_key
+    HostKey=/run/keys/ssh_host_rsa_key
+    HostKey=/run/keys/ssh_host_dsa_key
     Port=22
     PidFile=/tmp/holborn-openssh.pid
   '';
