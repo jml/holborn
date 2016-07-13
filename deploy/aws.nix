@@ -46,7 +46,7 @@ rec {
         # TODO - the following three should live holborn-ui:
         node_modules = pkgs.callPackage ../nix/node_modules.nix {};
         bower_modules = pkgs.callPackage ../nix/bower_modules.nix { inherit node_modules; };
-        frontend = pkgs.callPackage ../nix/frontend.nix {
+        holborn-ui = pkgs.callPackage ../nix/frontend.nix {
           inherit node_modules bower_modules;
           haskellPackages = hp;
         };
@@ -121,7 +121,7 @@ rec {
           }];
         };
 
-        environment.systemPackages = [ pkgs.git pkgs.vim frontend ];
+        environment.systemPackages = [ pkgs.git pkgs.vim holborn-ui ];
 
         services.postfix.enable = true;
 

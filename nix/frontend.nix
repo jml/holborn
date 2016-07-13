@@ -1,7 +1,7 @@
 { pkgs, stdenv, nodejs-4_x, closurecompiler, nix, node_modules, bower_modules,
   haskellPackages, glibcLocales, zopfli, sassc }:
 stdenv.mkDerivation {
-  name = "holborn-frontend";
+  name = "holborn-ui";
   phases = "unpackPhase buildPhase installPhase";
   buildInputs = [
     nodejs-4_x nix
