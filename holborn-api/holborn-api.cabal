@@ -88,6 +88,7 @@ test-suite holborn-api-tests
     , aeson
     , bytestring
     , errors
+    , http-api-data
     , holborn-api
     , hspec-wai >= 0.6.5
     , hspec-wai-json >= 0.6.0

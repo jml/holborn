@@ -5,23 +5,40 @@ module Main (main) where
 
 import HolbornPrelude
 
+import Control.Concurrent.MVar (newEmptyMVar, putMVar, readMVar, takeMVar)
 import Control.Monad.Trans.Except (runExceptT)
+import Data.Aeson (object, (.=))
+import Data.Maybe (fromJust)
 import Database.PostgreSQL.Simple (defaultConnectInfo)
 import qualified Network.HTTP.Types.Method as Method
 import Network.HTTP.Client.Internal (HttpException(..))
 import Network.Wai (Application)
 import Servant (serve)
-import System.Process (callCommand)
-import Test.Hspec.Wai (with, request, shouldRespondWith, ResponseMatcher(..))
-import Test.Hspec.Wai.JSON (json)
+import Test.Hspec.Wai (request, shouldRespondWith)
+import Test.Hspec.Wai.JSON (fromValue)
 import Test.Tasty (defaultMain, TestTree, testGroup, withResource)
 import Test.Tasty.HUnit hiding (assert)
-import Test.Tasty.Hspec (testSpec, describe, it)
+import Test.Tasty.Hspec (afterAll_, beforeAll_, before, testSpec, describe, it)
+import Web.HttpApiData (toHeader)
 
 import Holborn.API (api, server)
+import Holborn.API.Auth (UserId)
 import Holborn.API.Config (Config(..))
-import Holborn.API.Internal (APIError(..), APIHandler, jsonGet', runAPIHandler)
-import Holborn.API.Types (newPassword)
+import Holborn.API.Internal
+  ( APIError(..)
+  , APIHandler
+  , execute
+  , jsonGet'
+  , runAPIHandler
+  , sql
+  )
+import Holborn.API.Types
+  ( Email
+  , Username
+  , newUsername
+  , newPassword
+  , newEmail
+  )
 
 import Helpers (Postgres, connection, makeDatabase, stopPostgres)
 
@@ -33,12 +50,12 @@ main = do
 
 suite :: IO TestTree
 suite = do
+  waiTests <- waiTest
   pure $ testGroup "Holborn.API"
          [ simpleTests
          , withResource (makeDatabase "sql/initial.sql") stopPostgres apiTests
+         , waiTests
          ]
-
--- TODO: Use Helpers here to make postgres (withResource!)
 
 -- TODO: Figure out some way of properly getting a port for holborn-api while
 -- also having correctly set base url.
@@ -52,6 +69,7 @@ suite = do
 -- https://hackage.haskell.org/package/pgsql-simple-0.1.2/docs/Database-PostgreSQL-Simple.html#t:ConnectInfo
 
 -- TODO: Figure out how to refer to schema.sql safely
+-- https://www.haskell.org/cabal/users-guide/developing-packages.html#accessing-data-files-from-package-code
 
 -- | A value of Config that can be used in tests that don't *actually* access
 -- the configuration for anything.
@@ -65,25 +83,64 @@ testConfig = Config
   }
 
 
-testApp :: IO Application
-testApp = do
-    callCommand "psql -q -f sql/initial.sql holborn-test-db -U holborn-test-user"
-    callCommand "psql -q -f sql/sample-data.sql holborn-test-db -U holborn-test-user"
-    pure (serve api (server testConfig))
+testApp :: Config -> Application
+testApp config = serve api (server config)
 
 
-authenticatedPost path body = request Method.methodPost path [("GAP-Auth", "alice"), ("content-type", "application/json")] body
+data User = User { _userId    :: UserId
+                 , userName  :: Username
+                 , _userEmail :: Email
+                 } deriving (Eq, Show)
+
+
+makeArbitraryUser :: MonadIO m => Config -> m User
+makeArbitraryUser config = do
+  userid <- liftIO $ runExceptT $ runAPIHandler config $ execute [sql|insert into "user" (username, email) values (?, ?)|] ("alice" :: Text, "alice@example.com" :: Text)
+  case userid of
+    Left _ -> terror "Could not create user in database and jml too lazy/stupid to show proper error"
+    Right userid' -> pure $ User (fromIntegral userid') username email
+  where
+    username = newUsername "alice"
+    email = fromJust (newEmail "alice@example.com")
+
 
 waiTest :: IO TestTree
 waiTest = do
-  testSpec "wai-tests" $ with testApp $ do
-    describe "the new-repo endpoint" $ do
-        it "creates repo when posted to" $ do
-            authenticatedPost "/v1/new-repo"
-              [json|{owner: "alice", name: "name", description: "", private: false, initialize: false}|]
-              `shouldRespondWith`
-              [json|{number_objects:0,size:0,owner:"alice",repo:"name",number_commits:0}|]
-              {matchStatus = 200}
+  postgresVar <- newEmptyMVar
+  testSpec "wai-tests" $ beforeAll_ (startDB postgresVar) $ afterAll_ (stopDB postgresVar) $ (before (testApp <$> getConfig postgresVar)) $ do
+    describe "/v1/new-repo" $ do
+      it "creates repo when posted to" $ do
+        user <- makeArbitraryUser =<< liftIO (getConfig postgresVar)
+        let repoName = "name" :: Text
+        authenticatedPost user "/v1/new-repo"
+          (fromValue $ object [ "owner" .= (userName user)
+                              , "name" .= repoName
+                              , "description" .= ("description" :: Text)
+                              , "private" .= False
+                              , "initialize" .= False
+                              ])
+          `shouldRespondWith`
+          (fromValue $ object [ "number_objects" .= (0 :: Int)
+                              , "size" .= (0 :: Int)
+                              , "owner" .= (userName user)
+                              , "id" .= (1 :: Int)
+                              , "number_commits" .= (0 :: Int)
+                              ])
+  where
+    authenticatedPost user path body =
+      request Method.methodPost path [("GAP-Auth", (toHeader (userName user))), ("content-type", "application/json")] body
+
+    startDB var = do
+      postgres <- makeDatabase "sql/initial.sql"
+      putMVar var postgres
+
+    stopDB var = do
+      postgres <- takeMVar var
+      stopPostgres postgres
+
+    getConfig var = do
+      postgres <- readMVar var
+      pure $ testConfig { dbConnection = connection postgres }
 
 
 apiTests :: IO Postgres -> TestTree

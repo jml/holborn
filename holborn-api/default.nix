@@ -26,9 +26,9 @@ mkDerivation {
   ];
   testHaskellDepends = [
     aeson base bytestring errors holborn-common-types holborn-prelude
-    hspec-wai hspec-wai-json http-client http-types postgresql-simple
-    process QuickCheck servant-server tasty tasty-hspec tasty-hunit
-    tasty-quickcheck text transformers unix wai
+    hspec-wai hspec-wai-json http-api-data http-client http-types
+    postgresql-simple process QuickCheck servant-server tasty
+    tasty-hspec tasty-hunit tasty-quickcheck text transformers unix wai
   ];
   description = "API server for Holborn";
   license = stdenv.lib.licenses.unfree;

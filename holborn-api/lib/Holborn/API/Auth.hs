@@ -1,7 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Holborn.API.Auth
-  ( getUserId
+  ( UserId
+  , getUserId
   ) where
 
 import HolbornPrelude

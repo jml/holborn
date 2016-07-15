@@ -9,6 +9,7 @@ module Holborn.API.Internal
   -- | Manipulate the database
   , query
   , execute
+  , sql
   -- | Call backends
   , jsonGet'
   -- | Repository server access
