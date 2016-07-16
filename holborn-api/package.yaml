@@ -6,7 +6,7 @@ license: AllRightsReserved
 data-files:
   - sql/initial.sql
 
-ghc-options: -Wall
+ghc-options: -Wall -Werror
 default-extensions:
   - GeneralizedNewtypeDeriving
   - MonadFailDesugaring
@@ -25,7 +25,6 @@ dependencies:
 
 library:
   source-dirs: lib
-  ghc-options: -Werror
   dependencies:
     - aeson >= 0.10
     - attoparsec
@@ -51,7 +50,6 @@ executables:
   holborn-api-server:
     main: Main.hs
     source-dirs: holborn-api-server
-    ghc-options: -Werror
     dependencies:
       - holborn-api
       - optparse-applicative

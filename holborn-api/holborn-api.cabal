@@ -80,7 +80,7 @@ test-suite holborn-api-tests
   hs-source-dirs:
       tests
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
-  ghc-options: -Wall -eventlog
+  ghc-options: -Wall -Werror -eventlog
   build-depends:
       base >=4.9 && <5
     , holborn-common-types
