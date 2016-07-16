@@ -1,56 +1,53 @@
+-- This file has been generated from package.yaml by hpack version 0.13.0.
+--
+-- see: https://github.com/sol/hpack
+
 name:                holborn-ssh
 version:             0.1.0.0
-author:              Tom Hunger and Jonathan Lange
-maintainer:          jml@mumak.net
+synopsis:            OpenSSH plugins to serve git repositories from Holborn
+license:             AllRightsReserved
 build-type:          Simple
-cabal-version:       >=1.10
+cabal-version:       >= 1.10
 
 executable holborn-authorized-keys
-  main-is:             Main.hs
-  hs-source-dirs:      holborn-authorized-keys
-  default-language:    Haskell2010
-  build-depends:       base >=4.9 && <5
-                     , bytestring
-                     , envparse >= 0.2
-                     , http-client
-                     , servant >= 0.5
-                     , servant-client >= 0.5
-                     , transformers
-                     , holborn-common-types
-                     , holborn-api
-                     , holborn-prelude
-                     , optparse-applicative
-
-  ghc-options:         -Wall -threaded -eventlog
-  default-extensions:  NoImplicitPrelude
-                     , OverloadedStrings
-                     , NamedFieldPuns
-                     , RecordWildCards
-                     , GeneralizedNewtypeDeriving
-
+  main-is: Main.hs
+  hs-source-dirs:
+      holborn-authorized-keys
+  default-language: Haskell2010
+  build-depends:
+      base >=4.9 && <5
+    , envparse >= 0.2
+    , holborn-api
+    , holborn-common-types
+    , holborn-prelude
+    , servant
+    , servant-client
+    , transformers
+    , bytestring
+    , http-client
+    , optparse-applicative
+  ghc-options: -Wall -threaded -eventlog
+  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards
 
 executable holborn-connect-repo
-  main-is:             Main.hs
-  hs-source-dirs:      holborn-connect-repo
-  default-language:    Haskell2010
-  build-depends:       base >=4.8 && <5
-                     , envparse >= 0.2
-                     , http-client
-                     , holborn-api
-                     , holborn-common-types
-                     , holborn-prelude
-                     , servant >= 0.5
-                     , servant-client >= 0.5
-                     , transformers
-                     , pipes
-                     , pipes-aeson
-                     , pipes-bytestring
-                     , pipes-network
-
-  ghc-options:         -Wall -threaded -eventlog
-  default-extensions:  NoImplicitPrelude
-                     , OverloadedStrings
-                     , NamedFieldPuns
-                     , RecordWildCards
-                     , GeneralizedNewtypeDeriving
-                     , MonadFailDesugaring
+  main-is: Main.hs
+  hs-source-dirs:
+      holborn-connect-repo
+  default-language: Haskell2010
+  build-depends:
+      base >=4.9 && <5
+    , envparse >= 0.2
+    , holborn-api
+    , holborn-common-types
+    , holborn-prelude
+    , servant
+    , servant-client
+    , transformers
+    , envparse >= 0.2
+    , http-client
+    , pipes
+    , pipes-aeson
+    , pipes-bytestring
+    , pipes-network
+  ghc-options: -Wall -threaded -eventlog
+  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards

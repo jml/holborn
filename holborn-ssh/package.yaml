@@ -1,0 +1,43 @@
+name: holborn-ssh
+version: 0.1.0.0
+synopsis: OpenSSH plugins to serve git repositories from Holborn
+license: AllRightsReserved
+
+ghc-options: -Wall -threaded -eventlog
+default-extensions:
+  - GeneralizedNewtypeDeriving
+  - MonadFailDesugaring
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - RecordWildCards
+
+dependencies:
+  - base >=4.9 && <5
+  - envparse >= 0.2
+  - holborn-api
+  - holborn-common-types
+  - holborn-prelude
+  - servant
+  - servant-client
+  - transformers
+
+executables:
+  holborn-authorized-keys:
+    main: Main.hs
+    source-dirs: holborn-authorized-keys
+    dependencies:
+      - bytestring
+      - http-client
+      - optparse-applicative
+
+  holborn-connect-repo:
+    main: Main.hs
+    source-dirs: holborn-connect-repo
+    dependencies:
+      - envparse >= 0.2
+      - http-client
+      - pipes
+      - pipes-aeson
+      - pipes-bytestring
+      - pipes-network
