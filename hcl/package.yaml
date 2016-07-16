@@ -1,0 +1,27 @@
+name: hcl
+version: 0.1.0.0
+synopsis: Command line tool for Holborn
+license: AllRightsReserved
+
+ghc-options: -Wall -Werror -threaded
+default-extensions:
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - NamedFieldPuns
+  - MonadFailDesugaring
+source-dirs: src
+
+dependencies:
+  - base >=4.9 && <5
+  - holborn-prelude
+  - turtle >=1.2
+
+executables:
+  hcl-wait-for-port:
+    main: wait-for-port.hs
+    dependencies:
+      - optparse-applicative
+      - network-simple >= 0.4
+
+  hcl-unused:
+    main: unused.hs

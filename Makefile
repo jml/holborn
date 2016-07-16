@@ -24,5 +24,8 @@ clean:
 holborn-prelude/holborn-prelude.cabal: holborn-prelude/package.yaml
 	hpack --silent holborn-prelude/
 
+hcl/hcl.cabal: hcl/package.yaml
+	hpack --silent hcl/
+
 
 $(foreach proj,$(HASKELL_PROJECTS),$(eval $(call generate_default_nix,$(proj))))

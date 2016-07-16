@@ -10,6 +10,6 @@ mkDerivation {
   executableHaskellDepends = [
     base holborn-prelude network-simple optparse-applicative turtle
   ];
-  description = "Command line tool for holborn";
+  description = "Command line tool for Holborn";
   license = stdenv.lib.licenses.unfree;
 }
