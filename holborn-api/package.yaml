@@ -3,6 +3,9 @@ version: 0.1.0.0
 synopsis: API server for Holborn
 license: AllRightsReserved
 
+data-files:
+  - sql/initial.sql
+
 ghc-options: -Wall
 default-extensions:
   - GeneralizedNewtypeDeriving

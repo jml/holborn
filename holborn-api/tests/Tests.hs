@@ -4,6 +4,7 @@
 module Main (main) where
 
 import HolbornPrelude
+import Paths_holborn_api (getDataFileName)
 
 import Control.Concurrent.MVar (newEmptyMVar, putMVar, readMVar, takeMVar)
 import Control.Monad.Trans.Except (runExceptT)
@@ -53,9 +54,14 @@ suite = do
   waiTests <- waiTest
   pure $ testGroup "Holborn.API"
          [ simpleTests
-         , withResource (makeDatabase "sql/initial.sql") stopPostgres apiTests
+         , withResource (makeHolbornDB) stopPostgres apiTests
          , waiTests
          ]
+
+makeHolbornDB :: IO Postgres
+makeHolbornDB = do
+  schemaFile <- getDataFileName "sql/initial.sql"
+  makeDatabase schemaFile
 
 -- TODO: Figure out some way of properly getting a port for holborn-api while
 -- also having correctly set base url.
@@ -68,8 +74,6 @@ suite = do
 -- withPoolConnection at
 -- https://hackage.haskell.org/package/pgsql-simple-0.1.2/docs/Database-PostgreSQL-Simple.html#t:ConnectInfo
 
--- TODO: Figure out how to refer to schema.sql safely
--- https://www.haskell.org/cabal/users-guide/developing-packages.html#accessing-data-files-from-package-code
 
 -- | A value of Config that can be used in tests that don't *actually* access
 -- the configuration for anything.
@@ -131,7 +135,7 @@ waiTest = do
       request Method.methodPost path [("GAP-Auth", (toHeader (userName user))), ("content-type", "application/json")] body
 
     startDB var = do
-      postgres <- makeDatabase "sql/initial.sql"
+      postgres <- makeHolbornDB
       putMVar var postgres
 
     stopDB var = do

@@ -9,6 +9,9 @@ license:             AllRightsReserved
 build-type:          Simple
 cabal-version:       >= 1.10
 
+data-files:
+    sql/initial.sql
+
 library
   exposed-modules:
       Holborn.API
