@@ -13,7 +13,6 @@ mkDerivation {
   testHaskellDepends = [
     base holborn-prelude tasty tasty-hunit tasty-quickcheck
   ];
-  homepage = "https://bitbucket.com/mumak/holborn";
   description = "Syntax analysis library";
   license = stdenv.lib.licenses.unfree;
 }
