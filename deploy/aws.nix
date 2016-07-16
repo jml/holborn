@@ -6,9 +6,9 @@ let
         nix.gc.dates = "10:00";
         nix.gc.options = "--delete-older-than 7d";
 
+        # PUPPY - probably a good idea to lock down our setup once
+        # we've settled.
         networking.firewall.enable = false;
-        #networking.firewall.allowedTCPPorts = [ 22 80 443 5556 ];
-        #networking.firewall.allowPing = true;
         services.journald.extraConfig = "SystemMaxUse=100M";
 
         # Set up ssh keys for git-pushing
@@ -108,6 +108,12 @@ rec {
         services.dex = {
           enable = true;
           package = (pkgs.callPackage ../nix/dex.nix {});
+
+          # PUPPY people with these keys can generate valid logins for
+          # any user so they need to be treated with more care.
+          #
+          # TODO - regenerate move them to secrets/keys.nix when we're done
+          # with testing.
           overlordDBURL = "postgres://dex-rw@127.0.0.1/dex?sslmode=disable";
           overlordAdminAPISecret = "lyErb98S0KpcUJ9AYM3jWlkPLxhvD5czolgJqpjls3jdBslhYqmZUOYhPoi8leiSoLvB6fVZ3xA9KdhZC7UA0COdbhgGORyGLlIq2DY/2xxkPm8UItARTqjSbAfVpqSVzSd1ZEhoNUi+iWNTdTVVArZN2Dg20geMNZEzlx/KqyM=";
           overlordKeySecrets = ["RKLSntSuSsg6Ki8AKmo3WaAw1m3KqTxC3bnGF5i9jCk="];
@@ -121,6 +127,15 @@ rec {
           }];
         };
 
+        # We're linking the UI into the current system so we don't
+        # have to re-start the front-end server to pick up the new
+        # UI. We just point at a static directory.
+        # This is temporary until we have decided on the right way to serve
+        # static content.
+        environment.pathsToLink = [ "/ui" ];
+
+        # Some useful packages for viewing, editing, and making sure
+        # UI is installed. Not stricly necessary but useful.
         environment.systemPackages = [ pkgs.git pkgs.vim holborn-ui ];
 
         services.postfix.enable = true;

@@ -82,6 +82,23 @@ in
         };
       };
 
+      listen = mkOption {
+        default = "http://0.0.0.0:5556";
+        type = types.str;
+        description = ''
+          Address/port to listen on. Includes http or https.
+        '';
+      };
+
+      issuer = mkOption {
+        default = "http://norf.co:5556";
+        type = types.str;
+        description = ''
+           Public facing uRL including http / https.
+           (This can't be derived from the listen option).
+        '';
+      };
+
       connectorConfig = mkOption {
         default = [{}];
         type = types.listOf types.attrs;
@@ -148,8 +165,8 @@ in
         DEX_WORKER_HTML_ASSETS = "${cfg.package}/share/go/src/github.com/coreos/dex/static/html/";
         DEX_WORKER_CLIENTS = "${clientConfigFile}";
         DEX_WORKER_CONNECTORS = "${connectorConfigFile}";
-        DEX_WORKER_LISTEN = "http://0.0.0.0:5556";
-        DEX_WORKER_ISSUER = "http://norf.co:5556"; # Needs to be the public domain or IP
+        DEX_WORKER_LISTEN = cfg.listen;
+        DEX_WORKER_ISSUER = cfg.issuer;
         DEX_WORKER_EMAIL_TEMPLATES = "${cfg.package}/share/go/src/github.com/coreos/dex/static/email/";
       };
 

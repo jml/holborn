@@ -12,7 +12,7 @@ let
     AuthorizedKeysCommand=/holborn-authorized-keys --api-url=${cfg.holbornApiEndpoint} --key=%k --type=%t
     AuthorizedKeysCommandUser=holborn
 
-    # PUPPY not sure we can use those keys they should be regenerated.
+    # Host keys provided via nixops `deployment.keys` option:
     HostKey=/run/keys/ssh_host_rsa_key
     HostKey=/run/keys/ssh_host_dsa_key
     Port=22
