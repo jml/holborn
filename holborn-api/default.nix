@@ -4,8 +4,8 @@
 , http-client, http-reverse-proxy, http-types, jwt
 , optparse-applicative, postgresql-simple, process, QuickCheck
 , servant-docs, servant-server, stdenv, tasty, tasty-hspec
-, tasty-hunit, tasty-quickcheck, text, time, transformers, wai
-, wai-cors, wai-extra, warp
+, tasty-hunit, tasty-quickcheck, text, time, transformers, unix
+, wai, wai-cors, wai-extra, warp
 }:
 mkDerivation {
   pname = "holborn-api";
@@ -28,7 +28,7 @@ mkDerivation {
     aeson base bytestring errors holborn-common-types holborn-prelude
     hspec-wai hspec-wai-json http-client http-types postgresql-simple
     process QuickCheck servant-server tasty tasty-hspec tasty-hunit
-    tasty-quickcheck text transformers wai
+    tasty-quickcheck text transformers unix wai
   ];
   description = "API server for Holborn";
   license = stdenv.lib.licenses.unfree;

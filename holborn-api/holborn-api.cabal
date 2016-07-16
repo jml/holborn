@@ -101,4 +101,7 @@ test-suite holborn-api-tests
     , tasty-quickcheck >= 0.8
     , text
     , transformers
+    , unix
+  other-modules:
+      Helpers
   default-language: Haskell2010

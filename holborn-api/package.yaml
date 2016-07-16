@@ -79,3 +79,4 @@ tests:
       - tasty-quickcheck >= 0.8
       - text
       - transformers
+      - unix
