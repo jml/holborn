@@ -45,19 +45,18 @@ connection Running{port, username, database} =
 -- | Make sure we have a database made of the SQL that's in the given file.
 makeDatabase :: FilePath -> IO Postgres
 makeDatabase schema = do
-  -- TODO: Try to re-use existing one, somehow
+  -- TODO: Try to re-use existing database directory, somehow
   pgDir <- initDb
-  -- TODO: Try to re-use this?
-  -- TODO: bracket the launch w/ a safe teardOwn
+  -- TODO: Try to re-use the running instance?
   port <- launchPostgres pgDir
-  user <- createPostgresUser port
-  database <- createPostgresDatabase port user
+  user <- onException (createPostgresUser port) (stopPostgres' pgDir)
+  database <- onException (createPostgresDatabase port user) (stopPostgres' pgDir)
   let postgres = Running { port      = port
                          , username  = user
                          , database  = database
                          , directory = pgDir
                          }
-  runSqlFromFile postgres schema
+  onException (runSqlFromFile postgres schema) (stopPostgres postgres)
   pure postgres
 
   where
@@ -65,9 +64,7 @@ makeDatabase schema = do
     initDb :: IO FilePath
     initDb = do
       dir <- mkdtemp "/tmp/holborn-postgres"
-      -- XXX: It'd be nice not to have to a) assemble the string here b) go
-      -- via shell.
-      cmd "pg_ctl" ["init", "-D", dir, "-s"]
+      pg_ctl dir "init" []
       pure dir
 
     -- | Start a Postgresql instance using the given directory.
@@ -75,12 +72,18 @@ makeDatabase schema = do
     -- Blocks until the Postgresql instance is ready for use.
     launchPostgres :: FilePath -> IO Port
     launchPostgres pgDir = do
-      let portOpt = "-p " <> textToString (show port)
-      cmd "pg_ctl" ["start", "-D", pgDir, "-s", "-w", "-o", portOpt]
+      -- TODO: Don't hardcode this.
+      let port = 5444
+      launchPostgres' pgDir port
       pure port
-        where
-          -- TODO: Don't hardcode this.
-          port = 5444
+
+    -- | Start a Postgresql instance using the given directory.
+    --
+    -- Blocks until the Postgresql instance is ready for use.
+    launchPostgres' :: FilePath -> Port -> IO ()
+    launchPostgres' pgDir port = do
+      let portOpt = "-p " <> textToString (show port)
+      pg_ctl pgDir "start" ["-o", portOpt]
 
     -- | Create a valid postgres user and return their name.
     createPostgresUser :: Port -> IO UserName
@@ -117,21 +120,32 @@ makeDatabase schema = do
     toString = textToString . show
 
 
+-- | Execute a command with arguments via the shell.
 cmd :: FilePath -> [String] -> IO ()
 cmd command args = do
   -- TODO: Capture output and only show if command fails.
   let command' = showCommandForUser command args
   callCommand command'
 
+-- | Execute the 'pg_ctl' command via the shell.
+--
+-- Blocks until command successfully completes, and uses the quietest possible
+-- output.
+pg_ctl :: FilePath -> String -> [String] -> IO ()
+pg_ctl pgDir command args = do
+  cmd "pg_ctl" $ [command, "-D", pgDir, "-s", "-w"] <> args
+
 
 -- | Terminate a running Postgresql instance.
 --
 -- Blocks until the instance is definitely terminated.
 stopPostgres :: Postgres -> IO ()
-stopPostgres Running{directory} = do
-  -- XXX: The documentation for terminateProcess says: "This function should
-  -- not be used under normal circumstances - no guarantees are given
-  -- regarding how cleanly the process is terminated." Does that mean we
-  -- should do our own signalling, sending SIGTERM first, waiting, then
-  -- sending SIGKILL if it's still going?
-  cmd "pg_ctl" ["stop", "-D", directory, "-s", "-w", "-m", "fast"]
+stopPostgres Running{directory} = stopPostgres' directory
+
+
+-- | Terminate a running Postgresql instance.
+--
+-- Blocks until the instance is definitely terminated.
+stopPostgres' :: FilePath -> IO ()
+stopPostgres' directory = do
+  pg_ctl directory "stop" ["-m", "fast"]

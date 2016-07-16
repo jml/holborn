@@ -60,6 +60,7 @@ suite = do
 
 makeHolbornDB :: IO Postgres
 makeHolbornDB = do
+  -- See https://www.haskell.org/cabal/users-guide/developing-packages.html#accessing-data-files-from-package-code
   schemaFile <- getDataFileName "sql/initial.sql"
   makeDatabase schemaFile
 
@@ -68,6 +69,7 @@ makeHolbornDB = do
 
 -- TODO: Figure out a way of resetting the database to the schema between
 -- tests.
+-- https://www.postgresql.org/docs/9.5/static/manage-ag-templatedbs.html
 
 -- TODO: Update the main app to only connect when we try to talk to the
 -- database. Ideally, it should use a connection pool. See newPool and
