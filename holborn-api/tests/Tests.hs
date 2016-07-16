@@ -101,6 +101,8 @@ data User = User { _userId    :: UserId
 
 makeArbitraryUser :: MonadIO m => Config -> m User
 makeArbitraryUser config = do
+  -- TODO: Make this actually arbitrary.
+  -- TODO: Remove duplication between query & `User` construction.
   userid <- liftIO $ runExceptT $ runAPIHandler config $ execute [sql|insert into "user" (username, email) values (?, ?)|] ("alice" :: Text, "alice@example.com" :: Text)
   case userid of
     Left _ -> terror "Could not create user in database and jml too lazy/stupid to show proper error"
