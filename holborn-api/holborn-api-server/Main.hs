@@ -52,12 +52,6 @@ options =
            <*> option str  -- TODO: reject empty names
                ( long "postgres-database" <> metavar "DATABASE" <> value "holborn"
                  <> help "Name of PostreSQL database with the holborn data" ))
-      <*> option (fromString <$> str)  -- TODO: What happens if the port contradicts the --port flag? Also, how do we use this?
-          ( long "base-url" <> metavar "URL" <> value "http://127.0.0.1:8002"
-            <> help "URL for the REST API server" )
-      <*> option (fromString <$> str)
-          ( long "static-url" <> metavar "URL" <> value "http://127.0.0.1:1337"
-            <> help "URL for the static content of the holborn app" )
       <*> option (fromString <$> str)
           ( long "repo-hostname" <> metavar "HOST" <> value "127.0.0.1"
             <> help "Where the holborn-repo server is running" )

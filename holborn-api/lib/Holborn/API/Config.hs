@@ -12,8 +12,6 @@ import qualified Network.Wai.Handler.Warp as Warp
 -- file, etc.
 data Config = Config { port :: Warp.Port
                      , dbConnection :: ConnectInfo
-                     , configBaseUrl :: Text
-                     , configStaticBaseUrl :: Text
                      , configRepoHostname :: Text
                      , configRepoPort :: Warp.Port
                      , configRawRepoPort :: Warp.Port
