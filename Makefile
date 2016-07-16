@@ -18,5 +18,11 @@ check:
 
 clean:
 	rm -f $(nix_exprs)
+	rm -f $(cabal_files)
+
+
+holborn-prelude/holborn-prelude.cabal: holborn-prelude/package.yaml
+	hpack --silent holborn-prelude/
+
 
 $(foreach proj,$(HASKELL_PROJECTS),$(eval $(call generate_default_nix,$(proj))))

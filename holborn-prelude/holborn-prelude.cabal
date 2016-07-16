@@ -1,46 +1,47 @@
-name:                holborn-prelude
-version:             0.1.0.0
-author:              Jonathan M. Lange
-maintainer:          jml@mumak.net
-build-type:          Simple
-cabal-version:       >=1.10
+-- This file has been generated from package.yaml by hpack version 0.13.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           holborn-prelude
+version:        0.1.0.0
+synopsis:       Standard prelude for Holborn
+license:        AllRightsReserved
+build-type:     Simple
+cabal-version:  >= 1.10
 
 library
-  exposed-modules:     HolbornPrelude
-  build-depends:       base >=4.9 && <5
-                     , basic-prelude >= 0.5.2
-                     , mtl
-                     , safe >= 0.3.9
-                     , text >= 1.2.2
+  hs-source-dirs:
+      lib
+  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables
+  ghc-options: -Wall -Werror
+  build-depends:
+      base >=4.9 && <5
+    , basic-prelude >= 0.5.2
+    , mtl
+    , safe >= 0.3.9
+    , text >= 1.2.2
+  exposed-modules:
+      HolbornPrelude
+  other-modules:
+      Paths_holborn_prelude
+  default-language: Haskell2010
 
-  hs-source-dirs:      lib
-  ghc-options:         -Wall -Werror
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-                     , OverloadedStrings
-                     , NamedFieldPuns
-                     , RecordWildCards
-                     , GeneralizedNewtypeDeriving
-                     , ScopedTypeVariables
-                     , MonadFailDesugaring
-
-Test-Suite holborn-prelude-tests
-  type:                exitcode-stdio-1.0
-  main-is:             Tests.hs
-  build-depends:       base >=4.9 && <5
-                     , basic-prelude
-                     , tasty >= 0.11
-                     , tasty-hunit >= 0.9.2
-                     , tasty-quickcheck >= 0.8.4
-                     , tasty-hspec >= 1.1.3
-                     , holborn-prelude
-
-  hs-source-dirs:      tests
-  ghc-options:         -Wall -eventlog
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-                     , OverloadedStrings
-                     , NamedFieldPuns
-                     , RecordWildCards
-                     , GeneralizedNewtypeDeriving
-                     , MonadFailDesugaring
+test-suite holborn-prelude-tests
+  type: exitcode-stdio-1.0
+  main-is: Tests.hs
+  hs-source-dirs:
+      tests
+  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables
+  ghc-options: -Wall -Werror -eventlog
+  build-depends:
+      base >=4.9 && <5
+    , basic-prelude >= 0.5.2
+    , mtl
+    , safe >= 0.3.9
+    , text >= 1.2.2
+    , holborn-prelude
+    , tasty >= 0.11
+    , tasty-hspec >= 1.1.3
+    , tasty-hunit >= 0.9.2
+    , tasty-quickcheck >= 0.8.4
+  default-language: Haskell2010
