@@ -1,4 +1,4 @@
-{ mkDerivation, base, basic-prelude, envparse, holborn-api
+{ mkDerivation, base, bytestring, envparse, holborn-api
 , holborn-common-types, holborn-prelude, http-client
 , optparse-applicative, pipes, pipes-aeson, pipes-bytestring
 , pipes-network, servant, servant-client, stdenv, transformers
@@ -10,10 +10,10 @@ mkDerivation {
   isLibrary = false;
   isExecutable = true;
   executableHaskellDepends = [
-    base basic-prelude envparse holborn-api holborn-common-types
+    base bytestring envparse holborn-api holborn-common-types
     holborn-prelude http-client optparse-applicative pipes pipes-aeson
     pipes-bytestring pipes-network servant servant-client transformers
   ];
+  description = "OpenSSH plugins to serve git repositories from Holborn";
   license = stdenv.lib.licenses.unfree;
-  enableSharedExecutables = false;
 }

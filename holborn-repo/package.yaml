@@ -1,0 +1,66 @@
+name: holborn-repo
+version: 0.1.0.0
+synopsis: Serve git repositories
+license: AllRightsReserved
+
+ghc-options: -Wall -Werror
+default-extensions:
+  - GeneralizedNewtypeDeriving
+  - MonadFailDesugaring
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - RecordWildCards
+
+dependencies:
+  - base >=4.9 && <5
+  - holborn-prelude
+  - servant-server
+  - wai
+  - warp
+
+library:
+  source-dirs: lib
+  dependencies:
+    - aeson >=0.9
+    - blaze-builder
+    - blaze-html
+    - blaze-markup
+    - bytestring
+    - conduit >=1.1
+    - conduit-combinators >=1.0
+    - directory
+    - errors
+    - gitlib
+    - gitlib-libgit2
+    - holborn-common-types
+    - holborn-syntax >= 0.3
+    - http-api-data
+    - http-types
+    - mtl
+    - network >= 2.5
+    - pipes
+    - pipes-aeson
+    - pipes-bytestring
+    - pipes-network
+    - pipes-parse
+    - pipes-safe
+    - pipes-shell >= 0.2.0
+    - pipes-zlib
+    - process
+    - servant-blaze >= 0.5
+    - servant-server >= 0.5
+    - tagged
+    - text
+    - transformers
+
+executables:
+  holborn-repo:
+    main: Main.hs
+    source-dirs: src
+    ghc-options: -threaded -rtsopts
+    dependencies:
+      - holborn-repo
+      - optparse-applicative
+      - time >=1.5
+      - wai-extra

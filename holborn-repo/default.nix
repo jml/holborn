@@ -25,5 +25,6 @@ mkDerivation {
     base holborn-prelude optparse-applicative servant-server time wai
     wai-extra warp
   ];
+  description = "Serve git repositories";
   license = stdenv.lib.licenses.unfree;
 }

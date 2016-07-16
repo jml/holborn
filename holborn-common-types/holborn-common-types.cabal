@@ -1,73 +1,70 @@
+-- This file has been generated from package.yaml by hpack version 0.13.0.
+--
+-- see: https://github.com/sol/hpack
+
 name:                holborn-common-types
 version:             0.1.3.0
--- synopsis:
--- description:
+synopsis:            Types shared between our nodes
 license:             AllRightsReserved
-author:              teh, jml
-maintainer:          tehunger@gmail.com
--- copyright:
--- category:
 build-type:          Simple
--- extra-source-files:
-cabal-version:       >=1.10
+cabal-version:       >= 1.10
 
 library
-  exposed-modules:     Holborn.JSON.Browse
-                     , Holborn.JSON.RepoMeta
-                     , Holborn.JSON.NewRepo
-                     , Holborn.JSON.Settings.SSHKeys
-                     , Holborn.JSON.Settings.Profile
-                     , Holborn.JSON.SSHRepoCommunication
-                     , Holborn.Logging
-                     , Holborn.API.Types
-                     , Holborn.Auth
-                     , Holborn.ServantTypes
-
-  build-depends:       base >=4.9 && <5.0
-                     , holborn-prelude
-                     , aeson >= 0.10
-                     , attoparsec
-                     , bcrypt
-                     , errors
-                     , process
-                     , http-client
-                     , bytestring
-                     , time
-                     , postgresql-simple
-                     , entropy
-                     , containers
-                     , http-api-data
-                     , servant
-                     , servant-server
-                     , http-media
-                     , QuickCheck
-                     , text
-
-  hs-source-dirs:      lib
-  ghc-options:         -Wall -Werror
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-                     , OverloadedStrings
-                     , NamedFieldPuns
-                     , RecordWildCards
-                     , GeneralizedNewtypeDeriving
+  exposed-modules:
+      Holborn.API.Types
+      Holborn.Auth
+      Holborn.JSON.Browse
+      Holborn.JSON.NewRepo
+      Holborn.JSON.RepoMeta
+      Holborn.JSON.Settings.Profile
+      Holborn.JSON.Settings.SSHKeys
+      Holborn.JSON.SSHRepoCommunication
+      Holborn.Logging
+      Holborn.ServantTypes
+  build-depends:
+      aeson >= 0.10
+    , base >=4.9 && <5.0
+    , holborn-prelude
+    , http-api-data
+    , QuickCheck
+    , attoparsec
+    , bcrypt
+    , bytestring
+    , containers
+    , entropy
+    , errors
+    , http-client
+    , http-media
+    , postgresql-simple
+    , process
+    , servant
+    , servant-server
+    , text
+    , time
+  hs-source-dirs:
+      lib
+  ghc-options: -Wall -Werror
+  default-language: Haskell2010
+  default-extensions: GeneralizedNewtypeDeriving NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards
 
 test-suite holborn-common-types-test
-  type:                exitcode-stdio-1.0
-  default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-                     , OverloadedStrings
-                     , NamedFieldPuns
-                     , RecordWildCards
-                     , GeneralizedNewtypeDeriving
-  ghc-options:        -Wall -Werror -O2 -threaded -rtsopts -with-rtsopts=-N
-  hs-source-dirs:     tests
-  main-is:            Main.hs
-  build-depends:      base >= 4.9 && < 5
-                    , holborn-prelude
-                    , aeson >= 0.10
-                    , http-api-data
-                    , tasty >= 0.11
-                    , tasty-hunit
-                    , tasty-quickcheck
-                    , holborn-common-types
+  type: exitcode-stdio-1.0
+  default-language: Haskell2010
+  default-extensions: GeneralizedNewtypeDeriving NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards
+  ghc-options: -Wall -Werror -O2 -threaded -rtsopts -with-rtsopts=-N
+  hs-source-dirs:
+      tests
+  main-is: Main.hs
+  build-depends:
+      aeson >= 0.10
+    , base >=4.9 && <5.0
+    , holborn-prelude
+    , http-api-data
+    , holborn-common-types
+    , tasty >= 0.11
+    , tasty-hunit
+    , tasty-quickcheck
+  other-modules:
+      Helpers
+      RepoMeta
+      SSH

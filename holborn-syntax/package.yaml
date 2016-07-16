@@ -1,0 +1,40 @@
+name: holborn-syntax
+version: 0.3.0.0
+synopsis: Syntax analysis library
+license: AllRightsReserved
+
+ghc-options: -Wall -Werror
+default-extensions:
+  - GeneralizedNewtypeDeriving
+  - MonadFailDesugaring
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - RecordWildCards
+
+dependencies:
+  - base >= 4.9 && < 5.0
+  - holborn-prelude
+
+library:
+  source-dirs: lib
+  dependencies:
+    - bytestring >= 0.10
+    - containers >= 0.5
+    - errors >= 2.0
+    - highlighter2 >= 0.2
+    - language-python >= 0.5.2
+    - mtl >= 2.2
+    - pretty-error
+    - text >= 1.2
+
+tests:
+  holborn-syntax-test:
+    main: Tests.hs
+    source-dirs: tests
+    dependencies:
+      - holborn-syntax
+      - tasty
+      - tasty-hunit
+      - tasty-quickcheck
+

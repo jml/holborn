@@ -7,7 +7,9 @@ mkDerivation {
   src = ./.;
   libraryHaskellDepends = [ base basic-prelude mtl safe text ];
   testHaskellDepends = [
-    base basic-prelude tasty tasty-hspec tasty-hunit tasty-quickcheck
+    base basic-prelude mtl safe tasty tasty-hspec tasty-hunit
+    tasty-quickcheck text
   ];
+  description = "Standard prelude for Holborn";
   license = stdenv.lib.licenses.unfree;
 }
