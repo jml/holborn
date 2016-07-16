@@ -1,0 +1,81 @@
+name: holborn-api
+version: 0.1.0.0
+synopsis: API server for Holborn
+license: AllRightsReserved
+
+ghc-options: -Wall
+default-extensions:
+  - GeneralizedNewtypeDeriving
+  - MonadFailDesugaring
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - ScopedTypeVariables
+  - RecordWildCards
+
+dependencies:
+  - base >=4.9 && <5
+  - holborn-common-types
+  - holborn-prelude
+  - servant-server
+  - wai
+
+library:
+  source-dirs: lib
+  ghc-options: -Werror
+  dependencies:
+    - aeson >= 0.10
+    - attoparsec
+    - blaze-html
+    - blaze-markup
+    - bytestring
+    - either
+    - errors
+    - exceptions >= 0.8
+    - http-api-data
+    - http-client
+    - http-reverse-proxy
+    - http-types
+    - jwt
+    - postgresql-simple
+    - servant-docs >= 0.5
+    - text
+    - time
+    - transformers
+    - warp >= 3.1
+
+executables:
+  holborn-api-server:
+    main: Main.hs
+    source-dirs: holborn-api-server
+    ghc-options: -Werror
+    dependencies:
+      - holborn-api
+      - optparse-applicative
+      - wai-cors
+      - wai-extra
+      - warp >= 3.1
+
+tests:
+  holborn-api-tests:
+    main: Tests.hs
+    source-dirs: tests
+    ghc-options: -eventlog
+    dependencies:
+      - QuickCheck
+      - aeson
+      - bytestring
+      - errors
+      - holborn-api
+      - hspec-wai >= 0.6.5
+      - hspec-wai-json >= 0.6.0
+      - http-client
+      - http-types
+      - process
+      - process
+      - tasty >= 0.10
+      - tasty-hspec >= 1.1.0
+      - tasty-hunit >= 0.9.0
+      - tasty-quickcheck >= 0.8
+      - text
+      - transformers

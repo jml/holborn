@@ -20,6 +20,8 @@ clean:
 	rm -f $(nix_exprs)
 	rm -f $(cabal_files)
 
+holborn-api/holborn-api.cabal: holborn-api/package.yaml
+	hpack --silent holborn-api/
 
 holborn-common-types/holborn-common-types.cabal: holborn-common-types/package.yaml
 	hpack --silent holborn-common-types/
