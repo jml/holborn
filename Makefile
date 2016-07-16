@@ -27,6 +27,9 @@ holborn-common-types/holborn-common-types.cabal: holborn-common-types/package.ya
 holborn-prelude/holborn-prelude.cabal: holborn-prelude/package.yaml
 	hpack --silent holborn-prelude/
 
+holborn-repo/holborn-repo.cabal: holborn-repo/package.yaml
+	hpack --silent holborn-repo/
+
 holborn-syntax/holborn-syntax.cabal: holborn-syntax/package.yaml
 	hpack --silent holborn-syntax/
 
