@@ -21,6 +21,9 @@ clean:
 	rm -f $(cabal_files)
 
 
+holborn-common-types/holborn-common-types.cabal: holborn-common-types/package.yaml
+	hpack --silent holborn-common-types/
+
 holborn-prelude/holborn-prelude.cabal: holborn-prelude/package.yaml
 	hpack --silent holborn-prelude/
 

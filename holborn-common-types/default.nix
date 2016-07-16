@@ -15,7 +15,9 @@ mkDerivation {
     time
   ];
   testHaskellDepends = [
-    aeson base holborn-prelude tasty tasty-hunit tasty-quickcheck
+    aeson base holborn-prelude http-api-data tasty tasty-hunit
+    tasty-quickcheck
   ];
+  description = "Types shared between our nodes";
   license = stdenv.lib.licenses.unfree;
 }

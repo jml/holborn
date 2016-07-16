@@ -1,0 +1,48 @@
+name: holborn-common-types
+version: 0.1.3.0
+synopsis: Types shared between our nodes
+license: AllRightsReserved
+
+ghc-options: -Wall -Werror
+default-extensions:
+  - GeneralizedNewtypeDeriving
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - RecordWildCards
+
+dependencies:
+  - aeson >= 0.10
+  - base >=4.9 && <5.0
+  - holborn-prelude
+  - http-api-data
+
+library:
+  source-dirs: lib
+  dependencies:
+    - QuickCheck
+    - attoparsec
+    - bcrypt
+    - bytestring
+    - containers
+    - entropy
+    - errors
+    - http-client
+    - http-media
+    - postgresql-simple
+    - process
+    - servant
+    - servant-server
+    - text
+    - time
+
+tests:
+  holborn-common-types-test:
+    main: Main.hs
+    source-dirs: tests
+    ghc-options: -O2 -threaded -rtsopts -with-rtsopts=-N
+    dependencies:
+      - holborn-common-types
+      - tasty >= 0.11
+      - tasty-hunit
+      - tasty-quickcheck
