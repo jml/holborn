@@ -16,9 +16,9 @@ import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Network.HTTP.Client (newManager, Manager, defaultManagerSettings)
 import Network.HTTP.ReverseProxy (defaultOnExc, waiProxyTo, WaiProxyResponse(..), ProxyDest(..))
-import Network.HTTP.Types (status302)
+import Network.HTTP.Types (status302, status200)
 import Network.OAuth.OAuth2 (authorizationUrl, OAuth2(..), appendQueryParam, AccessToken(idToken), fetchAccessToken)
-import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application, rawPathInfo, rawQueryString)
+import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application, rawPathInfo, rawQueryString, responseFile)
 import Web.Cookie (parseCookies, renderSetCookie, def, setCookieName, setCookieValue, setCookiePath, setCookieSecure)
 import Servant (serve, (:<|>)(..), (:>), Raw, Server, QueryParam, Header, Get, NoContent(..), JSON)
 import Servant.Server (ServantErr(..), err302, err401)
@@ -34,6 +34,9 @@ import Holborn.Proxy.AuthJar (AuthJar(..), UserCookie, TrustedCreds, newMemoryJa
 type ProxyAPI =
     "oauth2" :> "callback" :> QueryParam "code" Text :> Get '[JSON] NoContent
     :<|> "v1" :> Header "Cookie" Text :> Raw
+    -- default handler serves /static content + index.html on any path
+    :<|> "static" :> Raw
+    :<|> Raw
 
 
 type RedirectAndAcmeAPI =
@@ -51,8 +54,12 @@ redirectAndAcmeAPI = Proxy
 
 proxyServer :: (AuthJar jar) => Config -> Manager -> jar -> Server ProxyAPI
 proxyServer config manager jar =
-    handleOauth2Callback config manager jar
-    :<|> handleProxying config manager jar
+  handleOauth2Callback config manager jar
+  :<|> handleProxying config manager jar
+  :<|> serveDirectory "/run/current-system/sw/ui/static"
+  -- TODO: we need to set headers in such a way that index.html is always realoaded
+  -- nginx uses sth like `expired no-cache no-store private auth;`
+  :<|> \_ respond -> respond (responseFile status200 [] "/run/current-system/sw/ui/index.html" Nothing)
 
 
 redirectAndAcmeServer :: ServiceBaseUrl -> Server RedirectAndAcmeAPI
