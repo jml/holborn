@@ -30,6 +30,5 @@ mkDerivation {
     servant-server tasty tasty-hspec tasty-hunit tasty-quickcheck text
     transformers wai
   ];
-  description = "API server for Holborn";
   license = stdenv.lib.licenses.unfree;
 }
