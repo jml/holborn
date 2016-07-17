@@ -12,6 +12,22 @@ in
         default = null;
         description = "the package";
       };
+      httpPort = mkOption { type = types.int; default = 80; description = "http pport"; };
+      httpsPort = mkOption { type = types.int; default = 443; description = "https pport"; };
+      publicUrl = mkOption { type = types.str; default = "https://norf.co"; description = "publicly visible name"; };
+      upstreamHost = mkOption { type = types.str; default = "127.0.0.1"; description = "upstream host"; };
+      upstreamPort = mkOption { type = types.int; default = 8002; description = "upstream port"; };
+      oauthClientSecret = mkOption {
+        type = types.str;
+        default = "-SEiYMyo5cR6Xkar-JUSkNeRAWJ28FyO5anFZ4xdiS1DDS8CSgmAITHxrlJ0g1mgI7zoz3xWe8nwUQHHpBQGpEZyVahTZXsP";
+        description = "oauth client secret";
+      };
+      oauthClientId = mkOption {
+        type = types.str;
+        default = "JFiW-C-Oz5vaiTc068Qa452cnIsly9MHEEFV0PpfvS8=@norf.co";
+        description = "oauth client id";
+      };
+      dexHost = mkOption { type = types.str; default = "http://norf.co:5556"; description = "dex host"; };
     };
   };
 
@@ -29,7 +45,7 @@ in
       path = [ pkgs.openssh ];
 
       serviceConfig = {
-        ExecStart = ''${cfg.package}/bin/holborn-proxy --port=80 --ssl-port=443 --public-host=https://norf.co --upstream-host=127.0.0.1 --upstream-port=8002 --ssl-full-chain=/var/lib/acme/norf.co/fullchain.pem --ssl-key=/var/lib/acme/norf.co/key.pem --dex-host=http://norf.co:5556  --oauth-client-id="JFiW-C-Oz5vaiTc068Qa452cnIsly9MHEEFV0PpfvS8=@norf.co" --oauth-client-secret="-SEiYMyo5cR6Xkar-JUSkNeRAWJ28FyO5anFZ4xdiS1DDS8CSgmAITHxrlJ0g1mgI7zoz3xWe8nwUQHHpBQGpEZyVahTZXsP"'';
+        ExecStart = ''${cfg.package}/bin/holborn-proxy --port=${toString cfg.httpPort} --ssl-port=${toString cfg.httpsPort} --public-host="${cfg.publicUrl}" --upstream-host="${cfg.upstreamHost}" --upstream-port=${toString cfg.upstreamPort} --ssl-full-chain=/var/lib/acme/norf.co/fullchain.pem --ssl-key=/var/lib/acme/norf.co/key.pem --dex-host=${cfg.dexHost}  --oauth-client-id="${cfg.oauthClientId}" --oauth-client-secret="${cfg.oauthClientSecret}"'';
 
         PrivateTmp = true;
         PrivateDevices = true;

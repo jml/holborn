@@ -34,7 +34,6 @@ import Holborn.Proxy.AuthJar (AuthJar(..), UserCookie, TrustedCreds, newMemoryJa
 type ProxyAPI =
     "oauth2" :> "callback" :> QueryParam "code" Text :> Get '[JSON] NoContent
     :<|> "v1" :> Header "Cookie" Text :> Raw
-    :<|> Raw -- default handler serves static content on any path
 
 
 type RedirectAndAcmeAPI =

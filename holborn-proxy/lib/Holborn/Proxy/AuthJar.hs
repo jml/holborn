@@ -59,7 +59,7 @@ class AuthJar a where
 instance AuthJar MemoryJar where
     set (MemoryJar jar) key token = atomically (modifyTVar' jar (HashMap.insert key token))
     get (MemoryJar jar) key = atomically (readTVar jar) >>= \m -> pure (HashMap.lookup key m)
-    make _ = fmap encode (getEntropy 2048)
+    make _ = fmap encode (getEntropy 128)
 
 
 -- TODO: unpackClaims is nested too deeply but checked by
