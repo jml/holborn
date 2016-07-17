@@ -15,9 +15,10 @@ var config = {
     app: './entry',
     vendor: ["react", "react-dom"]
   },
-  output: { path: __dirname
-            , pathinfo: true
-            , filename: 'bundle.js'
+  debug: true,
+  output: { path: __dirname,
+            pathinfo: true,
+            filename: 'bundle.js',
           },
   module: { loaders: [
     { test: /\.purs$/,
@@ -25,6 +26,9 @@ var config = {
       exclude: /node_modules/,
       query: {
         src: ['bower_components/purescript-*/src/**/*.purs', 'src/**/*.purs'],
+        pscArgs: { sourceMaps: true },
+        bundle: false,
+        pscIde: true,
       },
     },
     {

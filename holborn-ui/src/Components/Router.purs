@@ -54,7 +54,7 @@ data RootRoutes =
 
 -- TODO tom: Routes should really be "invertible" so I can create a
 -- KeySettings route string from the value.
-rootRoutes :: Parser RootRoutes
+rootRoutes :: Parser String RootRoutes
 rootRoutes =
   string "/" *>
     ( string "settings/" *> (map SettingsRoute Settings.settingsRoutes)
@@ -76,7 +76,7 @@ data Action =
 -- a state monad but it's a bit unclear how to fit that observation
 -- into real code.
 instance fetchRootRoutes :: Fetchable RootRoutes State where
-  fetch route state@(RouterState { _userMeta = NotLoaded }) = do
+  fetch route state@(RouterState { _userMeta: NotLoaded }) = do
       maybeToken <- liftEff (C.getCookie "auth-token")
       newState <- case maybeToken of
         Nothing -> pure (set userMeta Anonymous state)
@@ -245,16 +245,16 @@ spec = container $ handleActions $ fold
           navigate ((unsafeCoerce ev).target.pathname)
         _ -> pure unit
 
-    handleActions = over T._performAction \nestedPerformAction a p s k -> do
-      nestedPerformAction a p s k
-      handleAction a p s k
+    handleActions = over T._performAction \nestedPerformAction a p s -> do
+      nestedPerformAction a p s
+      handleAction a p s
 
     -- TODO error handling when fetch fails
-    handleAction BurgerMenuToggle p s k = k (\s -> over burgerOpen not s)
+    handleAction BurgerMenuToggle p s = T.cotransform (\s -> over burgerOpen not s)
 
-    handleAction action@(UpdateRoute r) p s k =
-      runAff (\err -> traceAnyM err >>= const (k id)) (\result -> k \s -> result) (fetch r s)
-    handleAction _ _ _ _ = pure unit
+    handleAction action@(UpdateRoute r) p s = T.cotransform id
+--      runAff (\err -> traceAnyM err >>= const (k id)) (\result -> k \s -> result) (fetch r s)
+--    handleAction _ _ _ _ = pure unit
 
 
 -- The following is a hack to listen on route changes for the "root"

@@ -12,6 +12,7 @@ import Text.Parsing.Combinators (many1)
 import Web.Cookies as C
 import React.DOM as R
 import React.DOM.Props as RP
+import React as React
 import Data.Lens (lens, LensP, set, view, toListOf)
 import Data.Lens.Traversal (traversed)
 import Data.Maybe (Maybe(..), maybe)
@@ -52,7 +53,7 @@ toArrayOf p s = toUnfoldable (toListOf p s)
 -- | Fetch metadata for a git repository (e.g. description)
 fetchMeta :: forall eff. BrowseRoutes -> Owner -> Repo -> State -> Fetch eff State
 fetchMeta rt owner repo state = do
-  let url = makeUrl ("/v1/repos/" ++ owner ++ "/" ++ repo)
+  let url = makeUrl ("/v1/repos/" <> owner <> "/" <> repo)
   rx <- Auth.get url >>= decodeResponse
   let state' = set meta (Just rx) state
   fetch rt state'
@@ -72,9 +73,9 @@ makeBlobUrl owner repo ref path =
 
 
 instance browseFetchable :: Fetchable BrowseRoutes State where
-  fetch rt@(Home owner repo) state@(State { _meta = Nothing }) = fetchMeta rt owner repo state
-  fetch rt@(Tree owner repo _ _) state@(State { _meta = Nothing }) = fetchMeta rt owner repo state
-  fetch rt@(Blob owner repo _ _) state@(State { _meta = Nothing }) = fetchMeta rt owner repo state
+  fetch rt@(Home owner repo) state@(State { _meta: Nothing }) = fetchMeta rt owner repo state
+  fetch rt@(Tree owner repo _ _) state@(State { _meta: Nothing }) = fetchMeta rt owner repo state
+  fetch rt@(Blob owner repo _ _) state@(State { _meta: Nothing }) = fetchMeta rt owner repo state
 
   fetch (Home owner repo) state = do
     let url = makeTreeUrl owner repo (Just "master") Nothing
@@ -124,20 +125,20 @@ data BrowseRoutes =
   | BlobLoaded Owner Repo Ref RepoPath
 
 
-parseOwner :: Parser String
+parseOwner :: Parser String Owner
 parseOwner = fromCharList <$> many1 (alphanum <|> anyOf "-_")
-parseRepo :: Parser String
+parseRepo :: Parser String Repo
 parseRepo =
   fromCharList <$> many1 (alphanum <|> anyOf "-_") <* (string "/" <|> string ".git" <|> string "")
 
 -- TODO: parsePath & parseRef need some sophistication
-parsePath :: Parser String
+parsePath :: Parser String RepoPath
 parsePath = word
-parseRef :: Parser String
+parseRef :: Parser String Ref
 parseRef = fromCharList <$> many1 alphanum
 
 -- NB the ordering of the parser is important, I can't make `eof` work.
-browseRoutes :: Parser State
+browseRoutes :: Parser String State
 browseRoutes =
   map startRoute
     (     Tree <$> parseOwner <* string "/" <*> parseRepo <* string "tree/" <*> parseRef <* string "/" <*> parsePath
@@ -151,19 +152,19 @@ browseRoutes =
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = T.simpleSpec T.defaultPerformAction render
   where
-    render dispatch _ (State { route = Home org repo}) _ =
+    render dispatch _ (State { route: Home org repo}) _ =
       [ R.h1 [] [R.text "browse ... (loading)"]
-      , R.text $ org ++ repo
+      , R.text $ org <> repo
       ]
-    render dispatch _ (State { route = HomeLoaded org repo, _meta = Just meta, _tree = Just tree }) _ =
+    render dispatch _ (State { route: HomeLoaded org repo, _meta: Just meta, _tree: Just tree }) _ =
       [ R.h2 [] [R.text (view MB.description meta)]
       , R.ul [] (renderTree org repo tree)
       ]
-    render dispatch _ (State { route = TreeLoaded org repo ref path, _meta = Just meta, _tree = Just tree }) _ =
+    render dispatch _ (State { route: TreeLoaded org repo ref path, _meta: Just meta, _tree: Just tree }) _ =
       [ R.h2 [] [R.text (view MB.description meta)]
       , R.ul [] (renderTree org repo tree)
       ]
-    render dispatch _ (State { route = BlobLoaded org repo ref path, _meta = Just meta, _blob = Just (GitBlobRendered blob) }) _ =
+    render dispatch _ (State { route: BlobLoaded org repo ref path, _meta: Just meta, _blob: Just (GitBlobRendered blob) }) _ =
       [ R.h2 [] [R.text (view MB.description meta)]
         -- TODO count number of lines
       , R.pre [RP.className "line-numbers"] (renderLines (spy blob.num_lines))
@@ -195,3 +196,4 @@ spec = T.simpleSpec T.defaultPerformAction render
     makeLink org repo treePath (GitTreeEntry entry) = case entry.type_ of
       "blob" -> intercalate "/" (["", org, repo, "blob", "master"] <> treePath <> [entry.path])
       "tree" -> intercalate "/" (["", org, repo, "tree", "master"] <> treePath <> [entry.path])
+      _ -> "error404 TODO"

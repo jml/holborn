@@ -4,7 +4,7 @@
 module Standalone.Router.Dispatch where
 
 import Prelude
-import Text.Parsing.Simple (runParser, char, Parser)
+import Text.Parsing.Simple (unparser, Parser)
 import Control.Monad.Eff (Eff)
 import Data.Either (Either(..))
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
@@ -27,10 +27,10 @@ navigate = pushState
 
 
 -- | TODO do we want leave / enter events instead of Maybe a?
-matches :: forall a e. Parser a -> (a -> Eff e Unit) -> Eff e Unit
+matches :: forall a e. Parser String a -> (a -> Eff e Unit) -> Eff e Unit
 matches parser callback = do
   routeChanged $ \old new ->
-    let result = runParser parser new in
+    let result = unparser parser new in
     case result.remaining of
       "" -> case result.consumed of
         Right x -> callback x
