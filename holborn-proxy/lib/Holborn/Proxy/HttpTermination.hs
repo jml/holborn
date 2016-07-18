@@ -56,7 +56,7 @@ proxyServer config manager jar =
   handleOauth2Callback config manager jar
   :<|> handleProxying config manager jar
   :<|> serveDirectory "/run/current-system/sw/ui/static"
-  -- TODO: we need to set headers in such a way that index.html is always realoaded
+  -- TODO: we need to set headers in such a way that index.html is always reloaded
   -- nginx uses sth like `expired no-cache no-store private auth;`
   :<|> \_ respond -> respond (responseFile status200 [] "/run/current-system/sw/ui/index.html" Nothing)
 
