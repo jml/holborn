@@ -94,16 +94,12 @@ redirectSetAuthCookie Config{configPublicHost} userCookie =
 -- | Tell the user what went wrong. At some point we probably want to
 -- send a generic 401 and log in parallel for debugging.
 authProblem :: Text -> ExceptT ServantErr IO NoContent
-authProblem msg =
-    throwE (err401 { errBody = BSL.fromStrict (encodeUtf8 msg)}) >> pure NoContent
+authProblem msg = throwE (err401 { errBody = BSL.fromStrict (encodeUtf8 msg)})
 
 
 handleOauth2Callback :: (AuthJar jar) => Config -> Manager -> jar -> Maybe Text -> ExceptT ServantErr IO NoContent
-handleOauth2Callback config@Config{..} manager jar maybeCode = do
-    -- Classic Control.Monad.when doesn't work because it's () instead of NoContent
-    -- TODO: jml and I discussed IRL and we're unsure whether we could when and ignore the return value with `void`
-    _ <- if (maybeCode == Nothing) then authProblem "need code" else pure NoContent
-    let Just code = maybeCode
+handleOauth2Callback _ _ _ Nothing = authProblem "need code"
+handleOauth2Callback config@Config{..} manager jar (Just code) = do
     eitherToken <- liftIO (fetchAccessToken manager (oauth2FromConfig config) (encodeUtf8 code))
     case eitherToken of
       Right token -> do
@@ -115,8 +111,6 @@ handleOauth2Callback config@Config{..} manager jar maybeCode = do
                 redirectSetAuthCookie config userCookie
             Left err -> authProblem ("could not parse id_token: " <> (show err))
       Left err -> liftIO (print err) >> authProblem "token problem"
-
-  where
 
 
 handleProxying :: (AuthJar jar) => Config -> Manager -> jar -> Maybe Text -> Application
