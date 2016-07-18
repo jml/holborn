@@ -12,8 +12,8 @@ in
         default = null;
         description = "the package";
       };
-      httpPort = mkOption { type = types.int; default = 80; description = "http pport"; };
-      httpsPort = mkOption { type = types.int; default = 443; description = "https pport"; };
+      httpPort = mkOption { type = types.int; default = 80; description = "http port"; };
+      httpsPort = mkOption { type = types.int; default = 443; description = "https port"; };
       publicUrl = mkOption { type = types.str; default = "https://norf.co"; description = "publicly visible name"; };
       upstreamHost = mkOption { type = types.str; default = "127.0.0.1"; description = "upstream host"; };
       upstreamPort = mkOption { type = types.int; default = 8002; description = "upstream port"; };

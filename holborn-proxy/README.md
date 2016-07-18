@@ -1,3 +1,9 @@
+# holborn-proxy
+
+Internet facing frontend webservice. All HTTP traffic to Holborn goes
+through this. Think of it as an andvanced, not-c nginx.
+
+
 # TODO
 
 * state parameter - do we need it?

@@ -151,6 +151,6 @@ main = do
         threadDelay (1000 * 5000) -- 5 seconds
   where
     degradedModeMessage (err :: IOException) = do
-        putStrLn "Error when running TLS server:"
+        printErr "Error when running TLS server:"
         printErr (show err)
-        putStrLn "Running in degraded mode."
+        printErr "Running in degraded mode."
