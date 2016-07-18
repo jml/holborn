@@ -132,7 +132,11 @@ throwAPIError :: APIError err -> APIHandler err a
 throwAPIError = APIHandler . lift . throwE
 
 
--- | Configuration usable directly by application.
+-- | The internal "configuration" of the application. Collects things used
+-- across all handlers.
+--
+-- This is an implementation detail of 'APIHandler'. To create a
+-- configuration, use 'Holborn.API.Config.Config'.
 data AppConf = AppConf
   { conn :: PostgreSQL.Connection
   , httpManager :: Manager
@@ -176,10 +180,9 @@ runAPIHandler config handler = do
 --
 -- Use with 'enter'.
 toServantHandler :: JSONCodeableError err => Config -> APIHandler err :~> ExceptT ServantErr IO
-toServantHandler config = Nat (toServantHandler' config)
-
-toServantHandler' :: JSONCodeableError err => Config -> APIHandler err a -> ExceptT ServantErr IO a
-toServantHandler' config handler = bimapExceptT toServantErr id (runAPIHandler config handler)
+toServantHandler config = Nat toServantHandler'
+  where
+    toServantHandler' handler = bimapExceptT toServantErr id (runAPIHandler config handler)
 
 -- | If something throws with 'throwM', we'll convert that to an unexpected exception.
 instance MonadThrow (APIHandler err) where

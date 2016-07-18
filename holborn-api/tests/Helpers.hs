@@ -1,7 +1,7 @@
 -- | Support code for holborn-api integration tests.
 
 module Helpers
-  ( Postgres(..)
+  ( Postgres
   , connection
   , makeDatabase
   , stopPostgres
@@ -26,21 +26,14 @@ type UserName = String
 -- | Postgres database name.
 type DatabaseName = String
 
+-- | A Postgres database that we can use for tests.
+--
+-- Create with 'makeDatabase', stop with 'stopPostgres', and get a connection
+-- to the database using 'connection'.
 data Postgres =
-  Running { port      :: Port
-          , username  :: UserName
-          , database  :: DatabaseName
-          , directory :: FilePath
-          }
-
-
-connection :: Postgres -> ConnectInfo
-connection Running{port, username, database} =
-  defaultConnectInfo { connectPort = port
-                     , connectUser = username
-                     , connectDatabase = database
-                     }
-
+  Postgres { directory :: FilePath
+           , connection :: ConnectInfo
+           }
 
 -- | Make sure we have a database made of the SQL that's in the given file.
 makeDatabase :: FilePath -> IO Postgres
@@ -51,11 +44,13 @@ makeDatabase schema = do
   port <- launchPostgres pgDir
   user <- onException (createPostgresUser port) (stopPostgres' pgDir)
   database <- onException (createPostgresDatabase port user) (stopPostgres' pgDir)
-  let postgres = Running { port      = port
-                         , username  = user
-                         , database  = database
-                         , directory = pgDir
-                         }
+  let conn = defaultConnectInfo { connectPort = port
+                                , connectUser = user
+                                , connectDatabase = database
+                                }
+  let postgres = Postgres { directory = pgDir
+                          , connection = conn
+                          }
   onException (runSqlFromFile postgres schema) (stopPostgres postgres)
   pure postgres
 
@@ -109,10 +104,10 @@ makeDatabase schema = do
     -- TODO: What should this return? Something that communicates results and how
     -- it got there.
     runSqlFromFile :: Postgres -> FilePath -> IO ()
-    runSqlFromFile Running{port, username, database} filename = do
-      cmd "psql" [ "-p", toString port
-                 , "-U", username
-                 , "-d", database
+    runSqlFromFile Postgres{connection} filename = do
+      cmd "psql" [ "-p", toString (connectPort connection)
+                 , "-U", (connectUser connection)
+                 , "-d", (connectDatabase connection)
                  , "-qf", filename
                  ]
 
@@ -140,7 +135,7 @@ pg_ctl pgDir command args = do
 --
 -- Blocks until the instance is definitely terminated.
 stopPostgres :: Postgres -> IO ()
-stopPostgres Running{directory} = stopPostgres' directory
+stopPostgres Postgres{directory} = stopPostgres' directory
 
 
 -- | Terminate a running Postgresql instance.
