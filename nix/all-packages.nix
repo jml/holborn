@@ -35,9 +35,15 @@ haskellPackages.override {
       holborn-repo = self.callPackage ../holborn-repo {};
       holborn-ssh = self.callPackage ../holborn-ssh {};
       holborn-syntax = self.callPackage ../holborn-syntax {};
+      holborn-proxy = self.callPackage ../holborn-proxy {};
 
       language-python = self.callPackage ./language-python.nix {};
       unexceptionalio = self.callPackage ./unexceptionalio.nix {};
+
+      # Patched hoauth2 package with id_token field: Drop in favour of
+      # main package when https://github.com/freizl/hoauth2/pull/48 is
+      # in.
+      hoauth2 = self.callPackage ./hoauth2.nix {};
 
       # purescript relies on > 0.6 but we only have 0.5 branch in nix
       language-javascript = self.callPackage ./language-javascript.nix {};

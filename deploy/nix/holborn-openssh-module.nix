@@ -12,9 +12,9 @@ let
     AuthorizedKeysCommand=/holborn-authorized-keys --api-url=${cfg.holbornApiEndpoint} --key=%k --type=%t
     AuthorizedKeysCommandUser=holborn
 
-    # PUPPY not sure we can use those keys they should be regenerated.
-    HostKey=${cfg.package}/etc/ssh_host_rsa_key
-    HostKey=${cfg.package}/etc/ssh_host_dsa_key
+    # Host keys provided via nixops `deployment.keys` option:
+    HostKey=/run/keys/ssh_host_rsa_key
+    HostKey=/run/keys/ssh_host_dsa_key
     Port=22
     PidFile=/tmp/holborn-openssh.pid
   '';
@@ -77,7 +77,7 @@ in
         chmod 0755 /holborn-authorized-keys
       '';
 
-      serviceConfig.ExecStart = "${cfg.package}/bin/sshd -D -e -f ${ssh-config} -o \"HolbornApiEndpoint=${cfg.holbornApiEndpoint}\"";
+      serviceConfig.ExecStart = "${cfg.package}/bin/sshd -D -e -f ${ssh-config}";
     };
   };
 }

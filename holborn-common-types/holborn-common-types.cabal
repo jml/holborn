@@ -11,6 +11,7 @@ cabal-version:       >= 1.10
 
 library
   exposed-modules:
+      Holborn.API.ReviewTypes
       Holborn.API.Types
       Holborn.Auth
       Holborn.JSON.Browse

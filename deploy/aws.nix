@@ -1,14 +1,14 @@
 let
-    normalSSHPort = 3334;
+    ports = import ./ports.nix;
     region = "eu-west-1";
     common-config = {
         nix.gc.automatic = true;
         nix.gc.dates = "10:00";
         nix.gc.options = "--delete-older-than 7d";
 
-        networking.firewall.enable = true;
-        networking.firewall.allowedTCPPorts = [ 22 80 443 ];
-        networking.firewall.allowPing = true;
+        # PUPPY - probably a good idea to lock down our setup once
+        # we've settled.
+        networking.firewall.enable = false;
         services.journald.extraConfig = "SystemMaxUse=100M";
 
         # Set up ssh keys for git-pushing
@@ -27,25 +27,26 @@ rec {
     resources.ec2SecurityGroups.http-ssh = {
         inherit region;
         rules = [
-            { fromPort = 22; toPort = 22; sourceIp = "0.0.0.0/0"; }
-            { fromPort = normalSSHPort; toPort = normalSSHPort; sourceIp = "0.0.0.0/0"; }
-            { fromPort = 80; toPort = 80; sourceIp = "0.0.0.0/0"; }
-            { fromPort = 443; toPort = 443; sourceIp = "0.0.0.0/0"; }
+            { fromPort = ports.ssh; toPort = ports.ssh; sourceIp = "0.0.0.0/0"; }
+            { fromPort = ports.loginSSH; toPort = ports.loginSSH; sourceIp = "0.0.0.0/0"; }
+            { fromPort = ports.dex; toPort = ports.dex; sourceIp = "0.0.0.0/0"; }
+            { fromPort = ports.http; toPort = ports.http; sourceIp = "0.0.0.0/0"; }
+            { fromPort = ports.https; toPort = ports.https; sourceIp = "0.0.0.0/0"; }
         ];
     };
 
     web = { resources, pkgs, lib, config, ... }:
     let
         hp = pkgs.callPackage ../nix/all-packages.nix {};
-        ports = import ./ports.nix;
         holborn-api = hp.callPackage ../holborn-api {};
         holborn-repo = hp.callPackage ../holborn-repo {};
         holborn-ssh = hp.callPackage ../holborn-ssh {};
+        holborn-proxy = hp.callPackage ../holborn-proxy {};
 
         # TODO - the following three should live holborn-ui:
         node_modules = pkgs.callPackage ../nix/node_modules.nix {};
         bower_modules = pkgs.callPackage ../nix/bower_modules.nix { inherit node_modules; };
-        frontend = pkgs.callPackage ../nix/frontend.nix {
+        holborn-ui = pkgs.callPackage ../nix/frontend.nix {
           inherit node_modules bower_modules;
           haskellPackages = hp;
         };
@@ -58,6 +59,7 @@ rec {
         deployment.ec2.keyPair = resources.ec2KeyPairs.pair;
         deployment.ec2.securityGroups = [ resources.ec2SecurityGroups.http-ssh ];
 
+        deployment.keys = import ./secrets/keys.nix;
 
         # The following is slightly messy: The AMI ships with SSH
         # running on port 22 but we're moving it to another port so
@@ -73,14 +75,16 @@ rec {
           ./nix/holborn-openssh-module.nix
           ./nix/holborn-api-module.nix
           ./nix/holborn-repo-module.nix
+          ./nix/holborn-proxy-module.nix
+          ./nix/dex-module.nix
         ];
 
-        services.openssh.ports = [ normalSSHPort ];
+        services.openssh.ports = [ ports.loginSSH ];
 
         services.holborn-openssh = {
           package = pkgs.openssh;
           holbornSshPackage = holborn-ssh;
-          holbornApiEndpoint = "http://127.0.01:${ports.API}";
+          holbornApiEndpoint = "http://127.0.01:${toString ports.API}";
         };
 
         services.holborn-api = {
@@ -97,7 +101,44 @@ rec {
           rawPort = ports.RAW;
         };
 
-        environment.systemPackages = [ pkgs.git pkgs.vim frontend ];
+        services.holborn-proxy = {
+          package = holborn-proxy;
+        };
+
+        services.dex = {
+          enable = true;
+          package = (pkgs.callPackage ../nix/dex.nix {});
+
+          # PUPPY people with these keys can generate valid logins for
+          # any user so they need to be treated with more care.
+          #
+          # TODO - regenerate move them to secrets/keys.nix when we're done
+          # with testing.
+          overlordDBURL = "postgres://dex-rw@127.0.0.1/dex?sslmode=disable";
+          overlordAdminAPISecret = "lyErb98S0KpcUJ9AYM3jWlkPLxhvD5czolgJqpjls3jdBslhYqmZUOYhPoi8leiSoLvB6fVZ3xA9KdhZC7UA0COdbhgGORyGLlIq2DY/2xxkPm8UItARTqjSbAfVpqSVzSd1ZEhoNUi+iWNTdTVVArZN2Dg20geMNZEzlx/KqyM=";
+          overlordKeySecrets = ["RKLSntSuSsg6Ki8AKmo3WaAw1m3KqTxC3bnGF5i9jCk="];
+          logDebug = true;
+          emailConfig = {
+            type = "fake";
+          };
+          connectorConfig = [{
+            type = "local";
+            id = "local";
+          }];
+        };
+
+        # We're linking the UI into the current system so we don't
+        # have to re-start the front-end server to pick up the new
+        # UI. We just point at a static directory.
+        # This is temporary until we have decided on the right way to serve
+        # static content.
+        environment.pathsToLink = [ "/ui" ];
+
+        # Some useful packages for viewing, editing, and making sure
+        # UI is installed. Not stricly necessary but useful.
+        environment.systemPackages = [ pkgs.git pkgs.vim holborn-ui ];
+
+        services.postfix.enable = true;
 
         services.postgresql.enable = true;
         services.postgresql.package = pkgs.postgresql95;
@@ -108,13 +149,6 @@ rec {
         security.acme.certs."norf.co" = {
           webroot = "/var/www/challenges";
           email = "tehunger@gmail.com";
-        };
-
-        # For SSL:
-        services.nginx.enable = true;
-        services.nginx.config = import ./nix/nginx.conf.nix {
-          inherit frontend;
-          proxy_port = ports.API;
         };
     });
 }

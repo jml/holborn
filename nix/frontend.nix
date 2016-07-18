@@ -1,7 +1,7 @@
 { pkgs, stdenv, nodejs-4_x, closurecompiler, nix, node_modules, bower_modules,
   haskellPackages, glibcLocales, zopfli, sassc }:
 stdenv.mkDerivation {
-  name = "holborn-frontend";
+  name = "holborn-ui";
   phases = "unpackPhase buildPhase installPhase";
   buildInputs = [
     nodejs-4_x nix
@@ -32,24 +32,26 @@ stdenv.mkDerivation {
 
     # TODO ./static already exists in our source but relying on this
     # implicit contract is probably not a good idea.
-    # mkdir static
+
+
+    mkdir -p ui/static
     export BUNDLE_HASH=$(nix-hash bundle.min.js)
     export VENDOR_HASH=$(nix-hash vendor.bundle.min.js)
-    mv bundle.min.js static/bundle.$BUNDLE_HASH.min.js
-    mv vendor.bundle.min.js static/vendor.bundle.$VENDOR_HASH.min.js
+    mv bundle.min.js ui/static/bundle.$BUNDLE_HASH.min.js
+    mv vendor.bundle.min.js ui/static/vendor.bundle.$VENDOR_HASH.min.js
 
     # CSS
     sassc scss/holborn-ui.scss > app.css
     export CSS_HASH=$(nix-hash app.css)
-    mv app.css static/app.$CSS_HASH.css
+    mv app.css ui/static/app.$CSS_HASH.css
 
 
     # Note that zopfli keeps the uncompressed file around. We need
     # that for clients that don't send accept-encoding: gzip
-    zopfli -i1000 static/*.min.js
-    zopfli -i1000 static/*.css
+    zopfli -i1000 ui/static/*.min.js
+    zopfli -i1000 ui/static/*.css
 
-    cat >index.html <<HEREDOC
+    cat >ui/index.html <<HEREDOC
     <head>
       <title>norf</title>
       <link href="/static/app.$CSS_HASH.css" rel="stylesheet" type="text/css">
@@ -65,6 +67,6 @@ stdenv.mkDerivation {
 
   installPhase = ''
     mkdir -p $out
-    cp -r index.html static  $out/
+    cp -r ui  $out/
   '';
 }
