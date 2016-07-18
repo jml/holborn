@@ -56,6 +56,7 @@ executables:
       - wai-cors
       - wai-extra
       - warp >= 3.1
+      - postgresql-simple
 
 tests:
   holborn-api-tests:
