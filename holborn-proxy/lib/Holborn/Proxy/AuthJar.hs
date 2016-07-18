@@ -14,7 +14,7 @@ module Holborn.Proxy.AuthJar
 import HolbornPrelude
 
 import qualified Data.HashMap.Strict as HashMap
-import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar', readTVarIO, readTVar, TVar)
+import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar', readTVar, TVar)
 import Control.Concurrent.STM (atomically)
 import GHC.Generics (Generic)
 import System.Entropy (getEntropy)
@@ -85,6 +85,7 @@ unpackClaims token =
     Nothing -> Left "missing id_token"
 
 
+emailAndNameClaims :: ClaimsSet -> Maybe (Result TrustedCreds)
 emailAndNameClaims claimsSet = do
     let c = _unregisteredClaims claimsSet
     email <- fmap fromJSON (HashMap.lookup "email" c)

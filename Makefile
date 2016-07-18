@@ -23,6 +23,9 @@ clean:
 holborn-api/holborn-api.cabal: holborn-api/package.yaml
 	hpack --silent holborn-api/
 
+holborn-proxy/holborn-proxy.cabal: holborn-proxy/package.yaml
+	hpack --silent holborn-proxy/
+
 holborn-common-types/holborn-common-types.cabal: holborn-common-types/package.yaml
 	hpack --silent holborn-common-types/
 

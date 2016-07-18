@@ -8,7 +8,7 @@ import HolbornPrelude
 
 import qualified Network.Wai.Handler.Warp as Warp
 import Network.OAuth.OAuth2 (OAuth2(..))
-import Network.URI (URI, parseURI)
+import Network.URI (URI)
 
 
 type ServiceBaseUrl = URI

@@ -14,21 +14,20 @@ import HolbornPrelude
 
 import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
-import Network.HTTP.Client (newManager, Manager, defaultManagerSettings)
+import Network.HTTP.Client (Manager)
 import Network.HTTP.ReverseProxy (defaultOnExc, waiProxyTo, WaiProxyResponse(..), ProxyDest(..))
 import Network.HTTP.Types (status302, status200)
-import Network.OAuth.OAuth2 (authorizationUrl, OAuth2(..), appendQueryParam, AccessToken(idToken), fetchAccessToken)
+import Network.OAuth.OAuth2 (authorizationUrl, OAuth2(..), appendQueryParam, fetchAccessToken)
 import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application, rawPathInfo, rawQueryString, responseFile)
 import Web.Cookie (parseCookies, renderSetCookie, def, setCookieName, setCookieValue, setCookiePath, setCookieSecure)
 import Servant (serve, (:<|>)(..), (:>), Raw, Server, QueryParam, Header, Get, NoContent(..), JSON)
 import Servant.Server (ServantErr(..), err302, err401)
 import Data.Proxy (Proxy(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
-import qualified Data.HashMap.Strict as HashMap
 import Servant.Utils.StaticFiles (serveDirectory)
 
 import Holborn.Proxy.Config (Config(..), oauth2FromConfig, ServiceBaseUrl)
-import Holborn.Proxy.AuthJar (AuthJar(..), UserCookie, TrustedCreds, newMemoryJar, unpackClaims, trustedCredsHeaders)
+import Holborn.Proxy.AuthJar (AuthJar(..), UserCookie, TrustedCreds, unpackClaims, trustedCredsHeaders)
 
 
 type ProxyAPI =

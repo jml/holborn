@@ -1,0 +1,70 @@
+name: holborn-proxy
+version: 0.1.0.0
+synopsis: Reverse proxy / http terminator for holborn
+license: AllRightsReserved
+
+ghc-options: -Wall
+default-extensions:
+  - GeneralizedNewtypeDeriving
+  - MonadFailDesugaring
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - ScopedTypeVariables
+  - RecordWildCards
+
+dependencies:
+  - base >=4.9 && <5
+  - holborn-prelude
+
+library:
+  source-dirs: lib
+  ghc-options: -Werror
+  dependencies:
+    - warp >=3.2.1
+    - hoauth2 >=0.5.2
+    - unordered-containers
+    - stm
+    - hashable
+    - entropy
+    - base64-bytestring
+    - hoauth2 >=0.5.2
+    - wai
+    - http-reverse-proxy >=0.4
+    - http-client
+    - cookie
+    - bytestring
+    - http-types
+    - jose
+    - text
+    - aeson
+    - unordered-containers
+    - servant
+    - servant-server
+    - transformers
+    - network-uri
+
+executables:
+  holborn-proxy:
+    main: holborn-proxy.hs
+    source-dirs: src
+    ghc-options: -Werror
+    dependencies:
+      - holborn-proxy
+      - optparse-applicative
+      - http-client
+      - warp >=3.2.1
+      - warp-tls >=3.2.1
+      - wai-extra
+      - network-uri
+
+tests:
+  holborn-proxy-tests:
+    main: Tests.hs
+    source-dirs: tests
+    dependencies:
+      - holborn-proxy
+      - tasty >= 0.10
+      - tasty-hunit >= 0.9.0
+      - tasty-quickcheck >= 0.8
+      - tasty-hspec >= 1.1.0

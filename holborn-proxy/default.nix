@@ -24,6 +24,6 @@ mkDerivation {
   testHaskellDepends = [
     base holborn-prelude tasty tasty-hspec tasty-hunit tasty-quickcheck
   ];
-  description = "Reverse proxy";
+  description = "Reverse proxy / http terminator for holborn";
   license = stdenv.lib.licenses.unfree;
 }
