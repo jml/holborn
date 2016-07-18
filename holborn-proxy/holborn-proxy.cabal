@@ -17,28 +17,26 @@ library
   build-depends:
       base >=4.9 && <5
     , holborn-prelude
-    , warp >=3.2.1
-    , hoauth2 >=0.5.2
-    , unordered-containers
-    , stm
-    , hashable
-    , entropy
+    , aeson
     , base64-bytestring
-    , hoauth2 >=0.5.2
-    , wai
-    , http-reverse-proxy >=0.4
-    , http-client
-    , cookie
     , bytestring
+    , cookie
+    , entropy
+    , hashable
+    , hoauth2 >=0.5.2
+    , http-client
+    , http-reverse-proxy >=0.4
     , http-types
     , jose
-    , text
-    , aeson
-    , unordered-containers
+    , network-uri
     , servant
     , servant-server
+    , stm
+    , text
     , transformers
-    , network-uri
+    , unordered-containers
+    , wai
+    , warp >=3.2.1
   hs-source-dirs:
       lib
   default-language: Haskell2010
@@ -50,12 +48,12 @@ executable holborn-proxy
       base >=4.9 && <5
     , holborn-prelude
     , holborn-proxy
-    , optparse-applicative
     , http-client
+    , network-uri
+    , optparse-applicative
+    , wai-extra
     , warp >=3.2.1
     , warp-tls >=3.2.1
-    , wai-extra
-    , network-uri
   hs-source-dirs:
       src
   ghc-options: -Wall -Werror
@@ -71,9 +69,9 @@ test-suite holborn-proxy-tests
     , holborn-prelude
     , holborn-proxy
     , tasty >= 0.10
+    , tasty-hspec >= 1.1.0
     , tasty-hunit >= 0.9.0
     , tasty-quickcheck >= 0.8
-    , tasty-hspec >= 1.1.0
   hs-source-dirs:
       tests
   ghc-options: -Wall

@@ -28,7 +28,6 @@ library:
     - entropy
     - hashable
     - hoauth2 >=0.5.2
-    - hoauth2 >=0.5.2
     - http-client
     - http-reverse-proxy >=0.4
     - http-types
@@ -39,7 +38,6 @@ library:
     - stm
     - text
     - transformers
-    - unordered-containers
     - unordered-containers
     - wai
     - warp >=3.2.1
