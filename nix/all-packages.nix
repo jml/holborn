@@ -43,10 +43,9 @@ haskellPackages.override {
       });
       holborn-common-types = self.callPackage ../holborn-common-types {};
       holborn-prelude = self.callPackage ../holborn-prelude {};
-      # holborn-repo uses the 'git' binary at runtime.
-      holborn-repo = lib.overrideDerivation (self.callPackage ../holborn-repo {}) (oldAttrs: {
-        executableSystemDepends = [ pkgs.git ];
-      });
+      # TODO: holborn-repo uses the 'git' binary at runtime, but we don't know
+      # how to specify that in Nix.
+      holborn-repo = self.callPackage ../holborn-repo {};
       holborn-ssh = self.callPackage ../holborn-ssh {};
       holborn-syntax = self.callPackage ../holborn-syntax {};
       holborn-proxy = self.callPackage ../holborn-proxy {};
