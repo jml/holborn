@@ -1,5 +1,5 @@
 { mkDerivation, aeson, base, base64-bytestring, bytestring, cookie
-, entropy, hashable, hoauth2, holborn-prelude, http-client
+, entropy, errors, hashable, hoauth2, holborn-prelude, http-client
 , http-reverse-proxy, http-types, jose, network-uri
 , optparse-applicative, servant, servant-server, stdenv, stm, tasty
 , tasty-hspec, tasty-hunit, tasty-quickcheck, text, transformers
@@ -12,10 +12,10 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    aeson base base64-bytestring bytestring cookie entropy hashable
-    hoauth2 holborn-prelude http-client http-reverse-proxy http-types
-    jose network-uri servant servant-server stm text transformers
-    unordered-containers wai warp
+    aeson base base64-bytestring bytestring cookie entropy errors
+    hashable hoauth2 holborn-prelude http-client http-reverse-proxy
+    http-types jose network-uri servant servant-server stm text
+    transformers unordered-containers wai warp
   ];
   executableHaskellDepends = [
     base holborn-prelude http-client network-uri optparse-applicative
