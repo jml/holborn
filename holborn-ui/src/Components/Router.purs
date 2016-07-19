@@ -3,7 +3,6 @@ module Components.Router where
 import Prelude
 import Control.Alt ((<|>))
 import Control.Apply ((*>))
-import Control.Monad.Aff (runAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE())
 import Control.Monad.Eff.Exception as E
@@ -30,7 +29,7 @@ import Holborn.SettingsRoute as Settings
 import Holborn.Signin as Signin
 import Holborn.Config (makeUrl)
 import Holborn.Auth as Auth
-import Debug.Trace (traceAnyM, spy)
+import Debug.Trace (spy)
 import Holborn.ManualEncoding.Profile as ManualCodingProfile
 import Holborn.DomHelpers (scroll)
 import Network.HTTP.StatusCode (StatusCode(..))
@@ -250,9 +249,12 @@ spec = container $ handleActions $ fold
       handleAction a p s
 
     -- TODO error handling when fetch fails
-    handleAction BurgerMenuToggle p s = T.cotransform (\s -> over burgerOpen not s)
+    handleAction BurgerMenuToggle p s = void $ T.cotransform (\s -> over burgerOpen not s)
 
-    handleAction action@(UpdateRoute r) p s = T.cotransform id
+    handleAction action@(UpdateRoute r) p s = void $ T.cotransform id
+
+    handleAction _ _ _ = void $ T.cotransform id
+
 --      runAff (\err -> traceAnyM err >>= const (k id)) (\result -> k \s -> result) (fetch r s)
 --    handleAction _ _ _ _ = pure unit
 

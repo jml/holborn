@@ -28,7 +28,6 @@ var config = {
         src: ['bower_components/purescript-*/src/**/*.purs', 'src/**/*.purs'],
         pscArgs: { sourceMaps: true },
         bundle: false,
-        pscIde: true,
       },
     },
     {
