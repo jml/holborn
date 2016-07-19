@@ -86,7 +86,6 @@ redirectToToAuth oauth2Conf _ respond =
 -- from JS as well.
 redirectSetAuthCookie :: Config -> UserCookie -> ExceptT ServantErr IO NoContent
 redirectSetAuthCookie Config{configPublicHost} userCookie =
-    -- TODO redirectUrl should be a type etc.
     let redirectUrl = encodeUtf8 (show configPublicHost)
         authCookie = def { setCookieName = "auth_cookie", setCookieValue = userCookie, setCookiePath = Just "/", setCookieSecure = False }
         setCookie = (BSL.toStrict . toLazyByteString . renderSetCookie) authCookie
