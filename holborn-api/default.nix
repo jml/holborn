@@ -5,7 +5,7 @@
 , optparse-applicative, postgresql-simple, process, QuickCheck
 , servant-docs, servant-server, stdenv, tasty, tasty-hspec
 , tasty-hunit, tasty-quickcheck, text, time, transformers, unix
-, wai, wai-cors, wai-extra, warp, postgresql, openssl
+, wai, wai-cors, wai-extra, warp
 }:
 mkDerivation {
   pname = "holborn-api";
@@ -22,17 +22,14 @@ mkDerivation {
   ];
   executableHaskellDepends = [
     base holborn-common-types holborn-prelude optparse-applicative
-    servant-server wai wai-cors wai-extra warp
+    postgresql-simple servant-server wai wai-cors wai-extra warp
   ];
-  testToolDepends = [ postgresql ];
-
   testHaskellDepends = [
     aeson base bytestring errors holborn-common-types holborn-prelude
     hspec-wai hspec-wai-json http-api-data http-client http-types
     postgresql-simple process QuickCheck servant-server tasty
     tasty-hspec tasty-hunit tasty-quickcheck text transformers unix wai
   ];
-  preCheck = ''export LD_LIBRARY_PATH=${openssl.out}/lib:$LD_LIBRARY_PATH'';
   description = "API server for Holborn";
   license = stdenv.lib.licenses.unfree;
 }

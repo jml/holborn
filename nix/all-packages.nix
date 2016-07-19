@@ -1,6 +1,6 @@
 # Override haskell packages to pretend that our own libraries and
 # binaries are part of standard hackage package set.
-{ haskellPackages, haskell, lib, stdenv, fetchFromGitHub }:
+{ haskellPackages, haskell, lib, stdenv, fetchFromGitHub, pkgs }:
 let
   capture-all-fork = fetchFromGitHub {
     owner = "jml";
@@ -24,15 +24,29 @@ haskellPackages.override {
       mkDerivation = { pname, ... }@args:
         super.mkDerivation (
           if builtins.substring 0 7 pname == "holborn"
-          then (args // { src = lib.sourceFilesBySuffices args.src [".cabal" ".hs"]; })
+          then (args // {
+            src = lib.sourceFilesBySuffices args.src [".cabal" ".hs" ".sql"];
+            # When we put our binaries into Docker images, they make huge
+            # docker images (2GB+) unless we set this option.
+            enableSharedExecutables = false;
+          })
           else args
         );
 
       hcl = self.callPackage ../hcl {};
-      holborn-api = self.callPackage ../holborn-api {};
+      # holborn-api tests have a runtime dependency on postgresql (to run
+      # pg_ctl). There's a weird linking bug that means if we express this in
+      # the Nix package using `testSystemDepends`, we can't link the main
+      # executable.
+      holborn-api = lib.overrideDerivation (self.callPackage ../holborn-api {}) (oldAttrs: {
+        preCheck = ''export PATH=${pkgs.postgresql}/bin:$PATH'';
+      });
       holborn-common-types = self.callPackage ../holborn-common-types {};
       holborn-prelude = self.callPackage ../holborn-prelude {};
-      holborn-repo = self.callPackage ../holborn-repo {};
+      # holborn-repo uses the 'git' binary at runtime.
+      holborn-repo = lib.overrideDerivation (self.callPackage ../holborn-repo {}) (oldAttrs: {
+        executableSystemDepends = [ pkgs.git ];
+      });
       holborn-ssh = self.callPackage ../holborn-ssh {};
       holborn-syntax = self.callPackage ../holborn-syntax {};
       holborn-proxy = self.callPackage ../holborn-proxy {};

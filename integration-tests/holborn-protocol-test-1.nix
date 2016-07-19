@@ -1,8 +1,8 @@
 { haskell, haskellPackages, stdenv, callPackage, fetchgitPrivate, git, writeText
 , helpers }:
 let
-  holborn-repo = haskellPackages.callPackage ../holborn-repo {};
-  hcl = haskell.lib.dontHaddock (haskellPackages.callPackage ../hcl {});
+  holborn-repo = haskellPackages.holborn-repo;
+  hcl = haskellPackages.hcl;
 
   repoPort = 8080;
   rawPort = 8081;
