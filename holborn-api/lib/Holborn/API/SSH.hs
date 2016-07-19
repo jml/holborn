@@ -34,7 +34,7 @@ import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object)
 import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(..), PlainText, Server, enter)
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Holborn.API.Config (AppConf(..))
+import Holborn.API.Config (Config)
 import Holborn.API.Internal
   ( APIHandler
   , JSONCodeableError(..)
@@ -76,7 +76,7 @@ api :: Proxy API
 api = Proxy
 
 
-server :: AppConf -> Server API
+server :: Config -> Server API
 server conf = enter (toServantHandler conf) $
     accessRepo
     :<|> listKeys

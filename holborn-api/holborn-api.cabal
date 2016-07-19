@@ -9,6 +9,9 @@ license:             AllRightsReserved
 build-type:          Simple
 cabal-version:       >= 1.10
 
+data-files:
+    sql/initial.sql
+
 library
   exposed-modules:
       Holborn.API
@@ -68,6 +71,7 @@ executable holborn-api-server
     , wai-cors
     , wai-extra
     , warp >= 3.1
+    , postgresql-simple
   ghc-options: -Wall -Werror
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
 
@@ -77,7 +81,7 @@ test-suite holborn-api-tests
   hs-source-dirs:
       tests
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
-  ghc-options: -Wall -eventlog
+  ghc-options: -Wall -Werror -eventlog
   build-depends:
       base >=4.9 && <5
     , holborn-common-types
@@ -88,12 +92,13 @@ test-suite holborn-api-tests
     , aeson
     , bytestring
     , errors
+    , http-api-data
     , holborn-api
     , hspec-wai >= 0.6.5
     , hspec-wai-json >= 0.6.0
     , http-client
     , http-types
-    , process
+    , postgresql-simple
     , process
     , tasty >= 0.10
     , tasty-hspec >= 1.1.0
@@ -101,4 +106,7 @@ test-suite holborn-api-tests
     , tasty-quickcheck >= 0.8
     , text
     , transformers
+    , unix
+  other-modules:
+      Helpers
   default-language: Haskell2010

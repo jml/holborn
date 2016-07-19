@@ -17,7 +17,7 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Data.Aeson (object, (.=))
 import Servant
 
-import Holborn.API.Config (AppConf(..))
+import Holborn.API.Config (Config)
 import Holborn.JSON.SSHRepoCommunication (parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
 import Holborn.API.Internal
@@ -51,7 +51,7 @@ instance JSONCodeableError KeyError where
     toJSON InvalidSSHKey = (400, object ["key" .= ("Invalid SSH key" :: Text)])
 
 
-server :: AppConf -> Server API
+server :: Config -> Server API
 server conf = enter (toServantHandler conf) $
     listKeys
     :<|> getKey

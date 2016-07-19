@@ -3,7 +3,10 @@ version: 0.1.0.0
 synopsis: API server for Holborn
 license: AllRightsReserved
 
-ghc-options: -Wall
+data-files:
+  - sql/initial.sql
+
+ghc-options: -Wall -Werror
 default-extensions:
   - GeneralizedNewtypeDeriving
   - MonadFailDesugaring
@@ -22,7 +25,6 @@ dependencies:
 
 library:
   source-dirs: lib
-  ghc-options: -Werror
   dependencies:
     - aeson >= 0.10
     - attoparsec
@@ -48,13 +50,13 @@ executables:
   holborn-api-server:
     main: Main.hs
     source-dirs: holborn-api-server
-    ghc-options: -Werror
     dependencies:
       - holborn-api
       - optparse-applicative
       - wai-cors
       - wai-extra
       - warp >= 3.1
+      - postgresql-simple
 
 tests:
   holborn-api-tests:
@@ -66,12 +68,13 @@ tests:
       - aeson
       - bytestring
       - errors
+      - http-api-data
       - holborn-api
       - hspec-wai >= 0.6.5
       - hspec-wai-json >= 0.6.0
       - http-client
       - http-types
-      - process
+      - postgresql-simple
       - process
       - tasty >= 0.10
       - tasty-hspec >= 1.1.0
@@ -79,3 +82,4 @@ tests:
       - tasty-quickcheck >= 0.8
       - text
       - transformers
+      - unix

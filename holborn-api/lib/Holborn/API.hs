@@ -15,7 +15,7 @@ import qualified Holborn.Docs
 import qualified Holborn.API.SSH
 import qualified Holborn.API.Browse
 import qualified Holborn.API.NewRepo
-import Holborn.API.Config (AppConf)
+import Holborn.API.Config (Config)
 import qualified Holborn.API.Settings.SSHKeys
 import qualified Holborn.API.Settings.Profile
 
@@ -34,7 +34,7 @@ api :: Proxy FullAPI
 api = Proxy
 
 
-server :: AppConf -> Server FullAPI
+server :: Config -> Server FullAPI
 server conf = Holborn.API.SSH.server conf
               :<|> Holborn.Docs.server
               :<|> (Holborn.API.Settings.SSHKeys.server conf

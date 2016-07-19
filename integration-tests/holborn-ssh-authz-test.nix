@@ -16,10 +16,10 @@
 }:
 
 let
-  hcl = haskell.lib.dontHaddock (haskellPackages.callPackage ../hcl {});
-  holborn-api = haskellPackages.callPackage ../holborn-api {};
-  holborn-repo = haskellPackages.callPackage ../holborn-repo {};
-  holborn-ssh = haskellPackages.callPackage ../holborn-ssh {};
+  hcl = haskellPackages.hcl;
+  holborn-api = haskellPackages.holborn-api;
+  holborn-repo = haskellPackages.holborn-repo;
+  holborn-ssh = haskellPackages.holborn-ssh;
   dockerImageBuilder = (import ../holborn-ssh/docker.nix {}).sshImage;
 
   repoPort = 8080;

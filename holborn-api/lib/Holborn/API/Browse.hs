@@ -21,7 +21,7 @@ import HolbornPrelude
 import Data.Aeson (object, (.=), Value)
 import Servant
 
-import Holborn.API.Config (AppConf(..))
+import Holborn.API.Config (Config)
 import Holborn.API.Types (Username)
 import Holborn.API.Internal
   ( APIHandler
@@ -57,7 +57,7 @@ instance JSONCodeableError BrowseError where
     toJSON NotFound = (404, object ["message" .= ("could not find object" :: Text)])
 
 
-server :: AppConf -> Server API
+server :: Config -> Server API
 server conf =
   enter (toServantHandler conf) $
   browse

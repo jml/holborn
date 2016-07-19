@@ -9,6 +9,7 @@ module Holborn.API.Internal
   -- | Manipulate the database
   , query
   , execute
+  , sql
   -- | Call backends
   , jsonGet'
   -- | Repository server access
@@ -38,11 +39,20 @@ import Data.Aeson (FromJSON, ToJSON, Value, eitherDecode', encode, object, (.=))
 import qualified Database.PostgreSQL.Simple as PostgreSQL
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import GHC.Generics (Generic)
-import Network.HTTP.Client (parseUrl, httpLbs, requestHeaders, responseBody)
+import Network.HTTP.Client
+  ( Manager
+  , defaultManagerSettings
+  , httpLbs
+  , newManager
+  , parseUrl
+  , requestHeaders
+  , responseBody
+  )
 import Network.HTTP.Types.Header (hAccept)
+import qualified Network.Wai.Handler.Warp as Warp
 import Servant (ServantErr(..), (:~>)(Nat), toUrlPiece)
 
-import Holborn.API.Config (AppConf(..))
+import Holborn.API.Config (Config(..))
 import Holborn.Logging (debugWithCallStack)
 import Holborn.JSON.RepoMeta (OwnerName, RepoId, RepoName)
 import Holborn.JSON.SSHRepoCommunication
@@ -122,6 +132,36 @@ throwAPIError :: APIError err -> APIHandler err a
 throwAPIError = APIHandler . lift . throwE
 
 
+-- | The internal "configuration" of the application. Collects things used
+-- across all handlers.
+--
+-- This is an implementation detail of 'APIHandler'. To create a
+-- configuration, use 'Holborn.API.Config.Config'.
+data AppConf = AppConf
+  { conn :: PostgreSQL.Connection
+  , httpManager :: Manager
+  , repoHostname :: Text
+    -- ^ Hostname for the repo server.
+  , repoPort :: Warp.Port
+    -- ^ Port for the repo server.
+  , rawRepoHostname :: Text
+    -- ^ Hostname for the raw repo server.
+  , rawRepoPort :: Warp.Port
+    -- ^ Port for the raw repo server.
+  }
+
+-- | Turn the pure configuration into something usable by the app.
+loadAppConf :: Config -> IO AppConf
+loadAppConf Config{..} =
+  AppConf
+    <$> PostgreSQL.connect (dbConnection)
+    <*> newManager defaultManagerSettings
+    <*> pure configRepoHostname
+    <*> pure configRepoPort
+    <*> pure configRepoHostname
+    <*> pure configRawRepoPort
+
+
 -- | Basic type for all of the handlers of Holborn.API.
 newtype APIHandler err a =
   APIHandler { unwrapAPIHandler :: ReaderT AppConf (ExceptT (APIError err) IO) a }
@@ -131,17 +171,18 @@ instance MonadFail (APIHandler err) where
   fail = throwAPIError . BrokenCode
 
 -- | Run an API handler action without doing the error translation
-runAPIHandler :: AppConf -> APIHandler err a -> ExceptT (APIError err) IO a
-runAPIHandler appConf handler = runReaderT (unwrapAPIHandler handler) appConf
+runAPIHandler :: Config -> APIHandler err a -> ExceptT (APIError err) IO a
+runAPIHandler config handler = do
+  appConf <- liftIO $ loadAppConf config
+  runReaderT (unwrapAPIHandler handler) appConf
 
 -- | Turn a Holborn.API-specific handler into a generic Servant handler.
 --
 -- Use with 'enter'.
-toServantHandler :: JSONCodeableError err => AppConf -> APIHandler err :~> ExceptT ServantErr IO
-toServantHandler appConf = Nat (toServantHandler' appConf)
-
-toServantHandler' :: JSONCodeableError err => AppConf -> APIHandler err a -> ExceptT ServantErr IO a
-toServantHandler' appConf handler = bimapExceptT toServantErr id (runAPIHandler appConf handler)
+toServantHandler :: JSONCodeableError err => Config -> APIHandler err :~> ExceptT ServantErr IO
+toServantHandler config = Nat toServantHandler'
+  where
+    toServantHandler' handler = bimapExceptT toServantErr id (runAPIHandler config handler)
 
 -- | If something throws with 'throwM', we'll convert that to an unexpected exception.
 instance MonadThrow (APIHandler err) where
