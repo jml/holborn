@@ -12,6 +12,8 @@ module Holborn.Proxy.HttpTermination
 
 import HolbornPrelude
 
+import Control.Error (hoistMaybe)
+import Control.Monad.Trans.Maybe (runMaybeT)
 import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Network.HTTP.Client (Manager)
@@ -119,14 +121,17 @@ handleProxying config@Config{..} manager jar cookie = waiProxyTo doProxy default
     authRedirect = pure (WPRApplication (redirectToToAuth (oauth2FromConfig config)))
     doProxy :: Request -> IO WaiProxyResponse
     doProxy request = do
-      case cookie >>= \cookie' -> lookup "auth_cookie" (parseCookies (encodeUtf8 cookie')) of
-        -- TODO: maybe use MaybeT to simplify (jml wanted to take this one)
+      userCookie <- getUserCookie
+      case userCookie of
+        Just userCookie' -> pure (setCredHeaders request userCookie')
         Nothing -> authRedirect
-        Just authCookie -> do
-            c <- get jar authCookie
-            case c of
-              Nothing -> authRedirect
-              Just userCookie -> pure (setCredHeaders request userCookie)
+
+    getUserCookie :: IO (Maybe TrustedCreds)
+    getUserCookie = runMaybeT $ do
+      cookie' <- hoistMaybe $ cookie
+      authCookie <- hoistMaybe $ lookup "auth_cookie" (parseCookies (encodeUtf8 cookie'))
+      userCookie <- lift $ get jar authCookie
+      hoistMaybe userCookie
 
     setCredHeaders :: Request -> TrustedCreds -> WaiProxyResponse
     setCredHeaders request' trustedCreds =
