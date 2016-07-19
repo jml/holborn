@@ -62,27 +62,18 @@ instance AuthJar MemoryJar where
     make _ = fmap encode (getEntropy 128)
 
 
--- TODO: unpackClaims is nested too deeply but checked by
--- compiler and no IO so I assume it works..
 unpackClaims :: AccessToken -> Either String TrustedCreds
-unpackClaims token =
-  case idToken token of
-    Just id' ->
-        -- PUPPY I don't *think* we need to verify the JWT
-        -- access token because it's been given to us by
-        -- dex. Might be wrong though. If we do need to check we
-        -- need to send a verify request as well and use the
-        -- keys from the response to verify the token.
-        case decodeCompact (BSL.fromStrict id') of
-          Right jwt ->
-            case emailAndNameClaims (jwtClaimsSet (jwt :: JWT)) of
-              Nothing -> Left (textToString ("missing claims. Token: " <> (show jwt)))
-              Just claims ->
-                case claims of
-                  Success creds -> Right creds
-                  Error err -> Left err
-          _ -> Left "Could not decode claims"
-    Nothing -> Left "missing id_token"
+unpackClaims token = do
+  id' <- note "missing id_token" $ idToken token
+  -- PUPPY I don't *think* we need to verify the JWT access token because it's
+  -- been given to us by dex. Might be wrong though. If we do need to check we
+  -- need to send a verify request as well and use the keys from the response
+  -- to verify the token.
+  jwt <- fmapL (const "Could not decode claims") $ decodeCompact (BSL.fromStrict id')
+  claims <- note (textToString ("missing claims. Token: " <> (show jwt))) (emailAndNameClaims (jwtClaimsSet (jwt :: JWT)))
+  case claims of
+    Error err -> Left err
+    Success creds -> Right creds
 
 
 emailAndNameClaims :: ClaimsSet -> Maybe (Result TrustedCreds)
