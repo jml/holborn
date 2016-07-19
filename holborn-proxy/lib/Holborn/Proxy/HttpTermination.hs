@@ -127,7 +127,7 @@ handleProxying config@Config{..} manager jar cookie = waiProxyTo doProxy default
 
     getUserCookie :: IO (Maybe TrustedCreds)
     getUserCookie = runMaybeT $ do
-      cookie' <- hoistMaybe $ cookie
+      cookie' <- hoistMaybe cookie
       authCookie <- hoistMaybe $ lookup "auth_cookie" (parseCookies (encodeUtf8 cookie'))
       userCookie <- lift $ get jar authCookie
       hoistMaybe userCookie
