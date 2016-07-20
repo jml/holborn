@@ -21,24 +21,16 @@ dependencies:
   - holborn-common-types
   - holborn-prelude
   - servant-server
-  - wai
 
 library:
   source-dirs: lib
   dependencies:
     - aeson >= 0.10
-    - attoparsec
-    - blaze-html
-    - blaze-markup
     - bytestring
-    - either
     - errors
     - exceptions >= 0.8
-    - http-api-data
     - http-client
-    - http-reverse-proxy
     - http-types
-    - jwt
     - postgresql-simple
     - servant-docs >= 0.5
     - text
@@ -53,6 +45,7 @@ executables:
     dependencies:
       - holborn-api
       - optparse-applicative
+      - wai
       - wai-cors
       - wai-extra
       - warp >= 3.1
@@ -83,3 +76,4 @@ tests:
       - text
       - transformers
       - unix
+      - wai
