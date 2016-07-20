@@ -13,9 +13,8 @@
 
 module Main (main) where
 
-import Prelude (Unit, (<$>), (<<<), bind, (>>=), void)
+import Prelude (Unit, (<$>), (<<<), bind, (>>=), void, pure, unit)
 
-import Data.Maybe.Unsafe (fromJust)
 import Data.Nullable (toMaybe)
 
 import Control.Monad.Eff (Eff)
@@ -31,12 +30,15 @@ import DOM.HTML (window) as DOM
 import DOM.HTML.Types (htmlDocumentToParentNode) as DOM
 import DOM.HTML.Window (document) as DOM
 import DOM.Node.ParentNode (querySelector) as DOM
+import Data.Maybe (Maybe(..))
 
 
 -- | The main method creates the task list component, and renders it to the document body.
 main :: forall eff. Eff (dom :: DOM.DOM, console :: CONSOLE | eff) Unit
-main = void do
+main = do
   let reactElement = (R.createFactory Router.component {})
   document <- DOM.window >>= DOM.document
-  container <- fromJust <<< toMaybe <$> DOM.querySelector "#container" (DOM.htmlDocumentToParentNode document)
-  RD.render reactElement container
+  container <- toMaybe <$> DOM.querySelector "#container" (DOM.htmlDocumentToParentNode document)
+  case container of
+    Just container' -> void (RD.render reactElement container')
+    Nothing -> pure unit

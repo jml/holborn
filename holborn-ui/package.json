@@ -12,7 +12,7 @@
     "jshint": "^2.9",
     "node-sass": "^3.4.2",
     "pulp": "^8",
-    "purs-loader": "^1.0.0",
+    "purs-loader": "^2.0.0-rc.1",
     "react": "^0.14.7",
     "react-dom": "^0.14.7",
     "sass-loader": "^3.2.0",
@@ -22,7 +22,7 @@
     "webpack-dev-server": "^1.14.1"
   },
   "devDependencies": {
-    "purs-loader": "^1.0.0"
+    "purs-loader": "^2.0.0-rc.1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

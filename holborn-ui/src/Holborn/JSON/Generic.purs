@@ -7,7 +7,7 @@
 -- * We automatically handle Maybe as optionl (entry missing -> Nothing)
 module Holborn.JSON.Generic where
 
-import Prelude ((<<<), pure, ($), bind, unit, (==), (++), const, (<>), (<$>), map, (#), show, id)
+import Prelude ((<<<), pure, ($), bind, unit, (==), const, (<>), (<$>), map, (#), show, id)
 import Data.Foldable (foldr)
 
 import Data.Generic (class Generic, GenericSignature(..), GenericSpine(..), toSignature, fromSpine, toSpine)
@@ -15,11 +15,10 @@ import Data.Generic (class Generic, GenericSignature(..), GenericSpine(..), toSi
 import Data.Argonaut.Core (Json)
 import Data.Either (Either(..))
 import Data.Argonaut.Core (Json, toObject, toArray, toBoolean, toNumber, toString, fromString, fromBoolean, fromArray, fromObject, fromNumber)
-import Data.Argonaut.Encode (encodeJson)
 
 import Control.Bind ((=<<))
 import Data.Int as Int
-import Data.String (toChar, fromChar)
+import Data.String (toChar, singleton)
 import Data.Traversable (traverse, for)
 import Data.StrMap as M
 import Data.Array (zipWithA, length, head)
@@ -31,8 +30,9 @@ import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 gDecode' :: GenericSignature -> Json -> Either String GenericSpine
 gDecode' sig json = case sig of
+    SigUnit -> pure SUnit
     SigNumber -> SNumber <$> mFail "Expected a number" (toNumber json)
-    SigInt -> SInt <$> (mFail ("Expected an integer number, got: " ++ (show json))) (Int.fromNumber =<< toNumber json)
+    SigInt -> SInt <$> (mFail ("Expected an integer number, got: " <> (show json))) (Int.fromNumber =<< toNumber json)
     SigString -> SString <$> mFail "Expected a string" (toString json)
     SigChar -> SChar <$> mFail "Expected a char" (toChar =<< toString json)
     SigBoolean -> SBoolean <$> mFail "Expected a boolean" (toBoolean json)
@@ -41,7 +41,7 @@ gDecode' sig json = case sig of
       SArray <$> traverse (map const <<< gDecode' (thunk unit)) jArr
 
     SigRecord props -> do
-      jObj <- mFail ("Expected an object, got: " ++ (maybe "Nothing" _.recLabel (head props))) $ toObject json
+      jObj <- mFail ("Expected an object, got: " <> (maybe "Nothing" _.recLabel (head props))) $ toObject json
       SRecord <$> for props \({recLabel: lbl, recValue: val}) -> do
         case val unit of
           constr@(SigProd "Data.Maybe.Maybe" sigValues) -> case M.lookup lbl jObj of
@@ -67,7 +67,7 @@ gDecode' sig json = case sig of
       pure $ SProd justDC.sigConstructor [\_ -> sp]
 
     SigProd typeConstr alts -> do
-      let decodingErr msg = "When decoding a " ++ typeConstr ++ ": " ++ msg
+      let decodingErr msg = "When decoding a " <> typeConstr <> ": " <> msg
 
       _ <- if length alts == 1
            then Right unit
@@ -100,12 +100,13 @@ gEncode = gEncodeJson' <<< toSpine
 
 gEncodeJson' :: GenericSpine -> Json
 gEncodeJson' spine = case spine of
+  SUnit             -> fromString ""
   SInt x            -> fromNumber $ Int.toNumber x
   SString x         -> fromString x
-  SChar x           -> fromString $ fromChar x
+  SChar x           -> fromString $ singleton x
   SNumber x         -> fromNumber x
   SBoolean x        -> fromBoolean x
-  SArray thunks     -> fromArray (gEncodeJson' <<< (unit #) <$> thunks)
+  SArray thunks     -> fromArray (gEncodeJson' <<< (unit # _) <$> thunks)
   SProd constr args -> case head args of
     Just x -> gEncodeJson' (x unit)
     Nothing -> fromArray []

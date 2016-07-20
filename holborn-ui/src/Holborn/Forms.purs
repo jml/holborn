@@ -19,7 +19,7 @@ inp :: forall eff p s r formData.
        -> formData
        -> React.ReactElement
 inp _type label error lens dp state =
-  R.div [RP.className ("form-group" ++ maybe "" (const " has-error") error) ]
+  R.div [RP.className ("form-group" <> maybe "" (const " has-error") error) ]
   [ R.label [ RP.htmlFor label] [R.text (maybe label id error)]
   , R.input [ RP._type _type
             , RP._id label
@@ -41,7 +41,7 @@ textarea :: forall eff p s r formData.
        -> formData
        -> React.ReactElement
 textarea label error lens dp state =
-  R.div [RP.className ("form-group" ++ maybe "" (const " has-error") error) ]
+  R.div [RP.className ("form-group" <> maybe "" (const " has-error") error) ]
   [ R.label [ RP.htmlFor label] [R.text (maybe label id error)]
   , R.textarea [ RP._id label
                , RP.value (view lens state)

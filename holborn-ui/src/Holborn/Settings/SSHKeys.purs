@@ -13,6 +13,7 @@ import Network.HTTP.Affjax as AJ
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Aff (runAff, Aff)
+import Control.Monad.Trans (lift)
 import Network.HTTP.Affjax (AJAX)
 import Data.Either (Either(..))
 import Data.Argonaut.Decode (decodeJson)
@@ -72,7 +73,7 @@ fieldUpdater setter ev state = set setter (unsafeCoerce ev).target.value state
 -- emerge and we can consolidate then.
 labeled label err formEl = case err of
   Nothing -> R.div [ RP.className "form-group" ] [ R.label [] [R.text label],  formEl ]
-  Just msg -> R.div [ RP.className "form-group has-error" ] [ R.label [] [R.text (label ++ " - " ++ msg)],  formEl ]
+  Just msg -> R.div [ RP.className "form-group has-error" ] [ R.label [] [R.text (label <> " - " <> msg)],  formEl ]
 
 renderGlobalError err = case err of
   Nothing -> R.text ""
@@ -122,37 +123,16 @@ spec = T.simpleSpec performAction render
     -- action and modifies the state by calling the callback k and
     -- passing it the modified state.
     performAction :: forall eff a. T.PerformAction (ajax :: AJAX, cookie :: C.COOKIE | eff) State props Action
-    performAction (UpdateFormData x) props state k =  k $ \state -> state { formData = x }
-    performAction (RemoveKey keyId) props state k = do
-      k (\state -> state { loading = true })
-      runAff (\_ -> k id) k (removeKey keyId)
-
-    performAction AddKey props state k = do
-      k (\state -> state { loading = true })
-      runAff (\err -> traceAnyM err >>= \_ -> k $ \state -> state { formErrors = networkAddKeyDataError "No network connection. Please try again later"}) k (addKey state)
-
-    -- Server fetching can go in many ways and we'll need to reflect
-    -- errors in the state and allow users to move on from there
-    -- (e.g. re-enable buttons for retry, display actual invalid input
-    -- errors etc).
-    addKey :: forall eff. State -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) (State -> State)
-    addKey state = do
-      r <- HA.post (makeUrl "/v1/user/keys") (encodeJson state.formData)
-      return case r.status of
-         StatusCode 201 -> case decodeJson r.response of
-             Left err -> \state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpeced broke." }
-             Right key -> \state -> state { loading = false, keys = key : state.keys, formData = emptyAddKeyData, formErrors = emptyAddKeyDataError }
-
-         -- Note that by calling `decodeJson` in the 201 branch the
-         -- type inference decided that the response must be JSON so
-         -- we need to send back valid JSON in the 400 case as well.
-         StatusCode 400 -> case decodeJson r.response of
-             Left _ -> \state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpeced broke." }
-             Right errors -> \state -> state { loading = false, formErrors = errors }
+    performAction (UpdateFormData x) props state =  void $ T.cotransform $ \state -> state { formData = x }
+    performAction (RemoveKey keyId) props state = do
+      T.cotransform (\state -> state { loading = true })
+      void $ lift (removeKey keyId)
+      void $ T.cotransform (\state -> state { loading = false })
+    performAction AddKey _ _  = void $ T.cotransform id
 
     removeKey :: forall eff. Int -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) (State -> State)
     removeKey keyId = do
-      r <- HA.delete ((makeUrl "/v1/user/keys/") ++ show keyId) :: AJ.Affjax (cookie :: C.COOKIE | eff) Unit
-      return $ case r.status of
+      r <- HA.delete ((makeUrl "/v1/user/keys/") <> show keyId) :: AJ.Affjax (cookie :: C.COOKIE | eff) Unit
+      pure $ case r.status of
           StatusCode 204 -> \state -> state { keys = filter (\(Key { id }) -> id /= keyId) state.keys, loading = false }
           _ -> id -- TODO error handling

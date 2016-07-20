@@ -57,10 +57,8 @@ spec = T.simpleSpec performAction render
           (unsafeCoerce ev).preventDefault
           dispatch SignIn
 
-    performAction SignIn props state k = do
-      k $ \state -> state { loading = true }
-      runAff (\err -> traceAnyM err >>= \_ -> k handleSigninError) k (runSignin state)
-    performAction (UpdateFormData x) props state k = k $ \state -> state { formData = x }
+    performAction SignIn props state = void (T.cotransform id)
+    performAction _ _ _  = void (T.cotransform id)
 
     -- TODO show an error if we get a network error.
     handleSigninError :: State -> State
@@ -71,12 +69,13 @@ spec = T.simpleSpec performAction render
       r <- AJ.post (makeUrl "/v1/signin") (encodeJson state.formData)
       case r.status of
         StatusCode 200 -> case decodeJson r.response of
-          Left err -> return (\state -> state { loading = false })
+          Left err -> pure (\state -> state { loading = false })
           Right (SigninOK { token }) -> do
             liftEff $ C.setCookie "auth-token" token {path: "/"}
-            return (\state -> state { loading = false })
-        StatusCode 400 -> case decodeJson r.response of
-          Left _ -> return (\state -> state { loading = false }) -- TODO error handling
-          Right errors -> return (\state -> state { loading = false, formErrors = errors })
+            pure (\state -> state { loading = false })
+        _ -> case decodeJson r.response of
+          Left _ -> pure (\state -> state { loading = false }) -- TODO error handling
+          Right errors -> pure (\state -> state { loading = false, formErrors = errors })
+
         -- TODO: Complete the pattern match: server can return anything, and
         -- client-side code should be ready to handle it.

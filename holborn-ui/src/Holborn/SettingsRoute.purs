@@ -8,6 +8,7 @@ import Control.Alt ((<|>))
 import Thermite as T
 import React.DOM as R
 import React.DOM.Props as RP
+import React as React
 import Control.Monad.Eff.Exception as E
 import Network.HTTP.Affjax as AJ
 import Web.Cookies as C
@@ -50,7 +51,7 @@ routeLens :: LensP State SettingsRoutes
 routeLens = lens (\(State s) -> s.route) (\(State s) x -> State (s { route = x }))
 
 
-settingsRoutes :: Parser State
+settingsRoutes :: Parser String State
 settingsRoutes =
       string "ssh-keys" $> (startWithRoute SSHKeySettings)
   <|> string "profile" $> (startWithRoute Profile)
@@ -64,7 +65,7 @@ settingsRoutes =
 instance fetchSettingsRoutes :: Fetchable SettingsRoutes State where
   fetch SSHKeySettings s = do
     r <- AJ.get (makeUrl "/v1/users/alice/keys")
-    return $ case decodeJson r.response of
+    pure $ case decodeJson r.response of
       Left err -> set routeLens SSHKeySettings s
       Right keys -> set routeLens (SSHKeySettingsOK (SSHKeys.initialState { keys = keys })) s
   fetch a s = pure s

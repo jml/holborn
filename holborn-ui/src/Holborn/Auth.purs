@@ -6,7 +6,7 @@ import Network.HTTP.Affjax.Request (class Requestable)
 import Network.HTTP.Affjax (Affjax, URL, defaultRequest, affjax)
 import Data.Maybe (Maybe(..))
 import Network.HTTP.Affjax.Response (class Respondable)
-import Network.HTTP.Method (Method(POST, DELETE))
+import Data.HTTP.Method (Method(POST, DELETE))
 import Network.HTTP.RequestHeader (RequestHeader(..))
 import Web.Cookies as C
 import Control.Monad.Eff.Class (liftEff)
@@ -14,6 +14,7 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Eff.Exception (error)
 import Network.HTTP.StatusCode (StatusCode(..))
+import Data.Either (Either(Left))
 
 
 getAuthHeader :: forall e. Eff (cookie :: C.COOKIE | e) (Array RequestHeader)
@@ -30,7 +31,7 @@ post :: forall e a b. (Requestable a, Respondable b) => URL -> a -> Affjax (cook
 post u c = do
   authHeader <- liftEff getAuthHeader
   affjax $ defaultRequest
-    { method = POST
+    { method = Left POST
     , url = u
     , content = Just c
     , headers = authHeader <> [RequestHeader "Accept" "application/json"]
@@ -58,7 +59,7 @@ delete :: forall e b. (Respondable b) => URL -> Affjax (cookie :: C.COOKIE | e) 
 delete u = do
   authHeader <- liftEff getAuthHeader
   affjax $ defaultRequest
-    { method = DELETE
+    { method = Left DELETE
     , url = u
     , headers = authHeader <> [RequestHeader "Accept" "application/json"]
     }
