@@ -71,8 +71,6 @@ in
     # Some of our tests run docker, so we need permission to run.
     extraGroups = [ "docker" ];
     extraPackages = [
-      # We need git to be able to get the source code to build it!
-      pkgs.git
       # We use make to run the tests
       pkgs.gnumake
       # We use direnv to make things work

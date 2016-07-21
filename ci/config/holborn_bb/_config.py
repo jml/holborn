@@ -43,19 +43,16 @@ def make_config(worker_name, worker_password, worker_port, git_repo, branch,
                     # run the tests
                     steps.ShellCommand(
                         command=[
-                            "/bin/sh",
-                            "--login",
-                            "-c",
-                            "direnv allow .",
+                            "direnv", "allow", ".",
                         ],
                     ),
                     steps.ShellCommand(
                         command=[
-                            "/bin/sh",
-                            "--login",
-                            "-c",
-                            "direnv exec . make check",
+                            "direnv", "exec", ".", "make", "check",
                         ],
+                        env={
+                            'NIX_REMOTE': 'daemon',
+                        },
                     ),
                 ]),
             ),
