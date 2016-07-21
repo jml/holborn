@@ -1,12 +1,6 @@
-{ stdenv, buildPythonPackage, fetchurl, pythonPackages,
-  callPackage
+{ stdenv, buildPythonPackage, fetchurl, pythonPackages
+, buildbot, buildbot-pkg
 }:
-
-let
-  buildbot = callPackage ./buildbot-0.9.nix {};
-  buildbotPkg = callPackage ./buildbot-pkg-0.9.nix {};
-in
-
 buildPythonPackage (rec {
   name = "buildbot-www-${version}";
   version = "0.9.0b9";
@@ -17,7 +11,7 @@ buildPythonPackage (rec {
     sha256 = "1n65k2wrvdy840cpgm21fx0m8wdq7w926vaaizyb9s3yyyimyci0";
   };
 
-  buildInputs = [ buildbot buildbotPkg pythonPackages.mock ];
+  buildInputs = [ buildbot buildbot-pkg pythonPackages.mock ];
 
   doCheck = true;
 

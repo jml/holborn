@@ -1,5 +1,4 @@
-{ stdenv, buildPythonPackage, fetchurl, callPackage
-, pythonPackages }:
+{ stdenv, buildPythonPackage, fetchurl, pythonPackages, txaio }:
 
 # Only tested with Python 2.7.
 
@@ -14,10 +13,7 @@ buildPythonPackage rec {
 
   propagatedBuildInputs =
     with pythonPackages;
-    [ six
-      # TODO: Use txaio from pythonPackages once it's there.
-      (callPackage ./txaio.nix {})
-    ];
+    [ six txaio ];
 
   buildInputs =
     with pythonPackages;

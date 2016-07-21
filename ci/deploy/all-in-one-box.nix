@@ -99,7 +99,7 @@ in
     enable = true;
     provider = "google";
     clientID = "579594549675-nuh9d5m5kvdckfdec785o9cbcqe6sje7.apps.googleusercontent.com";
-    package = (pkgs.callPackage ../packages/oauth2_proxy.nix {}).bin // { outputs = [ "bin" ]; };
+    package = (import ../packages).oauth2_proxy.bin // { outputs = [ "bin" ]; };
     # PUPPY: Shared secret.
     clientSecret = "bLlMleNsy_63ivGSIktA1EpP";
     cookie = {
