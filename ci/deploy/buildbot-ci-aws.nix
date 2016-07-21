@@ -6,13 +6,15 @@ let
   ec2 =
     { resources, ... }:
     { deployment.targetEnv = "ec2";
-      deployment.ec2.accessKeyId = accessKeyId;
-      deployment.ec2.region = region;
-      deployment.ec2.instanceType = "t2.nano";
-      deployment.ec2.keyPair = resources.ec2KeyPairs.my-key-pair;
-      deployment.ec2.securityGroups = [
-        resources.ec2SecurityGroups.buildbot-security
-      ];
+      deployment.ec2 = {
+        inherit accessKeyId region;
+        ebsInitialRootDiskSize = 100;
+        instanceType = "t2.nano";
+        keyPair = resources.ec2KeyPairs.my-key-pair;
+        securityGroups = [
+          resources.ec2SecurityGroups.buildbot-security
+        ];
+      };
 
       deployment.route53 = {
         inherit accessKeyId;

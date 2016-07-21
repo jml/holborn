@@ -41,7 +41,7 @@ BuildmasterConfig = {
         schedulers.SingleBranchScheduler(
             name="all",
             change_filter=util.ChangeFilter(branch='${gitBranch}'),
-            treeStableTimer=None,
+            treeStableTimer=${toString pollInterval}},
             builderNames=["${builderName}"]),
         schedulers.ForceScheduler(
             name="force",

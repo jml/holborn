@@ -47,6 +47,12 @@ in
 
   environment.systemPackages = [];
 
+  # Run GC at 8 am. If it breaks someone will be awake.
+  nix.gc.automatic = true;
+  nix.gc.dates = "08:00";
+  nix.gc.options = "--delete-older-than 7d";
+
+
   # We need to build holborn, which is not free.
   nixpkgs.config.allowUnfree = true;
 
