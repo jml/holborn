@@ -21,91 +21,21 @@
 # Assuming only one worker for now, which kind of sucks.
 , workerName, workerPassword
 }:
-
 ''
-from buildbot.plugins import *
+from holborn_bb import make_config
 
-BuildmasterConfig = {
-    'workers': [worker.Worker("${workerName}", "${workerPassword}")],
-
-    'protocols': {'pb': {'port': ${toString workerPort}}},
-
-    'change_source': [
-        changes.GitPoller(
-            '${gitRepo}',
-            workdir='gitpoller-workdir', branch='${gitBranch}',
-            pollinterval=${toString pollInterval}),
-    ],
-
-    'schedulers': [
-        schedulers.SingleBranchScheduler(
-            name="all",
-            change_filter=util.ChangeFilter(branch='${gitBranch}'),
-            treeStableTimer=${toString pollInterval},
-            builderNames=["${builderName}"]),
-        schedulers.ForceScheduler(
-            name="force",
-            builderNames=["${builderName}"]),
-    ],
-
-    'builders': [
-        util.BuilderConfig(
-            name="${builderName}",
-            workernames=["${workerName}"],
-            factory=util.BuildFactory([
-                # check out the source
-                steps.Git(repourl='${gitRepo}', mode='incremental'),
-                # run the tests
-                steps.ShellCommand(
-                  command=[
-                    "/bin/sh",
-                    "--login",
-                    "-c",
-                    "direnv allow .",
-                  ],
-                ),
-                steps.ShellCommand(
-                  command=[
-                    "/bin/sh",
-                    "--login",
-                    "-c",
-                    "direnv exec . make check",
-                  ],
-                ),
-            ]),
-        ),
-    ],
-
-    'status': [],
-
-    'title': '${projectName}',
-    'titleURL': "${projectURL}",
-
-    'buildbotURL': "${buildbotURL}",
-
-    'www': {
-        'port': ${toString buildbotWebPort},
-        'plugins': {
-           'waterfall_view': {},
-        },
-    },
-
-    'db': {
-        'db_url': "sqlite:///state.sqlite",
-    },
-
-    'services': [
-        reporters.MailNotifier(
-            fromaddr='${buildbotFromEmail}',
-            # TODO(jml): Currently sending mail for all builds. We should send
-            # mail under fewer circumstances once we have a better idea about
-            # what we actually want.
-            #
-            # http://buildbot.readthedocs.io/en/latest/manual/cfg-reporters.html?highlight=github#mailnotifier-arguments
-            mode='all',
-            # XXX: Temporarily hard-code until we can figure out how to get these automatically from commits.
-            extraRecipients=["jml@mumak.net", "thomas.e.hunger@gmail.com"],
-        )
-    ],
-}
+BuildmasterConfig = make_config(
+    worker_name="${workerName}",
+    worker_password="${workerPassword}",
+    worker_port=${toString workerPort},
+    git_repo="${gitRepo}",
+    branch="${gitBranch}",
+    poll_interval=${toString pollInterval},
+    builder_name="${builderName}",
+    project_name="${projectName}",
+    project_url="${projectURL}",
+    buildbot_url="${buildbotURL}",
+    buildbot_web_port=${toString buildbotWebPort},
+    buildbot_from_email="${buildbotFromEmail}",
+)
 ''

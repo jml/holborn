@@ -19,8 +19,14 @@ let
 
   # XXX: Depend on our custom packages for now.
   packages = import ../packages;
-  buildbotPackage = packages.buildbot [ packages.buildbot-www  packages.buildbot-waterfall-view];
   buildbotWebPackage = packages.buildbot-www;
+  # TODO: Move this list of packages into a config variable and specify from
+  # our deployment rather than hard-coding here.
+  buildbotPackage = packages.buildbot [
+    packages.buildbot-www
+    packages.buildbot-waterfall-view
+    (pkgs.callPackage ../config {})
+  ];
 
   cfg = config.services.buildbot;
 
