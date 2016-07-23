@@ -60,13 +60,13 @@ let
       '';
     };
     public = "${dir}/${name}.pub";
-    fullKey = builtins.readFile public;
+    fullKey = lib.removeSuffix "\n" (builtins.readFile public);
     in
     {
       inherit comment fullKey public;
       type = "ssh-${type}";
       private = "${dir}/${name}";
-      key = lib.removeSuffix " ${comment}\n" (lib.removePrefix "ssh-${type} " fullKey);
+      key = lib.removeSuffix " ${comment}" (lib.removePrefix "ssh-${type} " fullKey);
     };
 
   # ssh tries to create an ~/.ssh directory if it's not given a config file,
@@ -151,7 +151,9 @@ writeScriptBin "holborn-ssh-authz-test" ''
       ${postgresql}/bin/psql -p ${toString pgPort} -U ${pgUser} -d $pg_database -qf ${insertTestKeySql}
       ${postgresql}/bin/psql -p ${toString pgPort} -U ${pgUser} -d $pg_database -qf ${insertRepositorySql}
 
-      ${holborn-api}/bin/holborn-api-server \
+      # holborn-api has an undocumented run-time dependency on ssh, and
+      # expects ssh-keygen to be in the path.
+      PATH=$PATH:${openssh}/bin ${holborn-api}/bin/holborn-api-server \
         --port=${toString apiPort} \
         --postgres-database=$pg_database \
         --postgres-user=${pgUser} \
@@ -167,7 +169,7 @@ writeScriptBin "holborn-ssh-authz-test" ''
         --git-port=${toString rawRepoPort} \
         --repo-root=${test-repos} &
 
-      ${docker}/bin/docker run holborn-ssh:latest -o "LogLevel=Debug3" &
+      ${docker}/bin/docker run holborn-ssh:latest &
 
       # Wait for server to become ready
       ${hcl}/bin/hcl-wait-for-port --host ${dockerClient} --port ${toString sshPort} --timeout 10
@@ -180,7 +182,7 @@ writeScriptBin "holborn-ssh-authz-test" ''
 
       # Clone the test repository
       pushd $working_dir
-      GIT_SSH_COMMAND="ssh -F ${holborn-ssh-client-config}" ${git}/bin/git clone --verbose ssh://${sshClientUser}@${dockerClient}:${toString sshPort}/org/hello
+      GIT_SSH_COMMAND="${openssh}/bin/ssh -F ${holborn-ssh-client-config}" ${git}/bin/git clone --verbose ssh://${sshClientUser}@${dockerClient}:${toString sshPort}/org/hello
       observed=$(${git}/bin/git --git-dir ${repoName}/.git rev-parse HEAD)
       popd
 
