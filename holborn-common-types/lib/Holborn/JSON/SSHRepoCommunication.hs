@@ -187,7 +187,7 @@ instance FromJSON SSHKey where
 instance FromField SSHKey where
     fromField f (Just bs) = case parseSSHKey bs of
         Just x -> return x
-        _ -> returnError ConversionFailed f "Could not parse ssh key"
+        _ -> returnError ConversionFailed f ("Could not parse SSH key: " <> textToString (show bs))
     fromField _ _ = terror "FromField SSHKey should always decode correctly"
 
 instance ToField SSHKey where
@@ -213,6 +213,9 @@ parseSSHKey keyData = do
 
     -- Using unsafeperformIO because fingerprinting is morally a pure
     -- action but we 're using ssh-keygen for now.
+
+    -- TODO: This should abort hard with an informative error if ssh-keygen is
+    -- not found. Currently it just returns 'empty'.
     fingerprint keyData' = unsafePerformIO $ do
         -- e.g. ssh-keygen -l -f /dev/stdin <~/.ssh/id_rsa.pub
         (i, o, _, _) <- runInteractiveCommand "ssh-keygen -l -f /dev/stdin"
