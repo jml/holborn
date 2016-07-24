@@ -1,6 +1,13 @@
 """Configuration for Holborn's Buildbot."""
 
-from buildbot.plugins import *
+from buildbot.plugins import (
+    changes,
+    schedulers,
+    reporters,
+    steps,
+    util,
+    worker,
+)
 
 
 def make_config(worker_name, worker_password, worker_port, git_repo, branch,
@@ -22,7 +29,7 @@ def make_config(worker_name, worker_password, worker_port, git_repo, branch,
         'schedulers': [
             schedulers.SingleBranchScheduler(
                 name="all",
-                change_filter=util.ChangeFilter(branch='branch'),
+                change_filter=util.ChangeFilter(branch=branch),
                 treeStableTimer=poll_interval,
                 builderNames=[builder_name],
             ),
@@ -53,6 +60,11 @@ def make_config(worker_name, worker_password, worker_port, git_repo, branch,
                         env={
                             'NIX_REMOTE': 'daemon',
                         },
+                        # If we have to rebuild our dependencies from scratch,
+                        # we can go a long time without receiving output from
+                        # the compiler. Default timeout is 20 mins, bump to
+                        # 1hr.
+                        timeout=60 * 60,
                     ),
                 ]),
             ),
