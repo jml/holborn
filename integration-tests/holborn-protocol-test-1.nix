@@ -19,8 +19,7 @@ stdenv.mkDerivation {
       set -e
       echo "*** holborn-protocol-test-1"
 
-      # Run server (holborn-repo expects git to be available on the PATH)
-      PATH=$PATH:${git}/bin ${holborn-repo}/bin/holborn-repo \
+      ${holborn-repo}/bin/holborn-repo \
         --http-port=${toString repoPort} \
         --git-port=${toString rawPort} \
         --repo-root=${test-repos} &
