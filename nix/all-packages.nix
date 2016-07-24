@@ -9,6 +9,15 @@ let
     sha256 = "05z51jjpzwav1nrsh8xc0mwbk105k9x89zq9ii2rwzbhrk0gn53z";
   };
 
+  addTestDependency = drv: x: addTestDependencies drv [x];
+  addTestDependencies = drv: xs: haskell.lib.overrideCabal drv (drv: {
+    preCheck = ''
+      export PATH=${lib.makeBinPath xs}:$PATH
+
+      ${drv.preCheck or ""}
+    '';
+  });
+
 in
 haskellPackages.override {
     overrides = self: super: {
@@ -38,9 +47,7 @@ haskellPackages.override {
       # pg_ctl). There's a weird linking bug that means if we express this in
       # the Nix package using `testSystemDepends`, we can't link the main
       # executable.
-      holborn-api = lib.overrideDerivation (self.callPackage ../holborn-api {}) (oldAttrs: {
-        preCheck = ''export PATH=${pkgs.postgresql}/bin:$PATH'';
-      });
+      holborn-api = addTestDependency (self.callPackage ../holborn-api {}) pkgs.postgresql;
       holborn-common-types = self.callPackage ../holborn-common-types {};
       holborn-prelude = self.callPackage ../holborn-prelude {};
       # TODO: holborn-repo uses the 'git' binary at runtime, but we don't know
