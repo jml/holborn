@@ -22,7 +22,7 @@ def make_config(worker_name, worker_password, worker_port, git_repo, branch,
         'schedulers': [
             schedulers.SingleBranchScheduler(
                 name="all",
-                change_filter=util.ChangeFilter(branch='branch'),
+                change_filter=util.ChangeFilter(branch=branch),
                 treeStableTimer=poll_interval,
                 builderNames=[builder_name],
             ),
