@@ -1,4 +1,4 @@
-{ stdenv, buildPythonPackage, fetchurl, pythonPackages, callPackage
+{ stdenv, buildPythonPackage, fetchurl, pythonPackages
 }:
 
 buildPythonPackage (rec {

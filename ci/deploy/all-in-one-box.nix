@@ -71,8 +71,6 @@ in
     # Some of our tests run docker, so we need permission to run.
     extraGroups = [ "docker" ];
     extraPackages = [
-      # We need git to be able to get the source code to build it!
-      pkgs.git
       # We use make to run the tests
       pkgs.gnumake
       # We use direnv to make things work
@@ -99,7 +97,7 @@ in
     enable = true;
     provider = "google";
     clientID = "579594549675-nuh9d5m5kvdckfdec785o9cbcqe6sje7.apps.googleusercontent.com";
-    package = (pkgs.callPackage ../packages/oauth2_proxy.nix {}).bin // { outputs = [ "bin" ]; };
+    package = (import ../packages).oauth2_proxy.bin // { outputs = [ "bin" ]; };
     # PUPPY: Shared secret.
     clientSecret = "bLlMleNsy_63ivGSIktA1EpP";
     cookie = {

@@ -1,11 +1,6 @@
-{ stdenv, buildPythonPackage, fetchurl, pythonPackages,
-  callPackage
+{ stdenv, buildPythonPackage, fetchurl, pythonPackages
+, buildbot-pkg
 }:
-
-let
-  buildbotPkg = callPackage ./buildbot-pkg-0.9.nix {};
-in
-
 buildPythonPackage (rec {
   name = "buildbot-waterfall-view-${version}";
   version = "0.9.0b9";
@@ -15,7 +10,7 @@ buildPythonPackage (rec {
     sha256 = "0xcl1msf3s04wj9g12db45a3f3br5xybsvfdjan8f5klp6m5kw40";
   };
 
-  buildInputs = [ buildbotPkg ];
+  buildInputs = [ buildbot-pkg ];
 
   doCheck = true;
 

@@ -1,5 +1,4 @@
-{ stdenv, buildPythonPackage, fetchurl
-, pythonPackages }:
+{ stdenv, buildPythonPackage, fetchurl, pythonPackages }:
 
 assert pythonPackages.isPy27;
 

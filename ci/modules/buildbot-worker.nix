@@ -6,8 +6,18 @@ let
   buildbotDirectory = "/var/run/buildbot-worker";
 
   # XXX: Depend on custom package for now.
-  buildbotWorkerPackage = pkgs.callPackage ../packages/buildbot-worker-0.9.nix {};
+  buildbotWorkerPackage = (import ../packages).buildbot-worker;
   buildbotWorkerCommand = "${buildbotWorkerPackage}/bin/buildbot-worker";
+  # This grotesque hack works around what jml thinks is a systemd limitation
+  # on the length of environment variables.
+  #
+  # Really we should only do this wrapping if nix builds are enabled, but eh.
+  buildbotWorkerScript = pkgs.writeScript "buildbot-worker" ''
+    #!/usr/bin/env bash
+
+    export PATH=${lib.makeBinPath nixPackages}:$PATH
+    ${buildbotWorkerCommand} "$@"
+  '';
 
   cfg = config.services.buildbot-worker;
   tacFile = pkgs.writeText "buildbot.tac" (
@@ -34,6 +44,21 @@ let
     if cfg.allowUnfree
     then "{ allowUnfree = true; }"
     else "");
+
+  # Standard things for building nix.
+  # Cribbed from hydra/release.nix.
+  nixPackages = with pkgs; [
+    nix
+    gnutar
+    coreutils
+    findutils
+    gzip
+    bzip2
+    unzip
+    git
+    gitAndTools.topGit
+    gnused
+  ];
 
 in
 {
@@ -159,9 +184,7 @@ in
 
     systemd.services.buildbot-worker = {
       description = "buildbot worker";
-      path = [ buildbotWorkerPackage ] ++ cfg.extraPackages ++
-        (if cfg.enableNixBuilds
-         then  [ pkgs.nix ] else [ ]);
+      path = [ buildbotWorkerPackage ] ++ cfg.extraPackages;
       wantedBy = [ "multi-user.target" ];
       after = [ "network-interfaces.target" ];
 
@@ -183,7 +206,7 @@ in
         RestartSec = 2;
         PermissionsStartOnly = true;  # XXX: What does this mean?
 
-        ExecStart = "${buildbotWorkerCommand} start --nodaemon ${cfg.runDirectory}";
+        ExecStart = "${buildbotWorkerScript} start --nodaemon ${cfg.runDirectory}";
       };
     };
 
