@@ -50,7 +50,6 @@ haskellPackages.override {
       holborn-syntax = self.callPackage ../holborn-syntax {};
       holborn-proxy = self.callPackage ../holborn-proxy {};
 
-      language-python = self.callPackage ./language-python.nix {};
       unexceptionalio = self.callPackage ./unexceptionalio.nix {};
 
       # Patched hoauth2 package with id_token field: Drop in favour of
