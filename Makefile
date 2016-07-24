@@ -2,6 +2,7 @@
 
 HASKELL_PROJECTS = hcl holborn-api holborn-common-types holborn-repo holborn-prelude holborn-ssh holborn-syntax holborn-proxy
 
+integration_test_output_dir = .makefile-build
 cabal_files = $(foreach proj,$(HASKELL_PROJECTS),$(proj)/$(proj).cabal)
 nix_exprs = $(foreach proj,$(HASKELL_PROJECTS),$(proj)/default.nix)
 
@@ -12,13 +13,24 @@ endef
 
 all: $(nix_exprs)
 
-check:
-	nix-build --no-out-link ./integration-tests
+# Do a little bit of a dance to make sure that we leave nix-build symlinks
+# around, but in a place where they won't show up in git or get in the way.
+#
+# We do this so that there's a GC root, so that when we run nix-collect-gc we
+# don't accidentally blow away a pile of stuff like ghc that's been around for
+# ages.
+check: $(integration_test_output_dir)
+	rm -f $(integration_test_output_dir)/*
+	nix-build -o $(integration_test_output_dir)/result ./integration-tests
 	nix-shell -p '(import ./integration-tests).ssh-authz' --command "holborn-ssh-authz-test"
+
+$(integration_test_output_dir):
+	mkdir -p $(integration_test_output_dir)
 
 clean:
 	rm -f $(nix_exprs)
 	rm -f $(cabal_files)
+	rm -rf $(integration_test_output_dir)
 
 holborn-api/holborn-api.cabal: holborn-api/package.yaml
 	hpack --silent holborn-api/

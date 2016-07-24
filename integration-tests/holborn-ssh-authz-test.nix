@@ -132,8 +132,6 @@ writeScriptBin "holborn-ssh-authz-test" ''
       set -e
       echo "*** holborn-ssh-authz-test"
 
-      # TODO: jml anticipates this will fail to build on buildbot, as it might
-      # not have privileges to create docker images.
       ${docker}/bin/docker load < ${holborn-ssh-docker}
 
       pg_database=$(mktemp -d)
@@ -151,9 +149,7 @@ writeScriptBin "holborn-ssh-authz-test" ''
       ${postgresql}/bin/psql -p ${toString pgPort} -U ${pgUser} -d $pg_database -qf ${insertTestKeySql}
       ${postgresql}/bin/psql -p ${toString pgPort} -U ${pgUser} -d $pg_database -qf ${insertRepositorySql}
 
-      # holborn-api has an undocumented run-time dependency on ssh, and
-      # expects ssh-keygen to be in the path.
-      PATH=$PATH:${openssh}/bin ${holborn-api}/bin/holborn-api-server \
+      ${holborn-api}/bin/holborn-api-server \
         --port=${toString apiPort} \
         --postgres-database=$pg_database \
         --postgres-user=${pgUser} \
@@ -162,9 +158,7 @@ writeScriptBin "holborn-ssh-authz-test" ''
         --repo-http-port=${toString repoPort} \
         --repo-git-port=${toString rawRepoPort} &
 
-      # holborn-repo has an undocumented run-time dependency on git, and expects
-      # it to be in the path.
-      PATH=$PATH:${git}/bin ${holborn-repo}/bin/holborn-repo \
+      ${holborn-repo}/bin/holborn-repo \
         --http-port=${toString repoPort} \
         --git-port=${toString rawRepoPort} \
         --repo-root=${test-repos} &

@@ -9,6 +9,30 @@ let
     sha256 = "05z51jjpzwav1nrsh8xc0mwbk105k9x89zq9ii2rwzbhrk0gn53z";
   };
 
+  # These helpers really ought to be in standard haskell lib:
+  # https://github.com/NixOS/nixpkgs/issues/17226
+  addRuntimeDependency = drv: x: addRuntimeDependencies drv [x];
+  addRuntimeDependencies = drv: xs: haskell.lib.overrideCabal drv (drv: {
+    buildDepends = (drv.buildDepends or []) ++ [ pkgs.makeWrapper ];
+    postInstall = ''
+      ${drv.postInstall or ""}
+
+      for exe in "$out/bin/"* ; do
+        wrapProgram "$exe" --prefix PATH ":" \
+          ${lib.makeBinPath xs}
+      done
+    '';
+  });
+
+  addTestDependency = drv: x: addTestDependencies drv [x];
+  addTestDependencies = drv: xs: haskell.lib.overrideCabal drv (drv: {
+    preCheck = ''
+      export PATH=${lib.makeBinPath xs}:$PATH
+
+      ${drv.preCheck or ""}
+    '';
+  });
+
 in
 haskellPackages.override {
     overrides = self: super: {
@@ -34,18 +58,13 @@ haskellPackages.override {
         );
 
       hcl = self.callPackage ../hcl {};
-      # holborn-api tests have a runtime dependency on postgresql (to run
-      # pg_ctl). There's a weird linking bug that means if we express this in
-      # the Nix package using `testSystemDepends`, we can't link the main
-      # executable.
-      holborn-api = lib.overrideDerivation (self.callPackage ../holborn-api {}) (oldAttrs: {
-        preCheck = ''export PATH=${pkgs.postgresql}/bin:$PATH'';
-      });
+      # holborn-api tests have a runtime dependency on postgresql.
+      # holborn-api calls 'ssh-keygen' during normal operation.
+      holborn-api = addTestDependency (addRuntimeDependency (self.callPackage ../holborn-api {}) pkgs.openssh) pkgs.postgresql;
       holborn-common-types = self.callPackage ../holborn-common-types {};
       holborn-prelude = self.callPackage ../holborn-prelude {};
-      # TODO: holborn-repo uses the 'git' binary at runtime, but we don't know
-      # how to specify that in Nix.
-      holborn-repo = self.callPackage ../holborn-repo {};
+      # holborn-repo calls 'git' during normal operation.
+      holborn-repo = addRuntimeDependency (self.callPackage ../holborn-repo {}) pkgs.git;
       holborn-ssh = self.callPackage ../holborn-ssh {};
       holborn-syntax = self.callPackage ../holborn-syntax {};
       holborn-proxy = self.callPackage ../holborn-proxy {};

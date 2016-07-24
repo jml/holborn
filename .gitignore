@@ -6,3 +6,4 @@
 .stack-work/
 /.vagrant
 shell.drv
+.makefile-build/
