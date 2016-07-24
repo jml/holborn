@@ -60,6 +60,11 @@ def make_config(worker_name, worker_password, worker_port, git_repo, branch,
                         env={
                             'NIX_REMOTE': 'daemon',
                         },
+                        # If we have to rebuild our dependencies from scratch,
+                        # we can go a long time without receiving output from
+                        # the compiler. Default timeout is 20 mins, bump to
+                        # 1hr.
+                        timeout=60 * 60,
                     ),
                 ]),
             ),
