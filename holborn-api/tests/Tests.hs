@@ -6,7 +6,6 @@ module Main (main) where
 import HolbornPrelude
 import Paths_holborn_api (getDataFileName)
 
-import Control.Concurrent.MVar (newEmptyMVar, putMVar, readMVar, takeMVar)
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (object, (.=))
 import Data.Maybe (fromJust)
@@ -16,10 +15,11 @@ import Network.HTTP.Client.Internal (HttpException(..))
 import Network.Wai (Application)
 import Servant (serve)
 import Test.Hspec.Wai (request, shouldRespondWith)
+import Test.Hspec.Wai.Internal (withApplication)
 import Test.Hspec.Wai.JSON (fromValue)
 import Test.Tasty (defaultMain, TestTree, testGroup, withResource)
 import Test.Tasty.HUnit hiding (assert)
-import Test.Tasty.Hspec (afterAll_, beforeAll_, before, testSpec, describe, it)
+import Test.Tasty.Hspec (Spec, SpecWith, afterAll, aroundWith, beforeAll, testSpec, describe, it)
 import Web.HttpApiData (toHeader)
 
 import Holborn.API (api, server)
@@ -114,41 +114,41 @@ makeArbitraryUser config = do
 
 waiTest :: IO TestTree
 waiTest = do
-  postgresVar <- newEmptyMVar
-  testSpec "wai-tests" $ beforeAll_ (startDB postgresVar) $ afterAll_ (stopDB postgresVar) $ (before (testApp <$> getConfig postgresVar)) $ do
+  testSpec "wai-tests" $ withConfig $ do
     describe "/v1/new-repo" $ do
-      it "creates repo when posted to" $ do
-        user <- makeArbitraryUser =<< liftIO (getConfig postgresVar)
-        let repoName = "name" :: Text
-        authenticatedPost user "/v1/new-repo"
-          (fromValue $ object [ "owner" .= (userName user)
-                              , "name" .= repoName
-                              , "description" .= ("description" :: Text)
-                              , "private" .= False
-                              , "initialize" .= False
-                              ])
-          `shouldRespondWith`
-          (fromValue $ object [ "number_objects" .= (0 :: Int)
-                              , "size" .= (0 :: Int)
-                              , "owner" .= (userName user)
-                              , "id" .= (1 :: Int)
-                              , "number_commits" .= (0 :: Int)
-                              ])
+      it "creates repo when posted to" $ \config -> do
+        user <- makeArbitraryUser config
+        withApplication (testApp config) $ do
+          let repoName = "name" :: Text
+          authenticatedPost user "/v1/new-repo"
+            (fromValue $ object [ "owner" .= (userName user)
+                                , "name" .= repoName
+                                , "description" .= ("description" :: Text)
+                                , "private" .= False
+                                , "initialize" .= False
+                                ])
+            `shouldRespondWith`
+            (fromValue $ object [ "number_objects" .= (0 :: Int)
+                                , "size" .= (0 :: Int)
+                                , "owner" .= (userName user)
+                                , "id" .= (1 :: Int)
+                                , "number_commits" .= (0 :: Int)
+                                ])
   where
     authenticatedPost user path body =
       request Method.methodPost path [("GAP-Auth", (toHeader (userName user))), ("content-type", "application/json")] body
 
-    startDB var = do
-      postgres <- makeHolbornDB
-      putMVar var postgres
+    -- | Provide a Spec with everything it needs to have a valid Config object
+    -- pointing to a clean database instance.
+    withConfig :: SpecWith Config -> Spec
+    withConfig x = beforeAll makeHolbornDB $ afterAll stopPostgres $ aroundWith withConfig' $ x
 
-    stopDB var = do
-      postgres <- takeMVar var
-      stopPostgres postgres
-
-    getConfig var = do
-      postgres <- readMVar var
-      pure $ testConfig { dbConnection = connection postgres }
+    -- | Turn an action that uses Config into an action that needs our
+    -- internal postgres storage variable.
+    withConfig' action postgres = do
+      let config = testConfig { dbConnection = connection postgres }
+      -- TODO: This is the point where we should reset the database.
+      action config
 
 
 apiTests :: IO Postgres -> TestTree
