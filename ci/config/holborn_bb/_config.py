@@ -1,6 +1,13 @@
 """Configuration for Holborn's Buildbot."""
 
-from buildbot.plugins import *
+from buildbot.plugins import (
+    changes,
+    schedulers,
+    reporters,
+    steps,
+    util,
+    worker,
+)
 
 
 def make_config(worker_name, worker_password, worker_port, git_repo, branch,
