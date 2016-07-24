@@ -9,6 +9,8 @@ let
     sha256 = "05z51jjpzwav1nrsh8xc0mwbk105k9x89zq9ii2rwzbhrk0gn53z";
   };
 
+  # These helpers really ought to be in standard haskell lib:
+  # https://github.com/NixOS/nixpkgs/issues/17226
   addRuntimeDependency = drv: x: addRuntimeDependencies drv [x];
   addRuntimeDependencies = drv: xs: haskell.lib.overrideCabal drv (drv: {
     buildDepends = (drv.buildDepends or []) ++ [ pkgs.makeWrapper ];
