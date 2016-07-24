@@ -61,6 +61,7 @@ tests:
       - QuickCheck
       - aeson
       - bytestring
+      - containers
       - errors
       - http-api-data
       - holborn-api

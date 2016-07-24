@@ -10,6 +10,7 @@ module Holborn.JSON.SSHRepoCommunication
        , KeyType(..)
        , parseSSHCommand
        , unparseSSHCommand
+       , sshFingerprint
        , parseSSHKey
        , unparseSSHKey
        , parseKeyType
@@ -146,6 +147,7 @@ instance Arbitrary RepoCall where
 -- | SSH key type
 data KeyType = RSA | DSA deriving (Show, Eq, Ord, Read)
 
+-- TODO: No reason to have this different to parseKeyType and unparseKeyType.
 instance FromJSON KeyType where
     parseJSON "RSA" = pure RSA
     parseJSON "DSA" = pure DSA
@@ -178,12 +180,14 @@ instance ToJSON SSHKey where
     -- TODO: Maybe include comment in JSON output?
     toJSON (SSHKey _ key _comment fingerprint) = object ["key" .= decodeUtf8 key, "fingerprint" .= decodeUtf8 fingerprint]
 
+-- TODO: Why are we hard-coding this to RSA? It makes no sense.
 instance FromJSON SSHKey where
     parseJSON (Object v) = SSHKey RSA <$> (encodeUtf8 <$> v .: "key")
                                       <*> pure Nothing
                                       <*> (encodeUtf8 <$> v .: "fingerprint")
     parseJSON wat = typeMismatch "SSHKey" wat
 
+-- TODO: Pretty sure these encoders just exist to support weird comparison_pubkey thing.
 instance FromField SSHKey where
     fromField f (Just bs) = case parseSSHKey bs of
         Just x -> return x
@@ -197,6 +201,23 @@ instance FromRow SSHKey where
     fromRow = field
 
 
+-- | Generate an SSH fingerprint.
+sshFingerprint :: Alternative m => ByteString -> m ByteString
+sshFingerprint keyData = unsafePerformIO $ do
+  -- Using unsafeperformIO because fingerprinting is morally a pure
+  -- action but we 're using ssh-keygen for now.
+  -- TODO: This should abort hard with an informative error if ssh-keygen is
+  -- not found. Currently it just returns 'empty'.
+  -- e.g. ssh-keygen -l -f /dev/stdin <~/.ssh/id_rsa.pub
+  (i, o, _, _) <- runInteractiveCommand "ssh-keygen -l -f /dev/stdin"
+  BS.hPut i keyData
+  hClose i
+  f <- BS.hGetContents o
+  return $ case f of
+    "" -> empty
+    x -> pure x
+
+-- TODO: Do not generate fingerprint on parse. That is just silly.
 -- TODO: parse & unparse are obvious candidates for tests
 parseSSHKey :: MonadPlus m => ByteString -> m SSHKey
 parseSSHKey keyData = do
@@ -208,23 +229,7 @@ parseSSHKey keyData = do
                                [kt, k, c] -> pure (kt, k, Just c)
                                [kt, k] -> pure (kt, k, Nothing)
                                _ -> empty
-  SSHKey <$> parseKeyType keyType <*> pure key <*> pure comment <*> fingerprint keyData
-  where
-
-    -- Using unsafeperformIO because fingerprinting is morally a pure
-    -- action but we 're using ssh-keygen for now.
-
-    -- TODO: This should abort hard with an informative error if ssh-keygen is
-    -- not found. Currently it just returns 'empty'.
-    fingerprint keyData' = unsafePerformIO $ do
-        -- e.g. ssh-keygen -l -f /dev/stdin <~/.ssh/id_rsa.pub
-        (i, o, _, _) <- runInteractiveCommand "ssh-keygen -l -f /dev/stdin"
-        BS.hPut i keyData'
-        hClose i
-        f <- BS.hGetContents o
-        return $ case f of
-            "" -> empty
-            x -> pure x
+  SSHKey <$> parseKeyType keyType <*> pure key <*> pure comment <*> sshFingerprint keyData
 
 
 -- | Serialize the parsed key (the one we usually use for comparisons etc.)
