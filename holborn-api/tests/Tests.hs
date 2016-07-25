@@ -26,14 +26,17 @@ import Holborn.API.Internal
   )
 import Holborn.API.Types (newPassword)
 
-import Postgres (Postgres)
 import Fixtures
-  ( User(..)
-  , dbConfig
-  , makeArbitraryUser
+  ( dbConfig
   , withConfig
   , withDatabaseResource
   )
+import Helpers
+  ( User(..)
+  , makeArbitraryUser
+  )
+import Postgres (Postgres)
+
 
 main :: IO ()
 main = do

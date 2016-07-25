@@ -1,10 +1,10 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE QuasiQuotes #-}
+
+-- | Utilities for integrating with our test frameworks to provide resources
+-- necessary for testing.
 
 module Fixtures
-  ( User(..)
-  , dbConfig
-  , makeArbitraryUser
+  ( dbConfig
   , testConfig
   , withConfig
   , withDatabaseResource
@@ -13,25 +13,11 @@ module Fixtures
 import HolbornPrelude
 import Paths_holborn_api (getDataFileName)
 
-import Control.Monad.Trans.Except (runExceptT)
-import Data.Maybe (fromJust)
 import Database.PostgreSQL.Simple (defaultConnectInfo)
 import Test.Tasty (TestTree, withResource)
 import Test.Tasty.Hspec (Spec, SpecWith, afterAll, aroundWith, beforeAll)
 
-import Holborn.API.Auth (UserId)
 import Holborn.API.Config (Config(..))
-import Holborn.API.Internal
-  ( execute
-  , runAPIHandler
-  , sql
-  )
-import Holborn.API.Types
-  ( Email
-  , Username
-  , newUsername
-  , newEmail
-  )
 
 import Postgres (Postgres, connection, makeDatabase, stopPostgres)
 
@@ -66,28 +52,6 @@ testConfig = Config
 
 dbConfig :: Postgres -> Config
 dbConfig postgres = testConfig { dbConnection = connection postgres }
-
--- | A user we have created for testing.
---
--- Exists so we can provide easy APIs for writing tests without worrying too
--- much about impact on production code.
-data User = User { _userId    :: UserId
-                 , userName  :: Username
-                 , _userEmail :: Email
-                 } deriving (Eq, Show)
-
--- | Make an arbitrary user for testing.
-makeArbitraryUser :: MonadIO m => Config -> m User
-makeArbitraryUser config = do
-  -- TODO: Make this actually arbitrary.
-  -- TODO: Remove duplication between query & `User` construction.
-  userid <- liftIO $ runExceptT $ runAPIHandler config $ execute [sql|insert into "user" (username, email) values (?, ?)|] ("alice" :: Text, "alice@example.com" :: Text)
-  case userid of
-    Left _ -> terror "Could not create user in database and jml too lazy/stupid to show proper error"
-    Right userid' -> pure $ User (fromIntegral userid') username email
-  where
-    username = newUsername "alice"
-    email = fromJust (newEmail "alice@example.com")
 
 -- | Provide a Spec with everything it needs to have a valid Config object
 -- pointing to a clean database instance.
