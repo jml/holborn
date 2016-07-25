@@ -4,7 +4,6 @@
 module Fixtures
   ( User(..)
   , dbConfig
-  , makeApp
   , makeArbitraryUser
   , testConfig
   , withConfig
@@ -17,12 +16,9 @@ import Paths_holborn_api (getDataFileName)
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Maybe (fromJust)
 import Database.PostgreSQL.Simple (defaultConnectInfo)
-import Network.Wai (Application)
-import Servant (serve)
 import Test.Tasty (TestTree, withResource)
 import Test.Tasty.Hspec (Spec, SpecWith, afterAll, aroundWith, beforeAll)
 
-import Holborn.API (api, server)
 import Holborn.API.Auth (UserId)
 import Holborn.API.Config (Config(..))
 import Holborn.API.Internal
@@ -70,10 +66,6 @@ testConfig = Config
 
 dbConfig :: Postgres -> Config
 dbConfig postgres = testConfig { dbConnection = connection postgres }
-
--- | Make an instance of the Holborn API suitable for use in tests.
-makeApp :: Config -> Application
-makeApp config = serve api (server config)
 
 -- | A user we have created for testing.
 --

@@ -6,10 +6,12 @@ module Holborn.API
   ( FullAPI
   , server
   , api
+  , app
   ) where
 
-import Servant (Server, (:<|>)(..), (:>))
 import Data.Proxy (Proxy(..))
+import Network.Wai (Application)
+import Servant (Server, (:<|>)(..), (:>), serve)
 
 import qualified Holborn.Docs
 import qualified Holborn.API.SSH
@@ -42,3 +44,8 @@ server conf = Holborn.API.SSH.server conf
                     :<|> Holborn.API.NewRepo.server conf
                    )
               :<|> Holborn.API.Browse.server conf
+
+
+-- | Create a WAI application for Holborn
+app :: Config -> Application
+app conf = serve api (server conf)
