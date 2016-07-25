@@ -97,6 +97,7 @@ test-suite holborn-api-tests
     , transformers
     , unix
     , wai
+    , wai-extra
   other-modules:
       Fixtures
       Helpers

@@ -7,15 +7,13 @@ import HolbornPrelude
 
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (object, (.=))
-import qualified Network.HTTP.Types.Method as Method
 import Network.HTTP.Client.Internal (HttpException(..))
-import Test.Hspec.Wai (request, shouldRespondWith)
+import Test.Hspec.Wai (shouldRespondWith)
 import Test.Hspec.Wai.Internal (withApplication)
 import Test.Hspec.Wai.JSON (fromValue)
 import Test.Tasty (defaultMain, TestTree, testGroup)
 import Test.Tasty.HUnit hiding (assert)
 import Test.Tasty.Hspec (testSpec, describe, it)
-import Web.HttpApiData (toHeader)
 
 import Holborn.API (app)
 import Holborn.API.Internal
@@ -34,6 +32,7 @@ import Fixtures
 import Helpers
   ( User(..)
   , makeArbitraryUser
+  , postAs
   )
 import Postgres (Postgres)
 
@@ -66,7 +65,7 @@ waiTest = do
         user <- makeArbitraryUser config
         withApplication (app config) $ do
           let repoName = "name" :: Text
-          authenticatedPost user "/v1/new-repo"
+          postAs user "/v1/new-repo"
             (fromValue $ object [ "owner" .= (userName user)
                                 , "name" .= repoName
                                 , "description" .= ("description" :: Text)
@@ -80,10 +79,6 @@ waiTest = do
                                 , "id" .= (1 :: Int)
                                 , "number_commits" .= (0 :: Int)
                                 ])
-  where
-    authenticatedPost user path body =
-      request Method.methodPost path [("GAP-Auth", (toHeader (userName user))), ("content-type", "application/json")] body
-
 
 apiTests :: IO Postgres -> TestTree
 apiTests getDB =

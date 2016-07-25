@@ -25,7 +25,7 @@ mkDerivation {
     aeson base bytestring errors holborn-common-types holborn-prelude
     hspec-wai hspec-wai-json http-api-data http-client http-types
     postgresql-simple process QuickCheck tasty tasty-hspec tasty-hunit
-    tasty-quickcheck text transformers unix wai
+    tasty-quickcheck text transformers unix wai wai-extra
   ];
   description = "API server for Holborn";
   license = stdenv.lib.licenses.unfree;

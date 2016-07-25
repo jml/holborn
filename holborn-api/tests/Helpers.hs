@@ -6,12 +6,17 @@
 module Helpers
   ( User(..)
   , makeArbitraryUser
+  , postAs
   ) where
 
 import HolbornPrelude
 
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Maybe (fromJust)
+import qualified Network.HTTP.Types.Method as Method
+import Network.Wai.Test (SResponse)
+import Test.Hspec.Wai (WaiSession, request)
+import Web.HttpApiData (toHeader)
 
 import Holborn.API.Auth (UserId)
 import Holborn.API.Config (Config)
@@ -49,3 +54,10 @@ makeArbitraryUser config = do
   where
     username = newUsername "alice"
     email = fromJust (newEmail "alice@example.com")
+
+
+-- | Post JSON to 'path' as the given user.
+postAs :: User -> ByteString -> LByteString -> WaiSession SResponse
+postAs user path body =
+  request Method.methodPost path [("GAP-Auth", (toHeader (userName user))), ("content-type", "application/json")] body
+
