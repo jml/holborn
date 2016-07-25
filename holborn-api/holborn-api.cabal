@@ -99,5 +99,5 @@ test-suite holborn-api-tests
     , wai
   other-modules:
       Fixtures
-      Helpers
+      Postgres
   default-language: Haskell2010

@@ -26,7 +26,7 @@ import Holborn.API.Internal
   )
 import Holborn.API.Types (newPassword)
 
-import Helpers (Postgres)
+import Postgres (Postgres)
 import Fixtures
   ( User(..)
   , dbConfig

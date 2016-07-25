@@ -1,6 +1,9 @@
--- | Support code for holborn-api integration tests.
+-- | Make & destroy Postgresql instances for testing.
+--
+-- Deliberately doesn't have any code specific to Holborn, so we can re-use it
+-- in other places.
 
-module Helpers
+module Postgres
   ( Postgres
   , connection
   , makeDatabase

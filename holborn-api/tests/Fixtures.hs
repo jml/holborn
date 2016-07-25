@@ -33,7 +33,7 @@ import Holborn.API.Types
   , newEmail
   )
 
-import Helpers (Postgres, connection, makeDatabase, stopPostgres)
+import Postgres (Postgres, connection, makeDatabase, stopPostgres)
 
 
 -- | Create a blank instance of the Holborn database from scratch.
