@@ -100,5 +100,6 @@ test-suite holborn-api-tests
     , unix
     , wai
   other-modules:
+      Fixtures
       Helpers
   default-language: Haskell2010
