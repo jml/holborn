@@ -3,11 +3,12 @@
 
 module Fixtures
   ( User(..)
+  , dbConfig
   , makeApp
   , makeArbitraryUser
-  , makeHolbornDB
   , testConfig
   , withConfig
+  , withDatabaseResource
   ) where
 
 import HolbornPrelude
@@ -18,6 +19,7 @@ import Data.Maybe (fromJust)
 import Database.PostgreSQL.Simple (defaultConnectInfo)
 import Network.Wai (Application)
 import Servant (serve)
+import Test.Tasty (TestTree, withResource)
 import Test.Tasty.Hspec (Spec, SpecWith, afterAll, aroundWith, beforeAll)
 
 import Holborn.API (api, server)
@@ -66,6 +68,9 @@ testConfig = Config
   , configRawRepoPort = 0
   }
 
+dbConfig :: Postgres -> Config
+dbConfig postgres = testConfig { dbConnection = connection postgres }
+
 -- | Make an instance of the Holborn API suitable for use in tests.
 makeApp :: Config -> Application
 makeApp config = serve api (server config)
@@ -100,7 +105,13 @@ withConfig x = beforeAll makeHolbornDB $ afterAll stopPostgres $ aroundWith with
 -- | Turn an action that uses Config into an action that needs our
 -- internal postgres storage variable.
 withConfig' :: (Config -> a) -> Postgres -> a
-withConfig' action postgres = do
-  let config = testConfig { dbConnection = connection postgres }
+withConfig' action postgres =
   -- TODO: This is the point where we should reset the database.
-  action config
+  action (dbConfig postgres)
+
+-- XXX: jml has forgotten when this gets loaded & shut down etc. Important
+-- because maybe we can use it for Hspec tests and have less duplication.
+-- | Provide a "resource" for Tasty tests that loads a live database with a
+-- clean schema.
+withDatabaseResource :: (IO Postgres -> TestTree) -> TestTree
+withDatabaseResource = withResource makeHolbornDB stopPostgres

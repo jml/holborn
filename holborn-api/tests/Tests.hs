@@ -12,12 +12,11 @@ import Network.HTTP.Client.Internal (HttpException(..))
 import Test.Hspec.Wai (request, shouldRespondWith)
 import Test.Hspec.Wai.Internal (withApplication)
 import Test.Hspec.Wai.JSON (fromValue)
-import Test.Tasty (defaultMain, TestTree, testGroup, withResource)
+import Test.Tasty (defaultMain, TestTree, testGroup)
 import Test.Tasty.HUnit hiding (assert)
 import Test.Tasty.Hspec (testSpec, describe, it)
 import Web.HttpApiData (toHeader)
 
-import Holborn.API.Config (Config(..))
 import Holborn.API.Internal
   ( APIError(..)
   , APIHandler
@@ -26,14 +25,14 @@ import Holborn.API.Internal
   )
 import Holborn.API.Types (newPassword)
 
-import Helpers (Postgres, connection, stopPostgres)
+import Helpers (Postgres)
 import Fixtures
   ( User(..)
+  , dbConfig
   , makeApp
   , makeArbitraryUser
-  , makeHolbornDB
-  , testConfig
   , withConfig
+  , withDatabaseResource
   )
 
 main :: IO ()
@@ -47,7 +46,7 @@ suite = do
   waiTests <- waiTest
   pure $ testGroup "Holborn.API"
          [ simpleTests
-         , withResource (makeHolbornDB) stopPostgres apiTests
+         , withDatabaseResource apiTests
          , waiTests
          ]
 
@@ -87,8 +86,7 @@ apiTests :: IO Postgres -> TestTree
 apiTests getDB =
   testGroup "Holborn.API integration tests"
   [ testCase "Bad URL fails in ExceptT" $ do
-      postgres <- getDB
-      let config = testConfig { dbConnection = connection postgres }
+      config <- dbConfig <$> getDB
       let badUrl = "413213243214"
       let apiResult = (jsonGet' (fromString badUrl) :: APIHandler Int (Either String Int))
       let expectedException = UnexpectedException (toException (InvalidUrlException badUrl "Invalid URL")) :: APIError Int
