@@ -23,7 +23,7 @@ import Test.Tasty.Hspec (Spec, SpecWith, afterAll, aroundWith, beforeAll)
 import Holborn.API (app)
 import Holborn.API.Config (Config(..))
 
-import Postgres (Postgres, connection, makeDatabase, stopPostgres)
+import Postgres (Postgres, connection, makeDatabase, resetPostgres, stopPostgres)
 
 
 -- | Set this to True if you want the request logs from the api server to be
@@ -43,10 +43,6 @@ makeHolbornDB = do
 
 -- TODO: Figure out some way of properly getting a port for holborn-api while
 -- also having correctly set base url.
-
--- TODO: Figure out a way of resetting the database to the schema between
--- tests.
--- https://www.postgresql.org/docs/9.5/static/manage-ag-templatedbs.html
 
 -- | A value of Config that can be used in tests that don't *actually* access
 -- the configuration for anything.
@@ -72,8 +68,9 @@ withConfig x = beforeAll makeHolbornDB $ afterAll stopPostgres $ aroundWith with
 
 -- | Turn an action that uses Config into an action that needs our
 -- internal postgres storage variable.
-withConfig' :: (Config -> a) -> Postgres -> a
-withConfig' action postgres =
+withConfig' :: MonadIO m => (Config -> m a) -> Postgres -> m a
+withConfig' action postgres = do
+  liftIO $ resetPostgres postgres
   -- TODO: This is the point where we should reset the database.
   action (dbConfig postgres)
 
