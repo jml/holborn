@@ -7,7 +7,6 @@ module Main (main) where
 import HolbornPrelude
 
 import Database.PostgreSQL.Simple (ConnectInfo(..), defaultConnectInfo)
-import Network.Wai (Application)
 import qualified Network.Wai.Handler.Warp as Warp
 import Network.Wai.Middleware.Cors (cors, CorsResourcePolicy(..), simpleCorsResourcePolicy, simpleHeaders)
 import qualified Network.Wai.Middleware.RequestLogger as RL
@@ -27,9 +26,8 @@ import Options.Applicative
   , str
   , value
   )
-import Servant (serve)
 
-import Holborn.API (api, server)
+import Holborn.API (app)
 import Holborn.API.Config (Config(..))
 import qualified Holborn.Logging as Log
 
@@ -88,10 +86,6 @@ warpSettings port =
 
 devCors :: a -> Maybe CorsResourcePolicy
 devCors _ = Just (simpleCorsResourcePolicy { corsRequestHeaders = simpleHeaders ++ ["Authorization"] })
-
-
-app :: Config -> Application
-app conf = serve api (server conf)
 
 
 main :: IO ()

@@ -20,7 +20,6 @@ dependencies:
   - base >=4.9 && <5
   - holborn-common-types
   - holborn-prelude
-  - servant-server
 
 library:
   source-dirs: lib
@@ -33,9 +32,12 @@ library:
     - http-types
     - postgresql-simple
     - servant-docs >= 0.5
+    - servant-server
     - text
     - time
     - transformers
+    - wai
+    # We literally depend on this only for Port
     - warp >= 3.1
 
 executables:
@@ -45,7 +47,6 @@ executables:
     dependencies:
       - holborn-api
       - optparse-applicative
-      - wai
       - wai-cors
       - wai-extra
       - warp >= 3.1
@@ -77,3 +78,4 @@ tests:
       - transformers
       - unix
       - wai
+      - wai-extra
