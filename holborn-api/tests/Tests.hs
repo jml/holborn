@@ -5,35 +5,23 @@ module Main (main) where
 
 import HolbornPrelude
 
-import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (object, (.=))
-import Network.HTTP.Client.Internal (HttpException(..))
 import Test.Hspec.Wai (shouldRespondWith)
 import Test.Hspec.Wai.Internal (withApplication)
 import Test.Hspec.Wai.JSON (fromValue)
 import Test.Tasty (defaultMain, TestTree, testGroup)
-import Test.Tasty.HUnit hiding (assert)
 import Test.Tasty.Hspec (testSpec, describe, it)
 
-import Holborn.API.Internal
-  ( APIError(..)
-  , APIHandler
-  , jsonGet'
-  , runAPIHandler
-  )
-
 import Fixtures
-  ( dbConfig
-  , makeTestApp
+  ( makeTestApp
   , withConfig
-  , withDatabaseResource
   )
 import Helpers
   ( User(..)
   , makeArbitraryUser
   , postAs
   )
-import Postgres (Postgres)
+import qualified Internal
 
 
 main :: IO ()
@@ -46,7 +34,7 @@ suite :: IO TestTree
 suite = do
   waiTests <- waiTest
   pure $ testGroup "Holborn.API"
-         [ withDatabaseResource apiTests
+         [ Internal.suite
          , waiTests
          ]
 
@@ -77,17 +65,3 @@ waiTest = do
                                 , "id" .= (1 :: Int)
                                 , "number_commits" .= (0 :: Int)
                                 ])
-
-apiTests :: IO Postgres -> TestTree
-apiTests getDB =
-  testGroup "Holborn.API integration tests"
-  [ testCase "Bad URL fails in ExceptT" $ do
-      config <- dbConfig <$> getDB
-      let badUrl = "413213243214"
-      let apiResult = (jsonGet' (fromString badUrl) :: APIHandler Int (Either String Int))
-      let expectedException = UnexpectedException (toException (InvalidUrlException badUrl "Invalid URL")) :: APIError Int
-      result <- runExceptT (runAPIHandler config apiResult)
-      case result of
-        Left e -> show expectedException @?= show e
-        Right _ -> assertFailure $ "Unexpectedly parsed URL: " ++ badUrl
-  ]
