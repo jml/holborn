@@ -1,6 +1,6 @@
 -- | Tests for Holborn.API.Internal
 
-module Internal (suite) where
+module Internal (tests) where
 
 import HolbornPrelude
 
@@ -23,8 +23,8 @@ import Fixtures
 import Postgres (Postgres)
 
 
-suite :: TestTree
-suite = testGroup "Holborn.API.Internal"
+tests :: TestTree
+tests = testGroup "Holborn.API.Internal"
         [ withDatabaseResource jsonGetTests ]
 
 

@@ -1,6 +1,6 @@
 -- | Tests for Holborn.API.NewRepo
 
-module NewRepo (suite) where
+module NewRepo (tests) where
 
 import HolbornPrelude
 
@@ -23,8 +23,8 @@ import Helpers
   , postAs
   )
 
-suite :: IO TestTree
-suite = do
+tests :: IO TestTree
+tests = do
   sshSpec <- testSpec "/v1/new-repo" $ withConfig $ spec
   pure $ testGroup "Holborn.API.NewRepo" [ sshSpec ]
 

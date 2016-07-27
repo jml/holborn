@@ -15,16 +15,16 @@ import qualified NewRepo
 
 main :: IO ()
 main = do
-  tests <- suite
-  defaultMain tests
+  allTests <- tests
+  defaultMain allTests
 
 
-suite :: IO TestTree
-suite = do
-  newRepoSuite <- NewRepo.suite
+tests :: IO TestTree
+tests = do
+  newRepoTests <- NewRepo.tests
   pure $ testGroup "Holborn.API"
-         [ Internal.suite
-         , newRepoSuite
+         [ Internal.tests
+         , newRepoTests
          ]
 
 -- TODO: Update the main app to only connect when we try to talk to the
