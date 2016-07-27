@@ -5,6 +5,7 @@
 
 module Fixtures
   ( dbConfig
+  , makeTestApp
   , testConfig
   , withConfig
   , withDatabaseResource
@@ -14,13 +15,21 @@ import HolbornPrelude
 import Paths_holborn_api (getDataFileName)
 
 import Database.PostgreSQL.Simple (defaultConnectInfo)
+import Network.Wai (Application)
+import qualified Network.Wai.Middleware.RequestLogger as RL
 import Test.Tasty (TestTree, withResource)
 import Test.Tasty.Hspec (Spec, SpecWith, afterAll, aroundWith, beforeAll)
 
+import Holborn.API (app)
 import Holborn.API.Config (Config(..))
 
 import Postgres (Postgres, connection, makeDatabase, stopPostgres)
 
+
+-- | Set this to True if you want the request logs from the api server to be
+-- printed to stdout during tests.
+showRequestLog :: Bool
+showRequestLog = False
 
 -- | Create a blank instance of the Holborn database from scratch.
 --
@@ -49,6 +58,9 @@ testConfig = Config
   , configRepoPort = 0
   , configRawRepoPort = 0
   }
+
+makeTestApp :: Config -> Application
+makeTestApp = if showRequestLog then RL.logStdoutDev . app else app
 
 dbConfig :: Postgres -> Config
 dbConfig postgres = testConfig { dbConnection = connection postgres }

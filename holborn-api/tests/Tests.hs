@@ -15,7 +15,6 @@ import Test.Tasty (defaultMain, TestTree, testGroup)
 import Test.Tasty.HUnit hiding (assert)
 import Test.Tasty.Hspec (testSpec, describe, it)
 
-import Holborn.API (app)
 import Holborn.API.Internal
   ( APIError(..)
   , APIHandler
@@ -26,6 +25,7 @@ import Holborn.API.Types (newPassword)
 
 import Fixtures
   ( dbConfig
+  , makeTestApp
   , withConfig
   , withDatabaseResource
   )
@@ -63,7 +63,7 @@ waiTest = do
     describe "/v1/new-repo" $ do
       it "creates repo when posted to" $ \config -> do
         user <- makeArbitraryUser config
-        withApplication (app config) $ do
+        withApplication (makeTestApp config) $ do
           let repoName = "name" :: Text
           postAs user "/v1/new-repo"
             (fromValue $ object [ "owner" .= (userName user)
