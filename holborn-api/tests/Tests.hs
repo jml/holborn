@@ -21,7 +21,6 @@ import Holborn.API.Internal
   , jsonGet'
   , runAPIHandler
   )
-import Holborn.API.Types (newPassword)
 
 import Fixtures
   ( dbConfig
@@ -47,8 +46,7 @@ suite :: IO TestTree
 suite = do
   waiTests <- waiTest
   pure $ testGroup "Holborn.API"
-         [ simpleTests
-         , withDatabaseResource apiTests
+         [ withDatabaseResource apiTests
          , waiTests
          ]
 
@@ -92,13 +90,4 @@ apiTests getDB =
       case result of
         Left e -> show expectedException @?= show e
         Right _ -> assertFailure $ "Unexpectedly parsed URL: " ++ badUrl
-  ]
-
-
-simpleTests :: TestTree
-simpleTests =
-  testGroup "Simple tests"
-  [ testCase "password not shown" $ do
-        pwd <- newPassword "hello"
-        show pwd @?= "*hidden-password*"
   ]
