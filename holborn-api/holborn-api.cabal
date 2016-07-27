@@ -68,7 +68,7 @@ executable holborn-api-server
 
 test-suite holborn-api-tests
   type: exitcode-stdio-1.0
-  main-is: Tests.hs
+  main-is: Main.hs
   hs-source-dirs:
       tests
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
@@ -101,5 +101,7 @@ test-suite holborn-api-tests
   other-modules:
       Fixtures
       Helpers
+      Internal
+      NewRepo
       Postgres
   default-language: Haskell2010
