@@ -15,10 +15,8 @@ import HolbornPrelude
 
 import Data.Word (Word16)
 import Database.PostgreSQL.Simple (ConnectInfo(..), defaultConnectInfo)
-import System.Process
-  ( callCommand
-  , showCommandForUser
-  )
+import System.Exit (ExitCode(..))
+import qualified System.Process as P
 import System.Posix.Temp (mkdtemp)
 
 -- | A TCP port.
@@ -121,12 +119,25 @@ makeDatabase schema = do
                  ]
 
 
--- | Execute a command with arguments via the shell.
+-- | Execute a command with arguments.
 cmd :: FilePath -> [String] -> IO ()
 cmd command args = do
-  -- TODO: Capture output and only show if command fails.
-  let command' = showCommandForUser command args
-  callCommand command'
+  -- TODO: Show output & error only if command fails. readProcessWithExitCode
+  -- should be ideal for this, but there's some weird interaction it tries to
+  -- get stdout from `pg_ctl`.
+  let spec = (P.proc command args) { P.std_out = P.CreatePipe
+                                   , P.std_err = P.CreatePipe
+                                   }
+  (_, _, _, p) <- P.createProcess spec
+  exitCode <- P.waitForProcess p
+  case exitCode of
+    ExitSuccess -> pure ()
+    ExitFailure _ -> processFailed exitCode
+
+  where
+    processFailed exitCode = ioError (userError (
+      "Process failed: " <> P.showCommandForUser command args <> "(" <> toString exitCode <> ")\n"))
+
 
 -- | Execute the 'pg_ctl' command via the shell.
 --
