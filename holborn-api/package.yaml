@@ -54,7 +54,7 @@ executables:
 
 tests:
   holborn-api-tests:
-    main: Tests.hs
+    main: Main.hs
     source-dirs: tests
     ghc-options: -eventlog
     dependencies:

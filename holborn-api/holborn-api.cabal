@@ -68,7 +68,7 @@ executable holborn-api-server
 
 test-suite holborn-api-tests
   type: exitcode-stdio-1.0
-  main-is: Tests.hs
+  main-is: Main.hs
   hs-source-dirs:
       tests
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
