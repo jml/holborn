@@ -102,5 +102,6 @@ test-suite holborn-api-tests
       Fixtures
       Helpers
       Internal
+      NewRepo
       Postgres
   default-language: Haskell2010
