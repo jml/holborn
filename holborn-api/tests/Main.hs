@@ -11,20 +11,21 @@ import Test.Tasty (defaultMain, TestTree, testGroup)
 
 import qualified Internal
 import qualified NewRepo
-
+import qualified SSH
 
 main :: IO ()
 main = do
   allTests <- tests
   defaultMain allTests
 
-
 tests :: IO TestTree
 tests = do
   newRepoTests <- NewRepo.tests
+  sshTests <- SSH.tests
   pure $ testGroup "Holborn.API"
          [ Internal.tests
          , newRepoTests
+         , sshTests
          ]
 
 -- TODO: Update the main app to only connect when we try to talk to the

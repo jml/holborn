@@ -14,6 +14,7 @@ import GHC.Generics (Generic)
 
 import Holborn.JSON.SSHRepoCommunication (SSHKey)
 
+-- XXX: Move this back to holborn-api. No reason to be here at all.
 
 data ListKeysRow = ListKeysRow
     { _ListKeysRow_id :: Int

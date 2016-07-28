@@ -80,6 +80,7 @@ test-suite holborn-api-tests
     , QuickCheck
     , aeson
     , bytestring
+    , containers
     , errors
     , http-api-data
     , holborn-api
@@ -104,4 +105,5 @@ test-suite holborn-api-tests
       Internal
       NewRepo
       Postgres
+      SSH
   default-language: Haskell2010
