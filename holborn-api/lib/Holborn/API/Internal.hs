@@ -18,6 +18,7 @@ module Holborn.API.Internal
   , repoApiUrl
   , routeRepoRequest
   -- | Logging
+  , corruptDatabase
   , logDebug
   -- | Integrate with Servant
   , toServantHandler
@@ -250,7 +251,7 @@ getRepoId owner repo = do
   case rows of
     [[repoId :: RepoId]] -> pure repoId
     [] -> terror $ "ERROR: no repository found for " <> show owner <> "/" <> show repo
-    _ -> terror $ "ERROR: " <> show (length rows) <> " found for " <> show owner <> "/" <> show repo
+    _ -> corruptDatabase $ show (length rows) <> " repositories found for " <> show owner <> "/" <> show repo
 
 -- | Get the URL for the REST endpoint that serves the 'owner/repo'
 -- repository. i.e. a URL for a holborn-repo server.
@@ -283,3 +284,9 @@ routeRepoRequest command owner repo = do
 logDebug :: (Show s, Stack.HasCallStack) => s -> APIHandler err ()
 logDebug thing =
     APIHandler $ debugWithCallStack thing Stack.callStack
+
+
+-- | We found something in the database that should never have been there in
+-- the first place.
+corruptDatabase :: Text -> a
+corruptDatabase message = terror $ "ERROR: Corrupt database: " <> message
