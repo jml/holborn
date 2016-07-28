@@ -25,9 +25,9 @@ import Data.Aeson (FromJSON(..), ToJSON(..), genericParseJSON, genericToJSON, ob
 import Data.Aeson (Value(Object), (.:))
 import Data.Aeson.Types (typeMismatch)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
+import qualified Data.Attoparsec.ByteString as AB
 import qualified Data.Attoparsec.Text as AT
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BS8
 import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultError(ConversionFailed))
 import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(Escape))
@@ -147,6 +147,9 @@ instance Arbitrary RepoCall where
 -- | SSH key type
 data KeyType = RSA | DSA deriving (Show, Eq, Ord, Read)
 
+instance Arbitrary KeyType where
+  arbitrary = elements [ RSA, DSA ]
+
 -- TODO: No reason to have this different to parseKeyType and unparseKeyType.
 instance FromJSON KeyType where
     parseJSON "RSA" = pure RSA
@@ -158,15 +161,15 @@ instance ToJSON KeyType where
   toJSON DSA = "DSA"
 
 
-parseKeyType :: (Alternative m, Eq s, IsString s) => s -> m KeyType
-parseKeyType "ssh-rsa" = pure RSA
-parseKeyType "ssh-dsa" = pure DSA
-parseKeyType _ = empty
+keyTypeParser :: AB.Parser KeyType
+keyTypeParser = ("ssh-rsa" >> pure RSA) <|> ("ssh-dss" >> pure DSA)
 
+parseKeyType :: ByteString -> Maybe KeyType
+parseKeyType = AB.maybeResult . AB.parse keyTypeParser
 
 unparseKeyType :: IsString s => KeyType -> s
 unparseKeyType RSA = "ssh-rsa"
-unparseKeyType DSA = "ssh-dsa"
+unparseKeyType DSA = "ssh-dss"
 
 
 -- | An SSH key.
@@ -174,7 +177,7 @@ data SSHKey = SSHKey { _sshKeyType :: KeyType
                      , _sshKeyData :: ByteString
                      , _sshKeyComment :: Maybe ByteString
                      , _sshKeyFingerPrint :: ByteString
-                     } deriving Show
+                     } deriving (Show, Eq)
 
 instance ToJSON SSHKey where
     -- TODO: Maybe include comment in JSON output?
@@ -217,20 +220,29 @@ sshFingerprint keyData = unsafePerformIO $ do
     "" -> empty
     x -> pure x
 
--- TODO: Do not generate fingerprint on parse. That is just silly.
--- TODO: parse & unparse are obvious candidates for tests
-parseSSHKey :: MonadPlus m => ByteString -> m SSHKey
+-- | Parse a single SSH key, checking for validity.
+parseSSHKey :: ByteString -> Maybe SSHKey
 parseSSHKey keyData = do
-  -- keys look like "ssh-rsa AAAAB... ... La2Aw== tom@bla"
-  -- but onlyy the middle bit "AAAB ... La2Aw==" is used during checking so we extract that.
-  -- TODO: We could totally do this with just applicatives but it'd be way too
-  -- cumbersome. Just switch to attoparsec instead
-  (keyType, key, comment) <- case BS8.split ' ' keyData of
-                               [kt, k, c] -> pure (kt, k, Just c)
-                               [kt, k] -> pure (kt, k, Nothing)
-                               _ -> empty
-  SSHKey <$> parseKeyType keyType <*> pure key <*> pure comment <*> sshFingerprint keyData
+  (keyType, key, comment) <- hush (AB.parseOnly sshKeyParser keyData)
+  -- Generate the fingerprint so we *know* this is a valid key.
+  fingerprint <- sshFingerprint keyData
+  pure $ SSHKey keyType key comment fingerprint
 
+-- | Parser for a single SSH key
+--
+-- e.g.
+--  ssh-rsa AAAAbc22...  zoidberg@space
+--
+-- Doesn't check the semantic validity of the key, just does the basic syntax.
+sshKeyParser :: AB.Parser (KeyType, ByteString, Maybe ByteString)
+sshKeyParser = do
+  keyType <- keyTypeParser
+  void $ AB.string " "
+  key <- AB.takeWhile1 (AB.notInClass " ")
+  comment <- AB.option Nothing $ do
+    void $ AB.string " "
+    Just <$> AB.takeWhile1 (AB.notInClass "\n")
+  pure (keyType, key, comment)
 
 -- | Serialize the parsed key (the one we usually use for comparisons etc.)
 unparseSSHKey :: SSHKey -> ByteString
