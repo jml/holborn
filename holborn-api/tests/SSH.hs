@@ -90,13 +90,13 @@ spec = do
 
 
   describe "/internal/ssh/access-repo" $ do
-    it "rejects requests for non-existent repos" $ \config -> do
+    it "rejects requests for non-existent keys" $ \config -> do
       withApplication (makeTestApp config) $ do
         let req = jsonObj [ "key_id" .= (1 :: Int)
                           , "command" .= ("git-upload-pack '/no-such-org/no-such-repo'" :: Text)
                           ]
         post "/internal/ssh/access-repo" req
-          `shouldRespondWith` 403 { matchBody = Just [json|{}|] }
+          `shouldRespondWith` 401 { matchBody = Just [json|{"message": "Could not find SSH key"}|] }
 
     it "routes requests for existent repos" $ \config -> do
       user <- makeArbitraryUser config
