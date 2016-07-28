@@ -34,6 +34,7 @@ import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object)
 import Servant ((:>), (:<|>)(..), Post, ReqBody, JSON, MimeRender(..), PlainText, Server, enter)
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Web.HttpApiData (toUrlPiece)
 import Holborn.API.Config (Config)
 import Holborn.API.Internal
   ( APIHandler
@@ -45,6 +46,7 @@ import Holborn.API.Internal
   , throwHandlerError
   , toServantHandler
   )
+import Holborn.JSON.RepoMeta (OwnerName, RepoName)
 import Holborn.JSON.SSHRepoCommunication
   ( KeyType(..)
   , GitCommand(..)
@@ -82,6 +84,7 @@ data SSHError
   | MultipleSSHKeys
   | ReadOnlyKey KeyId
   | UnverifiedKey
+  | NoSuchRepo OwnerName RepoName
   deriving (Eq, Show)
 
 instance JSONCodeableError SSHError where
@@ -91,6 +94,7 @@ instance JSONCodeableError SSHError where
                                             , "keyId" .= keyId
                                             ])
   toJSON UnverifiedKey = (403, object [ "message" .= ("Cannot access repositories with key that has not been verified" :: Text)])
+  toJSON (NoSuchRepo owner repo) = (404, object [ "message" .= ("No such repository: " <> toUrlPiece owner <> "/" <> toUrlPiece repo) ])
 
 
 -- | Wrapper around APIHandler for SSH endpoints.
@@ -134,7 +138,9 @@ accessRepo CheckRepoAccessRequest{key_id, command} = do
       [(keyId, readOnly, True)] ->
         case (command', readOnly) of
           (GitReceivePack, True)  -> throwHandlerError $ ReadOnlyKey keyId
-          _                       -> routeRepoRequest command' owner name
+          _                       -> do
+            access <- routeRepoRequest command' owner name
+            maybe (throwHandlerError $ NoSuchRepo owner name) pure access
 
 
 data CheckKeyRequest = CheckKeyRequest

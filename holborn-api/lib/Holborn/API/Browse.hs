@@ -66,7 +66,7 @@ server conf =
 
 browse :: Maybe Username -> OwnerName -> RepoName -> APIHandler BrowseError BrowseMetaResponse
 browse _maybeUsername owner repo = do
-    repoUrl <- repoApiUrl owner repo
+    repoUrl <- maybe (throwHandlerError NotFound) pure =<< repoApiUrl owner repo
     r <- jsonGet' repoUrl
     repoMeta <- case r of
         Right x -> pure x
@@ -84,7 +84,7 @@ browse _maybeUsername owner repo = do
 -- authentication requirements.
 treeCommitBlob :: Maybe Username -> OwnerName -> RepoName -> [Text] -> APIHandler BrowseError Value
 treeCommitBlob _maybeUsername owner repo pathspec = do
-    repoUrl <- repoApiUrl owner repo
+    repoUrl <- maybe (throwHandlerError NotFound) pure =<< repoApiUrl owner repo
     -- TODO: constructing this URL manually is still not great. A
     -- secondary concern is that we're decoding, then re-encoding JSON
     -- here. Might be easier to pipe through backend responses unmodified.

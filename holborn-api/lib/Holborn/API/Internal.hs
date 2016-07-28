@@ -236,11 +236,8 @@ pickRepoServer = do
   AppConf{repoHostname, repoPort} <- getConfig
   pure $ repoHostname <> ":" <> fromShow repoPort
 
-getRepoId :: OwnerName -> RepoName -> APIHandler err RepoId
+getRepoId :: OwnerName -> RepoName -> APIHandler err (Maybe RepoId)
 getRepoId owner repo = do
-  -- TODO - the following is just a placeholder query so we can get
-  -- a repoId. It works but needs error handling (return e.g. 404
-  -- when repo wasn't found).
   rows <- query [sql|
     select "org_repo".id from "org_repo", "org"
     where "org".id = "org_repo".org_id and "org".orgname = ? and "org_repo".name = ?
@@ -249,13 +246,13 @@ getRepoId owner repo = do
     where "user".id = "user_repo".user_id and "user".username = ? and "user_repo".name = ?
     |] (owner, repo, owner, repo)
   case rows of
-    [[repoId :: RepoId]] -> pure repoId
-    [] -> terror $ "ERROR: no repository found for " <> show owner <> "/" <> show repo
+    [[repoId :: RepoId]] -> pure (Just repoId)
+    [] -> pure Nothing
     _ -> corruptDatabase $ show (length rows) <> " repositories found for " <> show owner <> "/" <> show repo
 
 -- | Get the URL for the REST endpoint that serves the 'owner/repo'
 -- repository. i.e. a URL for a holborn-repo server.
-repoApiUrl :: OwnerName -> RepoName -> APIHandler err Text
+repoApiUrl :: OwnerName -> RepoName -> APIHandler err (Maybe Text)
 repoApiUrl owner repo = do
   -- TODO: Because this is implemented only in terms of other things in
   -- Internal, it should probably be in a separate module, as it represents a
@@ -263,21 +260,28 @@ repoApiUrl owner repo = do
   -- https://bitbucket.org/holbornlondon/holborn/pull-requests/66/wip-notes-on-extracting-repo-layer/diff
   -- for discussion of this.
   repoId <- getRepoId owner repo
+  case repoId of
+    Nothing -> pure Nothing
+    Just repoId' -> Just <$> repoUrlForId repoId'
+
+repoUrlForId :: RepoId -> APIHandler err Text
+repoUrlForId repoId = do
   -- TODO: multi-repo-server: Currently our config hardcodes that we have a
   -- single repo server. In future, we would look up the host details from the
   -- database too.
   AppConf{repoHostname, repoPort} <- getConfig
   pure $ "http://" <> repoHostname <> ":" <> fromShow repoPort <> "/" <> toUrlPiece repoId
 
+
 -- | Given an SSH command line, return enough data to route the git traffic to
 -- the correct repo on the correct repo server.
-routeRepoRequest :: GitCommand -> OwnerName -> RepoName -> APIHandler err RepoAccess
+routeRepoRequest :: GitCommand -> OwnerName -> RepoName -> APIHandler err (Maybe RepoAccess)
 routeRepoRequest command owner repo = do
   repoId <- getRepoId owner repo
   -- TODO: multi-repo-server: Currently, we hardcode a single repo server in
   -- the config. Should instead get the details from the database here.
   AppConf{rawRepoHostname, rawRepoPort} <- getConfig
-  pure $ AccessGranted rawRepoHostname rawRepoPort (WritableRepoCall command repoId)
+  pure $ AccessGranted rawRepoHostname rawRepoPort . WritableRepoCall command <$> repoId
 
 
 -- | Log something for debugging

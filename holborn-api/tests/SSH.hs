@@ -98,6 +98,16 @@ spec = do
         post "/internal/ssh/access-repo" req
           `shouldRespondWith` 401 { matchBody = Just [json|{"message": "Could not find SSH key"}|] }
 
+    it "rejects requests for non-existent repo" $ \config -> do
+      user <- makeArbitraryUser config
+      keyId <- makeVerifiedKeyForUser config user
+      withApplication (makeTestApp config) $ do
+        let req = jsonObj [ "key_id" .= keyId
+                          , "command" .= ("git-upload-pack '/no-such-org/no-such-repo'" :: Text)
+                          ]
+        post "/internal/ssh/access-repo" req
+          `shouldRespondWith` 404 { matchBody = Just [json|{"message": "No such repository: no-such-org/no-such-repo"}|] }
+
     it "routes requests for existent repos" $ \config -> do
       user <- makeArbitraryUser config
       -- Create the key because for reasons jml still doesn't understand, we
