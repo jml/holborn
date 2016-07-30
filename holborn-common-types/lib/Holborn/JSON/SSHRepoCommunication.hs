@@ -205,6 +205,11 @@ instance FromJSON SSHKey where
                                   <*> (encodeUtf8 <$> v .: "fingerprint")
     parseJSON wat = typeMismatch "SSHKey" wat
 
+-- TODO: We might want to lock down SSHKey so we don't expose the construct
+-- and the only way to get a valid one is to parse it via parseSSHKey or load
+-- it from the database (and we have code to ensure that we only store valid
+-- keys in the database).
+
 -- TODO: Pretty sure these encoders just exist to support weird comparison_pubkey thing.
 instance FromField SSHKey where
     fromField f (Just bs) = case parseSSHKey bs of
@@ -239,6 +244,8 @@ parseSSHKey keyData = do
   -- Generate the fingerprint so we *know* this is a valid key.
   -- Using unsafeperformIO because fingerprinting is morally a pure
   -- action but we 're using ssh-keygen for now.
+  -- TODO: Check that type & comment returned by sshFingerprint match type &
+  -- comment in key.
   fingerprint <- unsafePerformIO $ sshFingerprint keyData
   pure $ SSHKey keyType key comment fingerprint
 
