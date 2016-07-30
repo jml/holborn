@@ -47,8 +47,9 @@ spec = do
 
     it "returns empty if there are no matching keys" $ \config -> do
       withApplication (makeTestApp config) $ do
-        let req = jsonObj [ "key_type" .= ("RSA" :: Text)
-                          , "key" .= validKey
+        let (Just (SSHKey keyType key _ _)) = parseSSHKey exampleKey
+        let req = jsonObj [ "key_type" .= toJSON keyType
+                          , "key" .= decodeUtf8 key
                           ]
         post "/internal/ssh/authorized-keys" req
           `shouldRespondWith` 200 { matchBody = Just [json|[]|] }
@@ -56,7 +57,7 @@ spec = do
     it "includes keys if they are present (RSA)" $ \config -> do
       user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
-        submitAndFetchKey user (encodeUtf8 ("ssh-rsa " <> validKey <> " comment")) "arbitrary title"
+        submitAndFetchKey user rsaKey "arbitrary title"
 
     it "includes keys if they are present (DSA)" $ \config -> do
       -- TODO: Version that uses DSA keys. Implementation is currently broken.
@@ -123,9 +124,8 @@ spec = do
       user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
         -- Register an SSH key for the user
-        let fullKey = "ssh-rsa " <> validKey <> " comment"
         let arbitraryTitle = "test-key" :: Text
-        resp <- postAs user "/v1/user/keys" (jsonObj [ "key" .= fullKey
+        resp <- postAs user "/v1/user/keys" (jsonObj [ "key" .= decodeUtf8 exampleKey
                                                      , "title" .= arbitraryTitle])
         pure resp `shouldRespondWith` 201
         let (Just keyId) = parseMaybe (\obj -> obj .: "id") (getJSONBody resp) :: Maybe Int
@@ -169,21 +169,21 @@ spec = do
 -- Duplicates quite a lot from Holborn.API.Settings.SSHKeys.addKey.
 makeVerifiedKeyForUser :: MonadIO m => Config -> User -> m Int64
 makeVerifiedKeyForUser config user = do
-  let fullKey = "ssh-rsa " <> validKey <> " comment"
-  let (Just sshKey) = parseSSHKey (encodeUtf8 fullKey)
+  let (Just sshKey) = parseSSHKey exampleKey
   let arbitraryTitle = "test-key" :: Text
   mutateDB config [sql|
                       insert into "public_key" (id, name, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly, created)
                       values (default, ?, ?, ?, ?, true, false, default)
-                      |] (arbitraryTitle, fullKey, sshKey, (userId user))
+                      |] (arbitraryTitle, exampleKey, sshKey, (userId user))
 
 
 jsonObj :: [Pair] -> LByteString
 jsonObj = fromValue . object
 
 
-validKey :: Text
-validKey = "AAAAB3NzaC1yc2EAAAADAQABAAABAQClEBRSTpSY668/c66R1QC/c1VUGmVBH4uxjbp8KNiF97VT3Dgl2b6gi/5KV5bCNpF4GqsrohzrEI3mf5XLF01ZIcW0pFUZfasWoS+7sQqJnFkb+fjbJDWo62YrLyJyQz7xXvqiUbm87cFA2zWy13jOoxAId5XxdCIEVQt3j4YdbbzFwGayBwgkBtvfok0geJgaTf2j8eRKvdb99ZFsRUlkyO/vqo/cjxXKbfpN3usykQ19To6k9MRANvWryhvAgth2qp4p8F7Zf2w3ZMly3POF8tZBiVE9QdE6QH860aBA8GNjTBCNRGrULilmh4IuXOdAhxSUR1RlDlHuKv0VrKBh"
+rsaKey, exampleKey :: ByteString
+rsaKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDQJqij/IOZ+j7gcv5eTo+buu48viZnKiVEKY7mOzdIVm+UBRB+f0YY3F9jKCNqwOOyXEvn6a/PieD6m5Xax33L8ZChhopbhq/XWlMmpYZz+jmwLRwBRH3ZJWUygsLenJM0PoLUEiZ4KkX+tH+ByBYDWJJtMANrZLPd6L3Aqr+TTNaAfHI868w2cFcEpMkiFRP7m1ksfaFYOkxrH8fd8aKfQvo+/jmaJQ2QGIfUIhpe2kVi/gzIAbzu0GU2XngNWoHurpwfT7CdJ3Bc/uCEmS34HImfMsGoNa62/pvI2KyssTOuqkmFgNohnO9SOFO4u+sRqtRfBPcO/OldBVnjTMXL jml@worth"
+exampleKey = rsaKey  -- For when we don't care about the particular properties of the key
 
 
 getJSONBody :: (FromJSON a) => SResponse -> a
