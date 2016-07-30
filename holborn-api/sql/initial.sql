@@ -93,9 +93,6 @@ create table "pull_request"
 drop table if exists "public_key" cascade;
 create table "public_key"
     ( id serial primary key
-    -- XXX: What is "name"? jml's guess is that it's the key comment, but the
-    -- integration test seems to point to it being something else.
-    , name varchar(128)
     , submitted_pubkey varchar(1024) not null -- The original pubkey
     , comparison_pubkey varchar(1024) not null -- the key we use for comparison
     , owner_id int references "user" (id) not null

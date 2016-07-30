@@ -19,21 +19,21 @@ import Holborn.JSON.SSHRepoCommunication (SSHKey)
 data ListKeysRow = ListKeysRow
     { _ListKeysRow_id :: Int
     , _ListKeysRow_key :: SSHKey
-    , _ListKeysRow_title :: Text
     , _ListKeysRow_verified :: Bool
     , _ListKeysRow_read_only :: Bool
     , _ListKeysRow_created_at :: LocalTime
     } deriving (Show, Generic)
 
-
 instance ToJSON ListKeysRow where
   toJSON = genericToJSON defaultOptions
     { fieldLabelModifier = drop (length ("_ListKeysRow_" :: String)) }
 
+instance FromRow ListKeysRow where
+    fromRow = ListKeysRow <$> field <*> field <*> field <*> field <*> field
+
 
 data AddKeyData = AddKeyData
     { _AddKeyData_key :: Text
-    , _AddKeyData_title :: Text
     } deriving (Show, Generic)
 
 instance ToJSON AddKeyData where
@@ -43,7 +43,3 @@ instance ToJSON AddKeyData where
 instance FromJSON AddKeyData where
   parseJSON = genericParseJSON defaultOptions
     { fieldLabelModifier = drop (length ("_AddKeyData_" :: String)) }
-
-
-instance FromRow ListKeysRow where
-    fromRow = ListKeysRow <$> field <*> field <*> field <*> field <*> field <*> field

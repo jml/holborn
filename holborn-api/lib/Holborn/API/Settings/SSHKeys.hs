@@ -43,11 +43,10 @@ type API =
 -- TODO Tom would really rather have an applicative validator that can
 -- check & mark several errors at the same time because that's a much
 -- better user experience.
-data KeyError = EmptyTitle | InvalidSSHKey
+data KeyError = InvalidSSHKey
 
 
 instance JSONCodeableError KeyError where
-    toJSON EmptyTitle = (400, object ["title" .= ("Title cannot be empty" :: Text)])
     toJSON InvalidSSHKey = (400, object ["key" .= ("Invalid SSH key" :: Text)])
 
 
@@ -62,7 +61,7 @@ server conf = enter (toServantHandler conf) $
 listKeys :: Username -> APIHandler KeyError [ListKeysRow]
 listKeys username =
     query [sql|
-              select id, comparison_pubkey, name, verified, readonly, created
+              select id, comparison_pubkey, verified, readonly, created
               from "public_key" where owner_id = (select id from "user" where username = ?)
           |] (Only username)
 
@@ -83,19 +82,18 @@ deleteKey username keyId = do
 
 
 addKey :: Maybe Username -> AddKeyData -> APIHandler KeyError ListKeysRow
-addKey username AddKeyData{..} = do
-    let sshKey = parseSSHKey (encodeUtf8 _AddKeyData_key)
+addKey username (AddKeyData key) = do
+    let sshKey = parseSSHKey (encodeUtf8 key)
     when (isNothing sshKey) (throwHandlerError InvalidSSHKey)
-    when (_AddKeyData_title == "") (throwHandlerError EmptyTitle)
     userId <- getUserId username
 
     [Only id_] <- query [sql|
-            insert into "public_key" (id, name, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly, created)
-            values (default, ?, ?, ?, ?, false, true, default) returning id
-            |] (_AddKeyData_title, _AddKeyData_key, sshKey, userId)
+            insert into "public_key" (id, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly, created)
+            values (default, ?, ?, ?, false, true, default) returning id
+            |] (key, sshKey, userId)
 
     [r] <- query [sql|
-                   select id, submitted_pubkey, name, verified, readonly, created
+                   select id, submitted_pubkey, verified, readonly, created
                    from "public_key" where id = ?
                |] (Only id_ :: Only Integer)
     return r

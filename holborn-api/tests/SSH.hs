@@ -51,22 +51,22 @@ spec = do
     it "includes keys if they are present (RSA)" $ \config -> do
       user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
-        submitAndFetchKey user rsaKey "arbitrary title"
+        submitAndFetchKey user rsaKey
 
     it "includes keys if they are present (DSA)" $ \config -> do
       user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
-        submitAndFetchKey user dsaKey "arbitrary title"
+        submitAndFetchKey user dsaKey
 
     it "includes keys if they are present (no comment)" $ \config -> do
       user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
-        submitAndFetchKey user keyWithoutComment "arbitrary title"
+        submitAndFetchKey user keyWithoutComment
 
     it "includes keys if they are present (complex comment)" $ \config -> do
       user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
-        submitAndFetchKey user keyWithComplexComment "arbitrary title"
+        submitAndFetchKey user keyWithComplexComment
 
   describe "/internal/ssh/access-repo" $ do
     it "rejects requests for non-existent keys" $ \config -> do
@@ -160,11 +160,10 @@ spec = do
 makeVerifiedKeyForUser :: MonadIO m => Config -> User -> m Int64
 makeVerifiedKeyForUser config user = do
   let (Just sshKey) = parseSSHKey exampleKey
-  let arbitraryTitle = "test-key" :: Text
   mutateDB config [sql|
-                      insert into "public_key" (id, name, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly, created)
-                      values (default, ?, ?, ?, ?, true, false, default)
-                      |] (arbitraryTitle, exampleKey, sshKey, (userId user))
+                      insert into "public_key" (id, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly, created)
+                      values (default, ?, ?, ?, true, false, default)
+                      |] (exampleKey, sshKey, (userId user))
 
 
 rsaKey, dsaKey, keyWithoutComment, keyWithComplexComment, exampleKey :: ByteString
@@ -182,13 +181,11 @@ exampleKey = rsaKey  -- For when we don't care about the particular properties o
 --
 -- When we fully implement SSH key verification, this property should be
 -- updated to verify the key and show that it is then present in authorized keys.
-submitAndFetchKey :: User -> ByteString -> Text -> WaiSession ()
-submitAndFetchKey user fullKey title = do
+submitAndFetchKey :: User -> ByteString -> WaiSession ()
+submitAndFetchKey user fullKey = do
   let (Just parsedKey) = parseSSHKey fullKey
   let (SSHKey keyType key comment fingerprint) = parsedKey
-  resp <- postAs user "/v1/user/keys" (object [ "key" .= decodeUtf8 fullKey
-                                              , "title" .= title
-                                              ])
+  resp <- postAs user "/v1/user/keys" (object [ "key" .= decodeUtf8 fullKey ])
   pure resp `shouldRespondWith` 201
   let (Just keyId) = parseMaybe (\obj -> obj .: "id") (getJSONBody resp) :: Maybe Int
 

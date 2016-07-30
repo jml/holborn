@@ -43,8 +43,7 @@ spec = do
     it "Lists keys you have added" $ \config -> do
       user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
-        let title = "arbitrary title" :: Text
-        let req = object [ "title" .= title, "key" .= (decodeUtf8 validKey) ]
+        let req = object [ "key" .= (decodeUtf8 validKey) ]
         response <- postAs user "/v1/user/keys" req
         let addedKey :: Object = getJSONBody response
         get ("/v1/users/" <> toUrlPiece (userName user) <> "/keys")
@@ -53,30 +52,26 @@ spec = do
   describe "/v1/user/keys" $ do
     it "Forbids anonymous users to add keys" $ \config -> do
       withApplication (makeTestApp config) $ do
-        let req = object [ "title" .= ("arbitrary title" :: Text)
-                         , "key" .= (decodeUtf8 validKey)
+        let req = object [ "key" .= (decodeUtf8 validKey)
                          ]
         post "/v1/user/keys" req `shouldRespondWith` 401
 
     it "400s when users try to add invalid keys" $ \config -> do
       withApplication (makeTestApp config) $ do
-        let req = object [ "title" .= ("arbitrary title" :: Text)
-                         , "key" .= ("not a valid SSH key" :: Text)
+        let req = object [ "key" .= ("not a valid SSH key" :: Text)
                          ]
         post "/v1/user/keys" req `shouldRespondWith` 400
 
     it "Lets you add an SSH key" $ \config -> do
       user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
-        let title = "arbitrary title" :: Text
-        let req = object [ "title" .= title, "key" .= (decodeUtf8 validKey) ]
+        let req = object [ "key" .= (decodeUtf8 validKey) ]
         response <- postAs user "/v1/user/keys" req
         pure response `shouldRespondWith` 201
         let observed = getJSONBody response
         let (Just (SSHKey keyType keyData comment fingerprint)) = parseSSHKey validKey
         liftIO $ (observed `getKey` "verified") `shouldBe` False
         liftIO $ (observed `getKey` "read_only") `shouldBe` True
-        liftIO $ (observed `getKey` "title") `shouldBe` title
         liftIO $ (observed `getKey` "id") `shouldBe` (1 :: Int)
         liftIO $ (observed `getKey` "key") `shouldBe`
           object [ "type" .= keyType
@@ -88,8 +83,7 @@ spec = do
     it "Lets you add duplicate keys" $ \config -> do
       user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
-        let title = "arbitrary title" :: Text
-        let req = object [ "title" .= title, "key" .= (decodeUtf8 validKey) ]
+        let req = object [ "key" .= (decodeUtf8 validKey) ]
         postAs user "/v1/user/keys" req `shouldRespondWith` 201
         -- TODO: Should instead 400
         postAs user "/v1/user/keys" req `shouldRespondWith` 201
