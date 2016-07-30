@@ -21,8 +21,18 @@ module Holborn.JSON.SSHRepoCommunication
 import HolbornPrelude
 
 import Control.Applicative (Alternative(..))
-import Data.Aeson (FromJSON(..), ToJSON(..), genericParseJSON, genericToJSON, object, withText, (.=))
-import Data.Aeson (Value(Object), (.:))
+import Data.Aeson
+  ( FromJSON(..)
+  , ToJSON(..)
+  , Value(Object)
+  , genericParseJSON
+  , genericToJSON
+  , object
+  , withText
+  , (.=)
+  , (.:)
+  , (.:?)
+  )
 import Data.Aeson.Types (typeMismatch)
 import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
 import qualified Data.Attoparsec.ByteString as AB
@@ -180,14 +190,18 @@ data SSHKey = SSHKey { _sshKeyType :: KeyType
                      } deriving (Show, Eq)
 
 instance ToJSON SSHKey where
-    -- TODO: Maybe include comment in JSON output?
-    toJSON (SSHKey _ key _comment fingerprint) = object ["key" .= decodeUtf8 key, "fingerprint" .= decodeUtf8 fingerprint]
+    toJSON key = object
+      [ "key"         .= (decodeUtf8 $ _sshKeyData key)
+      , "fingerprint" .= (decodeUtf8 $ _sshKeyFingerPrint key)
+      , "comment"     .= (decodeUtf8 <$> _sshKeyComment key)
+      , "type"        .= toJSON (_sshKeyType key)
+      ]
 
--- TODO: Why are we hard-coding this to RSA? It makes no sense.
 instance FromJSON SSHKey where
-    parseJSON (Object v) = SSHKey RSA <$> (encodeUtf8 <$> v .: "key")
-                                      <*> pure Nothing
-                                      <*> (encodeUtf8 <$> v .: "fingerprint")
+    parseJSON (Object v) = SSHKey <$> v .: "type"
+                                  <*> (encodeUtf8 <$> v .: "key")
+                                  <*> (map encodeUtf8 <$> v .:? "comment")
+                                  <*> (encodeUtf8 <$> v .: "fingerprint")
     parseJSON wat = typeMismatch "SSHKey" wat
 
 -- TODO: Pretty sure these encoders just exist to support weird comparison_pubkey thing.

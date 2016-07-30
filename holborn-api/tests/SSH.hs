@@ -79,6 +79,8 @@ spec = do
         fingerprint <- liftIO $ fromJust <$> sshFingerprint (encodeUtf8 fullKey)
         let expectedKey = object [ "fingerprint" .= (decodeUtf8 fingerprint)
                                  , "key" .= validKey
+                                 , "comment" .= ("comment" :: Text)
+                                 , "type" .= ("RSA" :: Text)
                                  ]
         post "/internal/ssh/authorized-keys" req
           `shouldRespondWith` 200 { matchBody = Just (fromValue (toJSON [(keyId, expectedKey)])) }
