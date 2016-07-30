@@ -5,6 +5,7 @@ module Settings.SSHKeys (spec) where
 import HolbornPrelude
 
 import Test.Tasty.Hspec (SpecWith, describe, it)
+import Test.Hspec.Wai (get, shouldRespondWith)
 import Test.Hspec.Wai.Internal (withApplication)
 
 import Holborn.API.Config (Config)
@@ -14,9 +15,11 @@ import Fixtures (makeTestApp)
 spec :: SpecWith Config
 spec = do
   describe "/v1/users/<username>/keys" $
-    it "404s for non-existent users" $ \config -> do
+    it "Returns empty list for non-existent users" $ \config -> do
       withApplication (makeTestApp config) $ do
-        pure ()
+        -- Actually, a 404 would be more appropriate, but might as well test
+        -- current behaviour.
+        get "/v1/users/suki/keys" `shouldRespondWith` 200
 
 -- TODO: Tests for SSH settings API:
 --

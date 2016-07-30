@@ -10,7 +10,7 @@ import Data.Sequence (fromList)
 import Test.Hspec.Wai (shouldRespondWith, ResponseMatcher(..), WaiSession)
 import Test.Hspec.Wai.Internal (withApplication)
 import Test.Hspec.Wai.JSON (fromValue, json)
-import Test.Tasty.Hspec (SpecWith, describe, it, shouldBe)
+import Test.Tasty.Hspec (SpecWith, describe, it)
 import Web.HttpApiData (toUrlPiece)
 
 import Holborn.API.Config (Config(..))
@@ -25,6 +25,7 @@ import Helpers
   , mutateDB
   , post
   , postAs
+  , respondsWithJSON
   )
 
 
@@ -43,8 +44,7 @@ spec = do
         let req = jsonObj [ "key_type" .= toJSON keyType
                           , "key" .= decodeUtf8 key
                           ]
-        post "/internal/ssh/authorized-keys" req
-          `shouldRespondWith` 200 { matchBody = Just [json|[]|] }
+        post "/internal/ssh/authorized-keys" req `respondsWithJSON` ([] :: [SSHKey])
 
     it "includes keys if they are present (RSA)" $ \config -> do
       user <- makeArbitraryUser config
@@ -108,16 +108,13 @@ spec = do
         let req = jsonObj [ "key_id" .= keyId
                           , "command" .= command
                           ]
-        response <- post "/internal/ssh/access-repo" req
-        pure response `shouldRespondWith` 200
         let expected = fromList [ toJSON (configRepoHostname config)
                                 , toJSON (configRepoPort config)
                                 , object [ "command" .= ("GitUploadPack" :: Text)
                                          , "repoId" .= repoId
                                          ]
                                 ]
-        let observed = getJSONBody response
-        liftIO $ observed `shouldBe` expected
+        post "/internal/ssh/access-repo" req `respondsWithJSON` expected
 
     -- Demostrate that we can't get repos without a verified key, and that
     -- there's no real way of verifying.
@@ -212,6 +209,5 @@ submitAndFetchKey user fullKey title = do
                            , "type" .= toJSON keyType
                            , "comment" .= (decodeUtf8 <$> comment)
                            ]
-
-  post "/internal/ssh/authorized-keys" req
-    `shouldRespondWith` 200 { matchBody = Just (fromValue (toJSON [(keyId, expectedKey)])) }
+  let expected = toJSON [(keyId, expectedKey)]
+  post "/internal/ssh/authorized-keys" req `respondsWithJSON` expected

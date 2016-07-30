@@ -8,6 +8,7 @@ module Helpers
   , getJSONBody
   , makeArbitraryUser
   , mutateDB
+  , respondsWithJSON
   , post
   , postAs
   ) where
@@ -20,8 +21,9 @@ import Data.Maybe (fromJust)
 import Database.PostgreSQL.Simple (Query, ToRow)
 import Network.HTTP.Types.Header (HeaderName)
 import Network.HTTP.Types.Method (methodPost)
-import Test.Hspec.Wai (WaiSession, request)
 import Network.Wai.Test (SResponse(..))
+import Test.Hspec.Wai (WaiSession, request, shouldRespondWith)
+import Test.Tasty.Hspec (shouldBe)
 import Web.HttpApiData (toHeader)
 
 import Holborn.API.Auth (UserId)
@@ -82,3 +84,9 @@ authHeader user = ("GAP-Auth", (toHeader (userName user)))
 
 getJSONBody :: (FromJSON a) => SResponse -> a
 getJSONBody = fromJust . decode . simpleBody
+
+respondsWithJSON :: (Show a, Eq a, FromJSON a) => WaiSession SResponse -> a -> WaiSession ()
+respondsWithJSON action expected = do
+  response <- action
+  pure response `shouldRespondWith` 200
+  liftIO $ getJSONBody response `shouldBe` expected
