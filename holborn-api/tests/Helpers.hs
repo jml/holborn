@@ -5,10 +5,11 @@
 
 module Helpers
   ( User(..)
-  , getJSONBody
   , makeArbitraryUser
-  , mutateDB
+  , getJSONBody
   , respondsWithJSON
+  , mutateDB
+  , get
   , post
   , postAs
   ) where
@@ -20,7 +21,7 @@ import Data.Aeson (FromJSON, decode)
 import Data.Maybe (fromJust)
 import Database.PostgreSQL.Simple (Query, ToRow)
 import Network.HTTP.Types.Header (HeaderName)
-import Network.HTTP.Types.Method (methodPost)
+import Network.HTTP.Types.Method (methodGet, methodPost)
 import Network.Wai.Test (SResponse(..))
 import Test.Hspec.Wai (WaiSession, request, shouldRespondWith)
 import Test.Tasty.Hspec (shouldBe)
@@ -68,13 +69,17 @@ makeArbitraryUser config = do
     username = newUsername "alice"
     email = fromJust (newEmail "alice@example.com")
 
+-- | Get JSON at 'path' anonymously.
+get :: Text -> WaiSession SResponse
+get path = request methodGet (encodeUtf8 path) [jsonContent] ""
+
 -- | Post JSON to 'path' anonymously.
-post :: ByteString -> LByteString -> WaiSession SResponse
-post path body = request methodPost path [jsonContent] body
+post :: Text -> LByteString -> WaiSession SResponse
+post path body = request methodPost (encodeUtf8 path) [jsonContent] body
 
 -- | Post JSON to 'path' as the given user.
-postAs :: User -> ByteString -> LByteString -> WaiSession SResponse
-postAs user path body = request methodPost path [authHeader user, jsonContent] body
+postAs :: User -> Text -> LByteString -> WaiSession SResponse
+postAs user path body = request methodPost (encodeUtf8 path) [authHeader user, jsonContent] body
 
 jsonContent :: (HeaderName, ByteString)
 jsonContent = ("content-type", "application/json")
