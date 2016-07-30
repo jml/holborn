@@ -57,10 +57,11 @@ spec = do
         post "/v1/user/keys" req `shouldRespondWith` 401
 
     it "400s when users try to add invalid keys" $ \config -> do
+      user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
         let req = object [ "key" .= ("not a valid SSH key" :: Text)
                          ]
-        post "/v1/user/keys" req `shouldRespondWith` 400
+        postAs user "/v1/user/keys" req `shouldRespondWith` 400
 
     it "Lets you add an SSH key" $ \config -> do
       user <- makeArbitraryUser config

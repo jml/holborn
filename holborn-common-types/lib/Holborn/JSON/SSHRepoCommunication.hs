@@ -171,6 +171,9 @@ instance ToJSON KeyType where
   toJSON RSA = "RSA"
   toJSON DSA = "DSA"
 
+instance ToField KeyType where
+  toField RSA = Escape "RSA"
+  toField DSA = Escape "DSA"
 
 keyTypeParser :: AB.Parser KeyType
 keyTypeParser = ("ssh-rsa" >> pure RSA) <|> ("ssh-dss" >> pure DSA)

@@ -18,7 +18,7 @@ import Data.Aeson (object, (.=))
 import Servant
 
 import Holborn.API.Config (Config)
-import Holborn.JSON.SSHRepoCommunication (parseSSHKey)
+import Holborn.JSON.SSHRepoCommunication (SSHKey(SSHKey), parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
 import Holborn.API.Internal
   ( APIHandler
@@ -83,13 +83,27 @@ deleteKey username keyId = do
 
 addKey :: Maybe Username -> AddKeyData -> APIHandler KeyError ListKeysRow
 addKey username (AddKeyData key) = do
-    when (isNothing (parseSSHKey (encodeUtf8 key))) (throwHandlerError InvalidSSHKey)
     userId <- getUserId username
+    let sshKey = parseSSHKey (encodeUtf8 key)
+    when (isNothing sshKey) (throwHandlerError InvalidSSHKey)
+    let (Just (SSHKey keyType keyData comment fingerprint)) = sshKey
 
+    -- TODO: Use 'returning' to avoid two roundtrips.
     [Only id_] <- query [sql|
-            insert into "public_key" (id, submitted_pubkey, owner_id, verified, readonly, created)
-            values (default, ?, ?, false, true, default) returning id
-            |] (key, userId)
+            insert into "public_key"
+              ( id
+              , submitted_pubkey
+              , "type"
+              , "key"
+              , comment
+              , fingerprint
+              , owner_id
+              , verified
+              , readonly
+              , created
+              )
+            values (default, ?, ?, ?, ?, ?, ?, false, true, default) returning id
+            |] (key, keyType, keyData, comment, fingerprint, userId)
 
     [r] <- query [sql|
                    select id, submitted_pubkey, verified, readonly, created

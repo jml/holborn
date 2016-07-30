@@ -89,11 +89,17 @@ create table "pull_request"
     , created timestamp without time zone default (now() at time zone 'utc') not null
     );
 
+drop type  if exists "ssh_key_type" cascade;
+create type ssh_key_type as enum ('RSA', 'DSA');
 
 drop table if exists "public_key" cascade;
 create table "public_key"
     ( id serial primary key
     , submitted_pubkey varchar(1024) not null -- The original pubkey
+    , type ssh_key_type not null
+    , key varchar(1024) not null
+    , comment varchar(1024)
+    , fingerprint varchar(1024)
     , owner_id int references "user" (id) not null
     , verified boolean not null
     , readonly boolean not null
