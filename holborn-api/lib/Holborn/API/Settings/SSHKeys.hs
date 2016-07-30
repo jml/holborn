@@ -61,7 +61,7 @@ server conf = enter (toServantHandler conf) $
 listKeys :: Username -> APIHandler KeyError [ListKeysRow]
 listKeys username =
     query [sql|
-              select id, comparison_pubkey, verified, readonly, created
+              select id, submitted_pubkey, verified, readonly, created
               from "public_key" where owner_id = (select id from "user" where username = ?)
           |] (Only username)
 
@@ -83,14 +83,13 @@ deleteKey username keyId = do
 
 addKey :: Maybe Username -> AddKeyData -> APIHandler KeyError ListKeysRow
 addKey username (AddKeyData key) = do
-    let sshKey = parseSSHKey (encodeUtf8 key)
-    when (isNothing sshKey) (throwHandlerError InvalidSSHKey)
+    when (isNothing (parseSSHKey (encodeUtf8 key))) (throwHandlerError InvalidSSHKey)
     userId <- getUserId username
 
     [Only id_] <- query [sql|
-            insert into "public_key" (id, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly, created)
-            values (default, ?, ?, ?, false, true, default) returning id
-            |] (key, sshKey, userId)
+            insert into "public_key" (id, submitted_pubkey, owner_id, verified, readonly, created)
+            values (default, ?, ?, false, true, default) returning id
+            |] (key, userId)
 
     [r] <- query [sql|
                    select id, submitted_pubkey, verified, readonly, created

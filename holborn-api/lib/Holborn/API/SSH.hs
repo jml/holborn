@@ -51,7 +51,6 @@ import Holborn.JSON.SSHRepoCommunication
   , GitCommand(..)
   , SSHCommandLine(..)
   , SSHKey
-  , unparseKeyType
   , unparseSSHKey
   )
 
@@ -110,13 +109,12 @@ instance MimeRender PlainText SSHKeys where
 -- | Get all authorized keys that match the supplied keys.
 authorizedKeys :: CheckKeyRequest -> SSHHandler SSHKeys
 authorizedKeys CheckKeyRequest{..} = do
-  let comparison_pubkey = unparseKeyType key_type <> " " <> key
   -- PUPPY: We are including unverfied keys in this "authorized keys" list,
   -- which is a potential security escalation vector.
   rows <- query [sql|select pk.id, pk.submitted_pubkey
                      from "public_key" as pk
-                     where comparison_pubkey = ?
-                     |] (Only comparison_pubkey)
+                     where submitted_pubkey = ?
+                     |] (Only key)
   return $ SSHKeys rows
 
 

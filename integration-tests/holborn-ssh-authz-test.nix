@@ -97,9 +97,8 @@ let
          ( 'alice'
          , 'alice@example.com'
          );
-    insert into public_key (submitted_pubkey, comparison_pubkey, owner_id, verified, readonly) values
+    insert into public_key (submitted_pubkey, owner_id, verified, readonly) values
          ( '${testKey.fullKey}'
-         , '${testKey.type} ${testKey.key}'
          , 1
          , true
          , false

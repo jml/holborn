@@ -94,9 +94,13 @@ drop table if exists "public_key" cascade;
 create table "public_key"
     ( id serial primary key
     , submitted_pubkey varchar(1024) not null -- The original pubkey
-    , comparison_pubkey varchar(1024) not null -- the key we use for comparison
     , owner_id int references "user" (id) not null
     , verified boolean not null
     , readonly boolean not null
     , created timestamp without time zone default (now() at time zone 'utc') not null
     );
+
+-- TODO: Rename table to ssh_key
+-- TODO: Rename submitted_pubkey to submitted_key
+-- TODO: Add parsed fields for type, comment, key, fingerprint
+-- TODO: Add indexes for submitted_key and key
