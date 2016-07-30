@@ -60,10 +60,19 @@ spec = do
         submitAndFetchKey user rsaKey "arbitrary title"
 
     it "includes keys if they are present (DSA)" $ \config -> do
-      -- TODO: Version that uses DSA keys. Implementation is currently broken.
+      user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
-        pure ()
+        submitAndFetchKey user dsaKey "arbitrary title"
 
+    it "includes keys if they are present (no comment)" $ \config -> do
+      user <- makeArbitraryUser config
+      withApplication (makeTestApp config) $ do
+        submitAndFetchKey user keyWithoutComment "arbitrary title"
+
+    it "includes keys if they are present (complex comment)" $ \config -> do
+      user <- makeArbitraryUser config
+      withApplication (makeTestApp config) $ do
+        submitAndFetchKey user keyWithComplexComment "arbitrary title"
 
   describe "/internal/ssh/access-repo" $ do
     it "rejects requests for non-existent keys" $ \config -> do
@@ -147,7 +156,10 @@ spec = do
                           ]
         post "/internal/ssh/access-repo" req `shouldRespondWith` 403
 
-
+-- TODO: Tests for SSH settings API:
+--
+-- In particular, want to show that submitting invalid keys returns some sort
+-- of error and doesn't create them
 
 -- TODO: We could probably come up with better helpers for making requests &
 -- assertions about responses that always decode to JSON, so we can use AST
@@ -181,8 +193,11 @@ jsonObj :: [Pair] -> LByteString
 jsonObj = fromValue . object
 
 
-rsaKey, exampleKey :: ByteString
+rsaKey, dsaKey, keyWithoutComment, keyWithComplexComment, exampleKey :: ByteString
 rsaKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDQJqij/IOZ+j7gcv5eTo+buu48viZnKiVEKY7mOzdIVm+UBRB+f0YY3F9jKCNqwOOyXEvn6a/PieD6m5Xax33L8ZChhopbhq/XWlMmpYZz+jmwLRwBRH3ZJWUygsLenJM0PoLUEiZ4KkX+tH+ByBYDWJJtMANrZLPd6L3Aqr+TTNaAfHI868w2cFcEpMkiFRP7m1ksfaFYOkxrH8fd8aKfQvo+/jmaJQ2QGIfUIhpe2kVi/gzIAbzu0GU2XngNWoHurpwfT7CdJ3Bc/uCEmS34HImfMsGoNa62/pvI2KyssTOuqkmFgNohnO9SOFO4u+sRqtRfBPcO/OldBVnjTMXL jml@worth"
+dsaKey = "ssh-dss AAAAB3NzaC1kc3MAAACBAP4XolT62nkT7tWiQ2d9Cv35s6JSN4PvYLPupmLhHlC1D+Q5K2yAwvphFP8XEr+42BxG/fY/aZG8hvo4HzAzYT4llSzJQRzfqznJyHGB5ZJ/Pk80uJir9LKUlh5DXjl+h3KtCpByMJk5ewRtW3Q1yBFX0xTRyPWlpQZW90mwlhHpAAAAFQCvOOTfFYDywM6Tu945PFoVqZlZxQAAAIBBz5tLladTqFElbPXzeCURn47FlvIOrL1F1WTEdAQ1ApZzuOD14asZ6DLA5eAktjFeZbsYx8wsTX6lHhNbE9sC2KNVa1P4YdTX7E3REIlf2/Rt9JShkPXaV7exxi8E5qaYHC7zjaQQhuciANd79WTgdgEY+0+G8erWROqEQiBUegAAAIBaJVw0OhDWtQt9z8V7efS/VITCJzyO6tS9kJww8mDxZTdjU+z/DRWaxnCp1LW06NI7+PXLS3aDnu4eU3RkHPi6EAPVvM0te/mKNVpjDjzYlkbDhawY2585DGJDyvGXF1FK/21xq+iZpjUSYsrrZ6bc0ynaqZ43Gi/EyBr+aY5Yng== jml@worth"
+keyWithoutComment = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDA9TbBf4tGNPtAAKPwzyKudBSnOFqen+sToJHBysC+ERYmy6CVLVYitW/ZzxkAmooXZrPGh+VBoa6hFy5o5CMQUoCJQpIbORuyWIyeAplI5CHMFEBB8yRyfLXdpVJ9iBhNlpz0PR9PhCxyrEJc4SvyNd9Iu5DaonLxV7brplcZ9Z54UPaMfiDpn5kUr0fmKGiVCi2NsHzES0Nh6lwRKVVzYIEzbFx8qQZmQbk0oeexOYxf1LkYq6M3MOABSzHMrty3kuQlZpusQz4/jTOVBSv3iLzk4WCcLjKtnggWF0QhcjKP94xslzjgw6AAdauUsJ6DMfKHIRdyMUOiOQ5/YCz7"
+keyWithComplexComment = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDiNWY5vRUTCJcaFhJ/CX+BWty1buVO1Qnhm79sTk2Dchc8cpFfsBVyps5rjmcfiMVRayTfnVAe6HcXUA0kMKSsyBth8Xl0WFJtkDlWeJ2PTbLC+g+GHyuM256GwNXZKJ5ZoYdee2UPvomyUYogiJLrfvrcWd+AM7i4xWYYFriJGRF6tugyiPy/2rCZc4yn8EcTwORp3z7DY5b0QWdPonwhxXvjNkAoKU+mM8o12inZJrKY0z8JSgrJVFVPe1sdT3V48LFGYjVzOYH6ycV7eWvzg2XhZl1XyyVrscrW9Ew+I01UFdHo6tS3n6+AYCTFU7fuFA3yOr7IXEsCvpBfgBqF I am not a number, I'm a free man"
 exampleKey = rsaKey  -- For when we don't care about the particular properties of the key
 
 
@@ -217,12 +232,11 @@ submitAndFetchKey user fullKey title = do
                       -- for the key.)
                     , "key" .= decodeUtf8 (key <> maybe mempty (" " <>) comment)
                     ]
-  let expectedKey = object ([ "fingerprint" .= (decodeUtf8 fingerprint)
-                            , "key" .= decodeUtf8 key
-                            , "type" .= toJSON keyType
-                            ] <> (case comment of
-                                    Nothing -> []
-                                    Just c -> ["comment" .= decodeUtf8 c]))
+  let expectedKey = object [ "fingerprint" .= decodeUtf8 fingerprint
+                           , "key" .= decodeUtf8 key
+                           , "type" .= toJSON keyType
+                           , "comment" .= (decodeUtf8 <$> comment)
+                           ]
 
   post "/internal/ssh/authorized-keys" req
     `shouldRespondWith` 200 { matchBody = Just (fromValue (toJSON [(keyId, expectedKey)])) }
