@@ -76,7 +76,7 @@ spec = do
                           -- for the key.)
                           , "key" .= (validKey <> " comment")
                           ]
-        fingerprint <- liftIO $ sshFingerprint (encodeUtf8 fullKey)
+        fingerprint <- liftIO $ fromJust <$> sshFingerprint (encodeUtf8 fullKey)
         let expectedKey = object [ "fingerprint" .= (decodeUtf8 fingerprint)
                                  , "key" .= validKey
                                  ]

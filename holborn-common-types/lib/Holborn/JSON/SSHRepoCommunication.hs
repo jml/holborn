@@ -205,10 +205,8 @@ instance FromRow SSHKey where
 
 
 -- | Generate an SSH fingerprint.
-sshFingerprint :: Alternative m => ByteString -> m ByteString
-sshFingerprint keyData = unsafePerformIO $ do
-  -- Using unsafeperformIO because fingerprinting is morally a pure
-  -- action but we 're using ssh-keygen for now.
+sshFingerprint :: Alternative m => ByteString -> IO (m ByteString)
+sshFingerprint keyData = do
   -- TODO: This should abort hard with an informative error if ssh-keygen is
   -- not found. Currently it just returns 'empty'.
   -- e.g. ssh-keygen -l -f /dev/stdin <~/.ssh/id_rsa.pub
@@ -225,7 +223,9 @@ parseSSHKey :: ByteString -> Maybe SSHKey
 parseSSHKey keyData = do
   (keyType, key, comment) <- hush (AB.parseOnly sshKeyParser keyData)
   -- Generate the fingerprint so we *know* this is a valid key.
-  fingerprint <- sshFingerprint keyData
+  -- Using unsafeperformIO because fingerprinting is morally a pure
+  -- action but we 're using ssh-keygen for now.
+  fingerprint <- unsafePerformIO $ sshFingerprint keyData
   pure $ SSHKey keyType key comment fingerprint
 
 -- | Parser for a single SSH key
