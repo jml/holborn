@@ -5,11 +5,11 @@ module SSH (spec) where
 import HolbornPrelude
 
 import Data.Aeson (object, (.=), toJSON, (.:))
-import Data.Aeson.Types (Pair, parseMaybe)
+import Data.Aeson.Types (parseMaybe)
 import Data.Sequence (fromList)
 import Test.Hspec.Wai (shouldRespondWith, ResponseMatcher(..), WaiSession)
 import Test.Hspec.Wai.Internal (withApplication)
-import Test.Hspec.Wai.JSON (fromValue, json)
+import Test.Hspec.Wai.JSON (json)
 import Test.Tasty.Hspec (SpecWith, describe, it)
 import Web.HttpApiData (toUrlPiece)
 
@@ -34,16 +34,18 @@ spec = do
   describe "/internal/ssh/authorized-keys" $ do
     it "rejects invalid keys" $ \config -> do
       withApplication (makeTestApp config) $ do
-        let badRequest = [json|{key_type: "huh", key: "what?"}|]
+        let badRequest = object [ "key_type" .= ("huh" :: Text)
+                                , "key" .=  ("what?" :: Text)
+                                ]
         post "/internal/ssh/authorized-keys" badRequest
           `shouldRespondWith` 400
 
     it "returns empty if there are no matching keys" $ \config -> do
       withApplication (makeTestApp config) $ do
         let (Just (SSHKey keyType key _ _)) = parseSSHKey exampleKey
-        let req = jsonObj [ "key_type" .= toJSON keyType
-                          , "key" .= decodeUtf8 key
-                          ]
+        let req = object [ "key_type" .= toJSON keyType
+                         , "key" .= decodeUtf8 key
+                         ]
         post "/internal/ssh/authorized-keys" req `respondsWithJSON` ([] :: [SSHKey])
 
     it "includes keys if they are present (RSA)" $ \config -> do
@@ -69,9 +71,9 @@ spec = do
   describe "/internal/ssh/access-repo" $ do
     it "rejects requests for non-existent keys" $ \config -> do
       withApplication (makeTestApp config) $ do
-        let req = jsonObj [ "key_id" .= (1 :: Int)
-                          , "command" .= ("git-upload-pack '/no-such-org/no-such-repo'" :: Text)
-                          ]
+        let req = object [ "key_id" .= (1 :: Int)
+                         , "command" .= ("git-upload-pack '/no-such-org/no-such-repo'" :: Text)
+                         ]
         post "/internal/ssh/access-repo" req
           `shouldRespondWith` 401 { matchBody = Just [json|{"message": "Could not find SSH key"}|] }
 
@@ -79,9 +81,9 @@ spec = do
       user <- makeArbitraryUser config
       keyId <- makeVerifiedKeyForUser config user
       withApplication (makeTestApp config) $ do
-        let req = jsonObj [ "key_id" .= keyId
-                          , "command" .= ("git-upload-pack '/no-such-org/no-such-repo'" :: Text)
-                          ]
+        let req = object [ "key_id" .= keyId
+                         , "command" .= ("git-upload-pack '/no-such-org/no-such-repo'" :: Text)
+                         ]
         post "/internal/ssh/access-repo" req
           `shouldRespondWith` 404 { matchBody = Just [json|{"message": "No such repository: no-such-org/no-such-repo"}|] }
 
@@ -94,7 +96,7 @@ spec = do
       withApplication (makeTestApp config) $ do
         -- Create a repo for user
         let repoName = "name" :: Text
-        resp <- postAs user "/v1/new-repo" $ jsonObj
+        resp <- postAs user "/v1/new-repo" $ object
           [ "owner" .= userName user
           , "name" .= repoName
           , "description" .= ("repo description" :: Text)
@@ -105,9 +107,9 @@ spec = do
 
         -- Try to get the repo
         let command = "git-upload-pack '/" <> toUrlPiece (userName user) <> "/" <> repoName <> "'"
-        let req = jsonObj [ "key_id" .= keyId
-                          , "command" .= command
-                          ]
+        let req = object [ "key_id" .= keyId
+                         , "command" .= command
+                         ]
         let expected = fromList [ toJSON (configRepoHostname config)
                                 , toJSON (configRepoPort config)
                                 , object [ "command" .= ("GitUploadPack" :: Text)
@@ -123,14 +125,14 @@ spec = do
       withApplication (makeTestApp config) $ do
         -- Register an SSH key for the user
         let arbitraryTitle = "test-key" :: Text
-        resp <- postAs user "/v1/user/keys" (jsonObj [ "key" .= decodeUtf8 exampleKey
-                                                     , "title" .= arbitraryTitle])
+        resp <- postAs user "/v1/user/keys" (object [ "key" .= decodeUtf8 exampleKey
+                                                    , "title" .= arbitraryTitle])
         pure resp `shouldRespondWith` 201
         let (Just keyId) = parseMaybe (\obj -> obj .: "id") (getJSONBody resp) :: Maybe Int
 
         -- Create a repo for user
         let repoName = "name" :: Text
-        void $ postAs user "/v1/new-repo" $ jsonObj
+        void $ postAs user "/v1/new-repo" $ object
           [ "owner" .= userName user
           , "name" .= repoName
           , "description" .= ("repo description" :: Text)
@@ -140,9 +142,9 @@ spec = do
 
         -- Try to get the repo
         let command = "git-upload-pack '/" <> toUrlPiece (userName user) <> "/" <> repoName <> "'"
-        let req = jsonObj [ "key_id" .= keyId
-                          , "command" .= command
-                          ]
+        let req = object [ "key_id" .= keyId
+                         , "command" .= command
+                         ]
         post "/internal/ssh/access-repo" req `shouldRespondWith` 403
 
 -- TODO: Is hspec-wai really worth the effort? Could we build better things on
@@ -165,10 +167,6 @@ makeVerifiedKeyForUser config user = do
                       |] (arbitraryTitle, exampleKey, sshKey, (userId user))
 
 
-jsonObj :: [Pair] -> LByteString
-jsonObj = fromValue . object
-
-
 rsaKey, dsaKey, keyWithoutComment, keyWithComplexComment, exampleKey :: ByteString
 rsaKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDQJqij/IOZ+j7gcv5eTo+buu48viZnKiVEKY7mOzdIVm+UBRB+f0YY3F9jKCNqwOOyXEvn6a/PieD6m5Xax33L8ZChhopbhq/XWlMmpYZz+jmwLRwBRH3ZJWUygsLenJM0PoLUEiZ4KkX+tH+ByBYDWJJtMANrZLPd6L3Aqr+TTNaAfHI868w2cFcEpMkiFRP7m1ksfaFYOkxrH8fd8aKfQvo+/jmaJQ2QGIfUIhpe2kVi/gzIAbzu0GU2XngNWoHurpwfT7CdJ3Bc/uCEmS34HImfMsGoNa62/pvI2KyssTOuqkmFgNohnO9SOFO4u+sRqtRfBPcO/OldBVnjTMXL jml@worth"
 dsaKey = "ssh-dss AAAAB3NzaC1kc3MAAACBAP4XolT62nkT7tWiQ2d9Cv35s6JSN4PvYLPupmLhHlC1D+Q5K2yAwvphFP8XEr+42BxG/fY/aZG8hvo4HzAzYT4llSzJQRzfqznJyHGB5ZJ/Pk80uJir9LKUlh5DXjl+h3KtCpByMJk5ewRtW3Q1yBFX0xTRyPWlpQZW90mwlhHpAAAAFQCvOOTfFYDywM6Tu945PFoVqZlZxQAAAIBBz5tLladTqFElbPXzeCURn47FlvIOrL1F1WTEdAQ1ApZzuOD14asZ6DLA5eAktjFeZbsYx8wsTX6lHhNbE9sC2KNVa1P4YdTX7E3REIlf2/Rt9JShkPXaV7exxi8E5qaYHC7zjaQQhuciANd79WTgdgEY+0+G8erWROqEQiBUegAAAIBaJVw0OhDWtQt9z8V7efS/VITCJzyO6tS9kJww8mDxZTdjU+z/DRWaxnCp1LW06NI7+PXLS3aDnu4eU3RkHPi6EAPVvM0te/mKNVpjDjzYlkbDhawY2585DGJDyvGXF1FK/21xq+iZpjUSYsrrZ6bc0ynaqZ43Gi/EyBr+aY5Yng== jml@worth"
@@ -188,22 +186,22 @@ submitAndFetchKey :: User -> ByteString -> Text -> WaiSession ()
 submitAndFetchKey user fullKey title = do
   let (Just parsedKey) = parseSSHKey fullKey
   let (SSHKey keyType key comment fingerprint) = parsedKey
-  resp <- postAs user "/v1/user/keys" (jsonObj [ "key" .= decodeUtf8 fullKey
-                                               , "title" .= title
-                                               ])
+  resp <- postAs user "/v1/user/keys" (object [ "key" .= decodeUtf8 fullKey
+                                              , "title" .= title
+                                              ])
   pure resp `shouldRespondWith` 201
   let (Just keyId) = parseMaybe (\obj -> obj .: "id") (getJSONBody resp) :: Maybe Int
 
   -- Try to request it as an authorized key.
-  let req = jsonObj [ "key_type" .= toJSON keyType
-                      -- TODO: We have to manually add comment because of
-                      -- the way the comparison_pubkey logic works, not
-                      -- because this is the desired behaviour of the
-                      -- endpoint. Our ssh-authorized-keys binary won't do
-                      -- this manual addition (it's never told the comment
-                      -- for the key.)
-                    , "key" .= decodeUtf8 (key <> maybe mempty (" " <>) comment)
-                    ]
+  let req = object [ "key_type" .= toJSON keyType
+                     -- TODO: We have to manually add comment because of
+                     -- the way the comparison_pubkey logic works, not
+                     -- because this is the desired behaviour of the
+                     -- endpoint. Our ssh-authorized-keys binary won't do
+                     -- this manual addition (it's never told the comment
+                     -- for the key.)
+                   , "key" .= decodeUtf8 (key <> maybe mempty (" " <>) comment)
+                   ]
   let expectedKey = object [ "fingerprint" .= decodeUtf8 fingerprint
                            , "key" .= decodeUtf8 key
                            , "type" .= toJSON keyType

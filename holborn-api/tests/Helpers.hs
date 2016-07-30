@@ -17,7 +17,7 @@ module Helpers
 import HolbornPrelude
 
 import Control.Monad.Trans.Except (runExceptT)
-import Data.Aeson (FromJSON, decode)
+import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.Maybe (fromJust)
 import Database.PostgreSQL.Simple (Query, ToRow)
 import Network.HTTP.Types.Header (HeaderName)
@@ -74,12 +74,12 @@ get :: Text -> WaiSession SResponse
 get path = request methodGet (encodeUtf8 path) [jsonContent] ""
 
 -- | Post JSON to 'path' anonymously.
-post :: Text -> LByteString -> WaiSession SResponse
-post path body = request methodPost (encodeUtf8 path) [jsonContent] body
+post :: ToJSON a => Text -> a -> WaiSession SResponse
+post path body = request methodPost (encodeUtf8 path) [jsonContent] (encode body)
 
 -- | Post JSON to 'path' as the given user.
-postAs :: User -> Text -> LByteString -> WaiSession SResponse
-postAs user path body = request methodPost (encodeUtf8 path) [authHeader user, jsonContent] body
+postAs :: ToJSON a => User -> Text -> a -> WaiSession SResponse
+postAs user path body = request methodPost (encodeUtf8 path) [authHeader user, jsonContent] (encode body)
 
 jsonContent :: (HeaderName, ByteString)
 jsonContent = ("content-type", "application/json")
