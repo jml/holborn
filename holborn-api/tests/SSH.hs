@@ -9,7 +9,7 @@ import Data.Aeson.Types (Pair, parseMaybe)
 import Data.Maybe (fromJust)
 import Data.Sequence (fromList)
 import Network.Wai.Test (SResponse(..))
-import Test.Hspec.Wai (shouldRespondWith, ResponseMatcher(..))
+import Test.Hspec.Wai (shouldRespondWith, ResponseMatcher(..), WaiSession)
 import Test.Hspec.Wai.Internal (withApplication)
 import Test.Hspec.Wai.JSON (fromValue, json)
 import Test.Tasty (TestTree, testGroup)
@@ -18,7 +18,7 @@ import Web.HttpApiData (toUrlPiece)
 
 import Holborn.API.Config (Config(..))
 import Holborn.API.Internal (sql)
-import Holborn.JSON.SSHRepoCommunication (parseSSHKey, sshFingerprint)
+import Holborn.JSON.SSHRepoCommunication (SSHKey(SSHKey), parseSSHKey)
 
 import Fixtures (makeTestApp, withConfig)
 import Helpers
@@ -56,34 +56,7 @@ spec = do
     it "includes keys if they are present (RSA)" $ \config -> do
       user <- makeArbitraryUser config
       withApplication (makeTestApp config) $ do
-        -- Register an SSH key for the user
-        let fullKey = "ssh-rsa " <> validKey <> " comment"
-        -- TODO: What's the title for?
-        let arbitraryTitle = "test-key" :: Text
-        resp <- postAs user "/v1/user/keys" (jsonObj [ "key" .= fullKey
-                                                     , "title" .= arbitraryTitle])
-        pure resp `shouldRespondWith` 201
-        let (Just keyId) = parseMaybe (\obj -> obj .: "id") (getJSONBody resp) :: Maybe Int
-
-        -- Try to request it as an authorized key.
-        -- "RSA" here has to match the key type of full key.
-        let req = jsonObj [ "key_type" .= ("RSA" :: Text)
-                          -- TODO: We have to manually add comment because of
-                          -- the way the comparison_pubkey logic works, not
-                          -- because this is the desired behaviour of the
-                          -- endpoint. Our ssh-authorized-keys binary won't do
-                          -- this manual addition (it's never told the comment
-                          -- for the key.)
-                          , "key" .= (validKey <> " comment")
-                          ]
-        fingerprint <- liftIO $ fromJust <$> sshFingerprint (encodeUtf8 fullKey)
-        let expectedKey = object [ "fingerprint" .= (decodeUtf8 fingerprint)
-                                 , "key" .= validKey
-                                 , "comment" .= ("comment" :: Text)
-                                 , "type" .= ("RSA" :: Text)
-                                 ]
-        post "/internal/ssh/authorized-keys" req
-          `shouldRespondWith` 200 { matchBody = Just (fromValue (toJSON [(keyId, expectedKey)])) }
+        submitAndFetchKey user (encodeUtf8 ("ssh-rsa " <> validKey <> " comment")) "arbitrary title"
 
     it "includes keys if they are present (DSA)" $ \config -> do
       -- TODO: Version that uses DSA keys. Implementation is currently broken.
@@ -215,3 +188,41 @@ validKey = "AAAAB3NzaC1yc2EAAAADAQABAAABAQClEBRSTpSY668/c66R1QC/c1VUGmVBH4uxjbp8
 
 getJSONBody :: (FromJSON a) => SResponse -> a
 getJSONBody = fromJust . decode . simpleBody
+
+
+-- | A key which is submitted by a user appears in their authorized keys list.
+--
+-- Note that this happens regardless of whether the key has been 'verified' or
+-- not (a concept only partially implemented within holborn-api).
+--
+-- When we fully implement SSH key verification, this property should be
+-- updated to verify the key and show that it is then present in authorized keys.
+submitAndFetchKey :: User -> ByteString -> Text -> WaiSession ()
+submitAndFetchKey user fullKey title = do
+  let (Just parsedKey) = parseSSHKey fullKey
+  let (SSHKey keyType key comment fingerprint) = parsedKey
+  resp <- postAs user "/v1/user/keys" (jsonObj [ "key" .= decodeUtf8 fullKey
+                                               , "title" .= title
+                                               ])
+  pure resp `shouldRespondWith` 201
+  let (Just keyId) = parseMaybe (\obj -> obj .: "id") (getJSONBody resp) :: Maybe Int
+
+  -- Try to request it as an authorized key.
+  let req = jsonObj [ "key_type" .= toJSON keyType
+                      -- TODO: We have to manually add comment because of
+                      -- the way the comparison_pubkey logic works, not
+                      -- because this is the desired behaviour of the
+                      -- endpoint. Our ssh-authorized-keys binary won't do
+                      -- this manual addition (it's never told the comment
+                      -- for the key.)
+                    , "key" .= decodeUtf8 (key <> maybe mempty (" " <>) comment)
+                    ]
+  let expectedKey = object ([ "fingerprint" .= (decodeUtf8 fingerprint)
+                            , "key" .= decodeUtf8 key
+                            , "type" .= toJSON keyType
+                            ] <> (case comment of
+                                    Nothing -> []
+                                    Just c -> ["comment" .= decodeUtf8 c]))
+
+  post "/internal/ssh/authorized-keys" req
+    `shouldRespondWith` 200 { matchBody = Just (fromValue (toJSON [(keyId, expectedKey)])) }
