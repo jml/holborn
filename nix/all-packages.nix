@@ -59,8 +59,8 @@ haskellPackages.override {
 
       hcl = self.callPackage ../hcl {};
       # holborn-api tests have a runtime dependency on postgresql.
-      # holborn-api calls 'ssh-keygen' during normal operation.
-      holborn-api = addTestDependency (addRuntimeDependency (self.callPackage ../holborn-api {}) pkgs.openssh) pkgs.postgresql;
+      # holborn-api calls 'ssh-keygen' during normal operation and during tests.
+      holborn-api = addTestDependencies (addRuntimeDependency (self.callPackage ../holborn-api {}) pkgs.openssh) [pkgs.postgresql pkgs.openssh];
       # holborn-common-types calls 'ssh-keygen' in its tests
       holborn-common-types = addTestDependency (self.callPackage ../holborn-common-types {}) pkgs.openssh;
       holborn-prelude = self.callPackage ../holborn-prelude {};

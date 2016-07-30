@@ -122,7 +122,7 @@ options =
       <$> option (fromString <$> str)
           ( long "key" <> short 'k' <> metavar "KEY"
             <> help "SSH key offered for authentication" )
-      <*> option (str >>= parseKeyType)
+      <*> option (str >>= parseKeyType . fromString)
           ( long "type" <> short 't' <> metavar "KEY_TYPE"
             <> help "Type of key being offered for authentication" )
       <*> option url

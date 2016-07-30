@@ -175,8 +175,8 @@ instance ToJSON KeyType where
 keyTypeParser :: AB.Parser KeyType
 keyTypeParser = ("ssh-rsa" >> pure RSA) <|> ("ssh-dss" >> pure DSA)
 
-parseKeyType :: ByteString -> Maybe KeyType
-parseKeyType = AB.maybeResult . AB.parse keyTypeParser
+parseKeyType :: Alternative m => ByteString -> m KeyType
+parseKeyType = hush . AB.parseOnly keyTypeParser
 
 unparseKeyType :: IsString s => KeyType -> s
 unparseKeyType RSA = "ssh-rsa"
