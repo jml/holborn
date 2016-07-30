@@ -39,7 +39,6 @@ import Holborn.API.Types (Username)
 
 type API =
          "users" :> Capture "username" Username :> "keys" :> Get '[JSON] [ListKeysRow]
-    :<|> "user" :> "keys" :> Capture "id" Int :> Get '[JSON] ListKeysRow
     :<|> Header "GAP-Auth" Username :> "user" :> "keys" :> Capture "id" Int :> Delete '[JSON] ()
     :<|> Header "GAP-Auth" Username :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> PostCreated '[JSON] ListKeysRow
 
@@ -57,7 +56,6 @@ instance JSONCodeableError KeyError where
 server :: Config -> Server API
 server conf = enter (toServantHandler conf) $
     listKeys
-    :<|> getKey
     :<|> deleteKey
     :<|> addKey
 
@@ -68,10 +66,6 @@ listKeys username =
               select id, "type", "key", comment, fingerprint, verified, readonly, created
               from "public_key" where owner_id = (select id from "user" where username = ?)
           |] (Only username)
-
-
-getKey :: Int -> APIHandler KeyError ListKeysRow
-getKey _keyId = undefined
 
 
 deleteKey :: Maybe Username -> Int -> APIHandler KeyError ()
