@@ -6,7 +6,10 @@
 module Helpers
   ( User(..)
   , makeArbitraryUser
+  , getJSONBody
+  , respondsWithJSON
   , mutateDB
+  , get
   , post
   , postAs
   ) where
@@ -14,12 +17,14 @@ module Helpers
 import HolbornPrelude
 
 import Control.Monad.Trans.Except (runExceptT)
+import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.Maybe (fromJust)
 import Database.PostgreSQL.Simple (Query, ToRow)
 import Network.HTTP.Types.Header (HeaderName)
-import Network.HTTP.Types.Method (methodPost)
-import Network.Wai.Test (SResponse)
-import Test.Hspec.Wai (WaiSession, request)
+import Network.HTTP.Types.Method (methodGet, methodPost)
+import Network.Wai.Test (SResponse(..))
+import Test.Hspec.Wai (WaiSession, request, shouldRespondWith)
+import Test.Tasty.Hspec (shouldBe)
 import Web.HttpApiData (toHeader)
 
 import Holborn.API.Auth (UserId)
@@ -64,16 +69,29 @@ makeArbitraryUser config = do
     username = newUsername "alice"
     email = fromJust (newEmail "alice@example.com")
 
+-- | Get JSON at 'path' anonymously.
+get :: Text -> WaiSession SResponse
+get path = request methodGet (encodeUtf8 path) [jsonContent] ""
+
 -- | Post JSON to 'path' anonymously.
-post :: ByteString -> LByteString -> WaiSession SResponse
-post path body = request methodPost path [jsonContent] body
+post :: ToJSON a => Text -> a -> WaiSession SResponse
+post path body = request methodPost (encodeUtf8 path) [jsonContent] (encode body)
 
 -- | Post JSON to 'path' as the given user.
-postAs :: User -> ByteString -> LByteString -> WaiSession SResponse
-postAs user path body = request methodPost path [authHeader user, jsonContent] body
+postAs :: ToJSON a => User -> Text -> a -> WaiSession SResponse
+postAs user path body = request methodPost (encodeUtf8 path) [authHeader user, jsonContent] (encode body)
 
 jsonContent :: (HeaderName, ByteString)
 jsonContent = ("content-type", "application/json")
 
 authHeader :: User -> (HeaderName, ByteString)
 authHeader user = ("GAP-Auth", (toHeader (userName user)))
+
+getJSONBody :: (FromJSON a) => SResponse -> a
+getJSONBody = fromJust . decode . simpleBody
+
+respondsWithJSON :: (Show a, Eq a, FromJSON a) => WaiSession SResponse -> a -> WaiSession ()
+respondsWithJSON action expected = do
+  response <- action
+  pure response `shouldRespondWith` 200
+  liftIO $ getJSONBody response `shouldBe` expected

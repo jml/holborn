@@ -71,11 +71,8 @@ withConfig x = beforeAll makeHolbornDB $ afterAll stopPostgres $ aroundWith with
 withConfig' :: MonadIO m => (Config -> m a) -> Postgres -> m a
 withConfig' action postgres = do
   liftIO $ resetPostgres postgres
-  -- TODO: This is the point where we should reset the database.
   action (dbConfig postgres)
 
--- XXX: jml has forgotten when this gets loaded & shut down etc. Important
--- because maybe we can use it for Hspec tests and have less duplication.
 -- | Provide a "resource" for Tasty tests that loads a live database with a
 -- clean schema.
 withDatabaseResource :: (IO Postgres -> TestTree) -> TestTree
