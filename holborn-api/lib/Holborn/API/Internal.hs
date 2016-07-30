@@ -8,6 +8,7 @@ module Holborn.API.Internal
   , runAPIHandler
   -- | Manipulate the database
   , query
+  , queryWith
   , execute
   , sql
   -- | Call backends
@@ -38,6 +39,7 @@ import Control.Monad.Trans.Except (ExceptT, throwE)
 import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
 import Data.Aeson (FromJSON, ToJSON, Value, eitherDecode', encode, object, (.=))
 import qualified Database.PostgreSQL.Simple as PostgreSQL
+import Database.PostgreSQL.Simple.Internal (RowParser)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import GHC.Generics (Generic)
 import Network.HTTP.Client
@@ -199,6 +201,12 @@ query :: (PostgreSQL.ToRow values, PostgreSQL.FromRow row) => PostgreSQL.Query -
 query sqlQuery values = do
   AppConf{conn} <- getConfig
   APIHandler $ liftIO $ PostgreSQL.query conn sqlQuery values
+
+-- | Query the database with a custom parser
+queryWith :: (PostgreSQL.ToRow values) => RowParser row -> PostgreSQL.Query -> values -> APIHandler err [row]
+queryWith parser sqlQuery values = do
+  AppConf{conn} <- getConfig
+  APIHandler $ liftIO $ PostgreSQL.queryWith parser conn sqlQuery values
 
 -- | Execute an operation on the database, returning the number of rows affected.
 execute :: PostgreSQL.ToRow values => PostgreSQL.Query -> values -> APIHandler err Int64

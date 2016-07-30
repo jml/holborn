@@ -6,7 +6,6 @@ module Holborn.JSON.Settings.SSHKeys
        ) where
 
 import HolbornPrelude
-import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions)
 import Data.Aeson.Types (Options(fieldLabelModifier))
 import Data.Time.LocalTime (LocalTime)
@@ -27,9 +26,6 @@ data ListKeysRow = ListKeysRow
 instance ToJSON ListKeysRow where
   toJSON = genericToJSON defaultOptions
     { fieldLabelModifier = drop (length ("_ListKeysRow_" :: String)) }
-
-instance FromRow ListKeysRow where
-    fromRow = ListKeysRow <$> field <*> field <*> field <*> field <*> field
 
 
 data AddKeyData = AddKeyData

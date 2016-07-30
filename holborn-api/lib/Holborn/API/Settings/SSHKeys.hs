@@ -13,7 +13,10 @@ module Holborn.API.Settings.SSHKeys
 import HolbornPrelude
 
 import Database.PostgreSQL.Simple (Only (..))
+import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
+import Database.PostgreSQL.Simple.Internal (RowParser)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
+
 import Data.Aeson (object, (.=))
 import Servant
 
@@ -27,6 +30,7 @@ import Holborn.API.Internal
   , throwHandlerError
   , execute
   , query
+  , queryWith
   , logDebug
   )
 import Holborn.API.Auth (getUserId)
@@ -60,8 +64,8 @@ server conf = enter (toServantHandler conf) $
 
 listKeys :: Username -> APIHandler KeyError [ListKeysRow]
 listKeys username =
-    query [sql|
-              select id, submitted_pubkey, verified, readonly, created
+    queryWith parseListKeys [sql|
+              select id, "type", "key", comment, fingerprint, verified, readonly, created
               from "public_key" where owner_id = (select id from "user" where username = ?)
           |] (Only username)
 
@@ -105,8 +109,18 @@ addKey username (AddKeyData key) = do
             values (default, ?, ?, ?, ?, ?, ?, false, true, default) returning id
             |] (key, keyType, keyData, comment, fingerprint, userId)
 
-    [r] <- query [sql|
-                   select id, submitted_pubkey, verified, readonly, created
+    [r] <- queryWith parseListKeys [sql|
+                   select id, "type", "key", comment, fingerprint, verified, readonly, created
                    from "public_key" where id = ?
                |] (Only id_ :: Only Integer)
     return r
+
+
+parseListKeys :: RowParser ListKeysRow
+parseListKeys = do
+  keyId <- field
+  sshKey <- fromRow
+  verified <- field
+  readonly <- field
+  created <- field
+  pure $ ListKeysRow keyId sshKey verified readonly created

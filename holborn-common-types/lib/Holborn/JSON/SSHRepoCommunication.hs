@@ -175,6 +175,11 @@ instance ToField KeyType where
   toField RSA = Escape "RSA"
   toField DSA = Escape "DSA"
 
+instance FromField KeyType where
+  fromField _ (Just "RSA") = pure RSA
+  fromField _ (Just "DSA") = pure DSA
+  fromField f x            = returnError ConversionFailed f ("Invalid key type in database: " <> (textToString (show x)))
+
 keyTypeParser :: AB.Parser KeyType
 keyTypeParser = ("ssh-rsa" >> pure RSA) <|> ("ssh-dss" >> pure DSA)
 
@@ -213,18 +218,21 @@ instance FromJSON SSHKey where
 -- it from the database (and we have code to ensure that we only store valid
 -- keys in the database).
 
--- TODO: Pretty sure these encoders just exist to support weird comparison_pubkey thing.
+-- | Decode an SSHKey from the submitted_key field in the database.
 instance FromField SSHKey where
     fromField f (Just bs) = case parseSSHKey bs of
         Just x -> return x
-        _ -> returnError ConversionFailed f ("Could not parse SSH key: " <> textToString (show bs))
+        _ -> returnError ConversionFailed f ("Invalid SSH key in database: " <> textToString (show bs))
+
+    -- TODO: Move corruptDatabase to holborn-prelude and use that
     fromField _ _ = terror "FromField SSHKey should always decode correctly"
 
 instance ToField SSHKey where
     toField = Escape . unparseSSHKey
 
+-- | Decode an SSH from the decomposed columns in the database.
 instance FromRow SSHKey where
-    fromRow = field
+    fromRow = SSHKey <$> field <*> field <*> field <*> field
 
 
 -- | Generate an SSH fingerprint.
