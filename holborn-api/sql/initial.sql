@@ -4,19 +4,11 @@
 -- our test output:
 set client_min_messages to WARNING;
 
+-- Old tables
+drop table if exists "oauth_token" cascade;
+
 
 drop table if exists "user" cascade;
-drop table if exists "org" cascade;
-drop table if exists "team" cascade;
-drop table if exists "team_member" cascade;
-drop table if exists "pull_request" cascade;
-drop table if exists "user_repo" cascade;
-drop table if exists "org_repo" cascade;
-drop table if exists "public_key" cascade;
-drop table if exists "oauth_token" cascade;
-drop sequence if exists "repo_id_sequence" cascade;
-
-
 create table "user"
     ( id serial primary key
     -- username and email are from the gap-auth header.
@@ -26,6 +18,7 @@ create table "user"
     );
 
 
+drop table if exists "org" cascade;
 create table "org"
     ( id serial primary key
     , orgname varchar(32) unique not null
@@ -34,6 +27,7 @@ create table "org"
     );
 
 
+drop table if exists "team" cascade;
 create table "team"
     ( id serial primary key
     , org_id int references "org" (id) not null
@@ -43,6 +37,7 @@ create table "team"
     );
 
 
+drop table if exists "team_member" cascade;
 create table "team_member"
     ( id serial primary key
     , org_id int references "org" (id) not null
@@ -51,10 +46,12 @@ create table "team_member"
     );
 
 
+drop sequence if exists "repo_id_sequence" cascade;
 create sequence repo_id_sequence;
 
 -- User and org repositories are different tables because they have
 -- different permissions etc attached to them.
+drop table if exists "user_repo" cascade;
 create table "user_repo"
     ( id int4 default nextval('repo_id_sequence') primary key
     , name varchar(128) not null
@@ -66,6 +63,7 @@ create table "user_repo"
     );
 
 
+drop table if exists "org_repo" cascade;
 create table "org_repo"
     ( id int4 default nextval('repo_id_sequence') primary key
     , name varchar(128) not null
@@ -80,6 +78,7 @@ create table "org_repo"
 -- pull requests are from a named ref to a named ref. We include the
 -- the full path to the other repo as a first-class object. We can
 -- make this fast with function indexes.
+drop table if exists "pull_request" cascade;
 create table "pull_request"
     ( id serial primary key
     , name varchar(128) not null
@@ -91,6 +90,7 @@ create table "pull_request"
     );
 
 
+drop table if exists "public_key" cascade;
 create table "public_key"
     ( id serial primary key
     -- XXX: What is "name"? jml's guess is that it's the key comment, but the
