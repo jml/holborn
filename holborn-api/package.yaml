@@ -28,6 +28,7 @@ library:
     - bytestring
     - errors
     - exceptions >= 0.8
+    - http-api-data
     - http-client
     - http-types
     - postgresql-simple

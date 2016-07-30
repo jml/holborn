@@ -31,22 +31,22 @@ import GHC.Generics (Generic)
 import Data.ByteString.Lazy (fromChunks)
 import Data.Proxy (Proxy(..))
 import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object)
-import Servant ((:>), (:<|>)(..), Capture, Get, Post, ReqBody, JSON, MimeRender(..), PlainText, Server, enter)
+import Servant ((:>), (:<|>)(..), Post, ReqBody, JSON, MimeRender(..), PlainText, Server, enter)
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Web.HttpApiData (toUrlPiece)
 import Holborn.API.Config (Config)
 import Holborn.API.Internal
   ( APIHandler
   , JSONCodeableError(..)
-  , APIError(InsufficientPermissions)
   , RepoAccess(..)
   , logDebug
   , query
   , routeRepoRequest
-  , throwAPIError
+  , throwHandlerError
   , toServantHandler
   )
-import Holborn.API.Types (Username)
+import Holborn.JSON.RepoMeta (OwnerName, RepoName)
 import Holborn.JSON.SSHRepoCommunication
   ( KeyType(..)
   , GitCommand(..)
@@ -63,9 +63,6 @@ type API =
        "access-repo"
        :> ReqBody '[JSON] CheckRepoAccessRequest
        :> Post '[JSON] RepoAccess
-       :<|> Capture "user" Username
-       :> "keys"
-       :> Get '[JSON, PlainText] SSHKeys
        :<|> "authorized-keys"
        :> ReqBody '[JSON] CheckKeyRequest
        :> Post '[JSON, PlainText] SSHKeys
@@ -78,36 +75,30 @@ api = Proxy
 
 server :: Config -> Server API
 server conf = enter (toServantHandler conf) $
-    accessRepo
-    :<|> listKeys
-    :<|> authorizedKeys
+    accessRepo :<|> authorizedKeys
 
 
--- None of the SSH handlers can return any valid error. Instead, they do a
--- weird thing where always return success responses (i.e. 200 response code),
--- but some success responses indicate failure.
---
--- This is because the primary client of this API is a fork of OpenSSH which
--- we are trying to keep very simple.
---
--- Rather than have this fork understand complicated responses, we just give
--- it a shell command that produces the effect that we desire.
-
--- | Unconstructable data type that represents the error that we can never
--- ever raise. Fills in a placeholder in the APIHandler type signature.
+-- | Different ways an SSH request can fail.
 data SSHError
+  = NoSSHKey
+  | MultipleSSHKeys
+  | ReadOnlyKey KeyId
+  | UnverifiedKey
+  | NoSuchRepo OwnerName RepoName
+  deriving (Eq, Show)
 
 instance JSONCodeableError SSHError where
-  toJSON _ = (500, object [ "message" .= ("unexpected SSH error" :: Text) ])
+  toJSON NoSSHKey = (401, object [ "message" .= ("Could not find SSH key" :: Text) ])
+  toJSON MultipleSSHKeys = (500, object [ "message" .= ("Found multiple matching SSH keys" :: Text) ])
+  toJSON (ReadOnlyKey keyId) = (403, object [ "message" .= ("Cannot push to repository with read-only key" :: Text)
+                                            , "keyId" .= keyId
+                                            ])
+  toJSON UnverifiedKey = (403, object [ "message" .= ("Cannot access repositories with key that has not been verified" :: Text)])
+  toJSON (NoSuchRepo owner repo) = (404, object [ "message" .= ("No such repository: " <> toUrlPiece owner <> "/" <> toUrlPiece repo) ])
 
 
--- | Wrapper around APIHandler to indicate that we're never using it to return
--- errors.
---
--- TODO: Probably a more clever thing would be to separate the config/io stuff
--- from the servanterr translation stuff. jml is not that clever yet.
+-- | Wrapper around APIHandler for SSH endpoints.
 type SSHHandler a = APIHandler SSHError a
-
 
 newtype SSHKeys = SSHKeys { unSSHKeys :: [(KeyId, SSHKey)] } deriving (ToJSON, FromJSON, Show)
 
@@ -115,22 +106,6 @@ instance MimeRender PlainText SSHKeys where
   -- | Turn a list of SSH keys into a line-separated plaintext dump that would
   -- serve as an authorized_keys file.
   mimeRender _ = fromChunks . map ((<> "\n") . unparseSSHKey) . map snd . unSSHKeys
-
-
--- | List all the verified SSH keys for a user.
-listKeys :: Username -> SSHHandler SSHKeys
-listKeys username = do
-    logDebug ("listing keys for" :: Text, username)
-    keys <- query keysQuery (Only username)
-    return $ SSHKeys keys
-  where
-    -- PUPPY: We are including unverfied keys in this "authorized keys" list,
-    -- which is a potential security escalation vector.
-    keysQuery =
-      [sql|select public_key.id, submitted_pubkey
-           from public_key
-           join "user" as u on u.id = owner_id and u.username = ?
-          |]
 
 
 -- | Get all authorized keys that match the supplied keys.
@@ -146,18 +121,9 @@ authorizedKeys CheckKeyRequest{..} = do
   return $ SSHKeys rows
 
 
--- | Different ways an SSH request can fail.
-data SSHAccessError
-  = NoSSHKey
-  | MultipleSSHKeys
-  | ReadOnlyKey KeyId
-  | UnverifiedKey
-  deriving (Eq, Show)
-
-
 -- | Determine whether the user identified by their SSH key can access a repo.
-checkRepoAccess' :: CheckRepoAccessRequest -> SSHHandler (Either SSHAccessError RepoAccess)
-checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
+accessRepo :: CheckRepoAccessRequest -> SSHHandler RepoAccess
+accessRepo CheckRepoAccessRequest{key_id, command} = do
     rows <- query [sql|
                    select id, pk.readonly, pk.verified
                    from "public_key" as pk where id = ?
@@ -166,21 +132,15 @@ checkRepoAccess' CheckRepoAccessRequest{key_id, command} = do
 
     let SSHCommandLine command' owner name = command
     case rows of
-      []                        -> pure $ Left NoSSHKey
-      _:_:_                     -> pure $ Left MultipleSSHKeys
-      [(_, _, False)]           -> pure $ Left UnverifiedKey
+      []                        -> throwHandlerError NoSSHKey
+      _:_:_                     -> throwHandlerError MultipleSSHKeys
+      [(_, _, False)]           -> throwHandlerError UnverifiedKey
       [(keyId, readOnly, True)] ->
         case (command', readOnly) of
-          (GitReceivePack, True)  -> pure $ Left $ ReadOnlyKey keyId
-          _                       -> Right <$> routeRepoRequest command' owner name
-
-
-accessRepo :: CheckRepoAccessRequest -> SSHHandler RepoAccess
-accessRepo request = do
-  route <- checkRepoAccess' request
-  case route of
-      Left _ -> throwAPIError InsufficientPermissions
-      Right route' -> return route'
+          (GitReceivePack, True)  -> throwHandlerError $ ReadOnlyKey keyId
+          _                       -> do
+            access <- routeRepoRequest command' owner name
+            maybe (throwHandlerError $ NoSuchRepo owner name) pure access
 
 
 data CheckKeyRequest = CheckKeyRequest
