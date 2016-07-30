@@ -156,11 +156,6 @@ spec = do
                           ]
         post "/internal/ssh/access-repo" req `shouldRespondWith` 403
 
--- TODO: Tests for SSH settings API:
---
--- In particular, want to show that submitting invalid keys returns some sort
--- of error and doesn't create them
-
 -- TODO: We could probably come up with better helpers for making requests &
 -- assertions about responses that always decode to JSON, so we can use AST
 -- JSON as a standard type everywhere in tests, rather than going backwards &

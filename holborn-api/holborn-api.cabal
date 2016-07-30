@@ -106,5 +106,6 @@ test-suite holborn-api-tests
       Internal
       NewRepo
       Postgres
+      Settings.SSHKeys
       SSH
   default-language: Haskell2010

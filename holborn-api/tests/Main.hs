@@ -11,7 +11,9 @@ import Test.Tasty (defaultMain, TestTree, testGroup)
 
 import qualified Internal
 import qualified NewRepo
+import qualified Settings.SSHKeys
 import qualified SSH
+
 
 main :: IO ()
 main = do
@@ -21,10 +23,12 @@ main = do
 tests :: IO TestTree
 tests = do
   newRepoTests <- NewRepo.tests
+  settingsSSHKeysTests <- Settings.SSHKeys.tests
   sshTests <- SSH.tests
   pure $ testGroup "Holborn.API"
          [ Internal.tests
          , newRepoTests
+         , settingsSSHKeysTests
          , sshTests
          ]
 
