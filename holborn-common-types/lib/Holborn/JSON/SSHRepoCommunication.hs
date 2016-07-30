@@ -42,9 +42,10 @@ import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultE
 import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(Escape))
 import GHC.Generics (Generic)
+import System.Exit (ExitCode(..))
 import System.IO (hClose)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
-import System.Process (runInteractiveCommand)
+import System.Process (runInteractiveCommand, waitForProcess)
 import Test.QuickCheck (Arbitrary(..), elements)
 import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Web.HttpApiData (toUrlPiece)
@@ -221,16 +222,15 @@ instance FromRow SSHKey where
 -- | Generate an SSH fingerprint.
 sshFingerprint :: Alternative m => ByteString -> IO (m ByteString)
 sshFingerprint keyData = do
-  -- TODO: This should abort hard with an informative error if ssh-keygen is
-  -- not found. Currently it just returns 'empty'.
-  -- e.g. ssh-keygen -l -f /dev/stdin <~/.ssh/id_rsa.pub
-  (i, o, _, _) <- runInteractiveCommand "ssh-keygen -l -f /dev/stdin"
+  (i, o, _, p) <- runInteractiveCommand "ssh-keygen -l -f /dev/stdin"
   BS.hPut i keyData
   hClose i
   f <- BS.hGetContents o
-  return $ case f of
-    "" -> empty
-    x -> pure x
+  exitCode <- waitForProcess p
+  case exitCode of
+    ExitFailure 127 -> terror "Could not find ssh-keygen process"
+    ExitFailure _ -> empty
+    ExitSuccess -> pure (pure f)
 
 -- | Parse a single SSH key, checking for validity.
 parseSSHKey :: ByteString -> Maybe SSHKey
