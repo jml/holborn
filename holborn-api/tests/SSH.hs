@@ -4,11 +4,9 @@ module SSH (spec) where
 
 import HolbornPrelude
 
-import Data.Aeson (FromJSON, decode, object, (.=), toJSON, (.:))
+import Data.Aeson (object, (.=), toJSON, (.:))
 import Data.Aeson.Types (Pair, parseMaybe)
-import Data.Maybe (fromJust)
 import Data.Sequence (fromList)
-import Network.Wai.Test (SResponse(..))
 import Test.Hspec.Wai (shouldRespondWith, ResponseMatcher(..), WaiSession)
 import Test.Hspec.Wai.Internal (withApplication)
 import Test.Hspec.Wai.JSON (fromValue, json)
@@ -22,6 +20,7 @@ import Holborn.JSON.SSHRepoCommunication (SSHKey(SSHKey), parseSSHKey)
 import Fixtures (makeTestApp)
 import Helpers
   ( User(..)
+  , getJSONBody
   , makeArbitraryUser
   , mutateDB
   , post
@@ -149,11 +148,6 @@ spec = do
                           ]
         post "/internal/ssh/access-repo" req `shouldRespondWith` 403
 
--- TODO: We could probably come up with better helpers for making requests &
--- assertions about responses that always decode to JSON, so we can use AST
--- JSON as a standard type everywhere in tests, rather than going backwards &
--- forwards between bytestring, quasiquotes, and AST.
-
 -- TODO: Is hspec-wai really worth the effort? Could we build better things on
 -- top of hunit? or just hspec using stdandard test stuff from wai-extra?
 
@@ -184,10 +178,6 @@ dsaKey = "ssh-dss AAAAB3NzaC1kc3MAAACBAP4XolT62nkT7tWiQ2d9Cv35s6JSN4PvYLPupmLhHl
 keyWithoutComment = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDA9TbBf4tGNPtAAKPwzyKudBSnOFqen+sToJHBysC+ERYmy6CVLVYitW/ZzxkAmooXZrPGh+VBoa6hFy5o5CMQUoCJQpIbORuyWIyeAplI5CHMFEBB8yRyfLXdpVJ9iBhNlpz0PR9PhCxyrEJc4SvyNd9Iu5DaonLxV7brplcZ9Z54UPaMfiDpn5kUr0fmKGiVCi2NsHzES0Nh6lwRKVVzYIEzbFx8qQZmQbk0oeexOYxf1LkYq6M3MOABSzHMrty3kuQlZpusQz4/jTOVBSv3iLzk4WCcLjKtnggWF0QhcjKP94xslzjgw6AAdauUsJ6DMfKHIRdyMUOiOQ5/YCz7"
 keyWithComplexComment = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDiNWY5vRUTCJcaFhJ/CX+BWty1buVO1Qnhm79sTk2Dchc8cpFfsBVyps5rjmcfiMVRayTfnVAe6HcXUA0kMKSsyBth8Xl0WFJtkDlWeJ2PTbLC+g+GHyuM256GwNXZKJ5ZoYdee2UPvomyUYogiJLrfvrcWd+AM7i4xWYYFriJGRF6tugyiPy/2rCZc4yn8EcTwORp3z7DY5b0QWdPonwhxXvjNkAoKU+mM8o12inZJrKY0z8JSgrJVFVPe1sdT3V48LFGYjVzOYH6ycV7eWvzg2XhZl1XyyVrscrW9Ew+I01UFdHo6tS3n6+AYCTFU7fuFA3yOr7IXEsCvpBfgBqF I am not a number, I'm a free man"
 exampleKey = rsaKey  -- For when we don't care about the particular properties of the key
-
-
-getJSONBody :: (FromJSON a) => SResponse -> a
-getJSONBody = fromJust . decode . simpleBody
 
 
 -- | A key which is submitted by a user appears in their authorized keys list.

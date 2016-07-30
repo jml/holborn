@@ -5,6 +5,7 @@
 
 module Helpers
   ( User(..)
+  , getJSONBody
   , makeArbitraryUser
   , mutateDB
   , post
@@ -14,12 +15,13 @@ module Helpers
 import HolbornPrelude
 
 import Control.Monad.Trans.Except (runExceptT)
+import Data.Aeson (FromJSON, decode)
 import Data.Maybe (fromJust)
 import Database.PostgreSQL.Simple (Query, ToRow)
 import Network.HTTP.Types.Header (HeaderName)
 import Network.HTTP.Types.Method (methodPost)
-import Network.Wai.Test (SResponse)
 import Test.Hspec.Wai (WaiSession, request)
+import Network.Wai.Test (SResponse(..))
 import Web.HttpApiData (toHeader)
 
 import Holborn.API.Auth (UserId)
@@ -77,3 +79,6 @@ jsonContent = ("content-type", "application/json")
 
 authHeader :: User -> (HeaderName, ByteString)
 authHeader user = ("GAP-Auth", (toHeader (userName user)))
+
+getJSONBody :: (FromJSON a) => SResponse -> a
+getJSONBody = fromJust . decode . simpleBody
