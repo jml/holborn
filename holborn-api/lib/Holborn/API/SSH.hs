@@ -40,7 +40,6 @@ import Holborn.API.Internal
   ( APIHandler
   , JSONCodeableError(..)
   , RepoAccess(..)
-  , logDebug
   , query
   , routeRepoRequest
   , throwHandlerError
@@ -128,7 +127,6 @@ accessRepo CheckRepoAccessRequest{key_id, command} = do
                    select id, pk.readonly, pk.verified
                    from "public_key" as pk where id = ?
                |] (Only key_id)
-    logDebug (key_id, command, rows)
 
     let SSHCommandLine command' owner name = command
     case rows of
