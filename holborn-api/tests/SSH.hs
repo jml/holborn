@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module SSH (tests) where
+module SSH (spec) where
 
 import HolbornPrelude
 
@@ -12,15 +12,14 @@ import Network.Wai.Test (SResponse(..))
 import Test.Hspec.Wai (shouldRespondWith, ResponseMatcher(..), WaiSession)
 import Test.Hspec.Wai.Internal (withApplication)
 import Test.Hspec.Wai.JSON (fromValue, json)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hspec (SpecWith, testSpec, describe, it, shouldBe)
+import Test.Tasty.Hspec (SpecWith, describe, it, shouldBe)
 import Web.HttpApiData (toUrlPiece)
 
 import Holborn.API.Config (Config(..))
 import Holborn.API.Internal (sql)
 import Holborn.JSON.SSHRepoCommunication (SSHKey(SSHKey), parseSSHKey)
 
-import Fixtures (makeTestApp, withConfig)
+import Fixtures (makeTestApp)
 import Helpers
   ( User(..)
   , makeArbitraryUser
@@ -28,12 +27,6 @@ import Helpers
   , post
   , postAs
   )
-
-
-tests :: IO TestTree
-tests = do
-  sshSpec <- testSpec "/v1/ssh" $ withConfig $ spec
-  pure $ testGroup "Holborn.API.SSH" [ sshSpec ]
 
 
 spec :: SpecWith Config
@@ -163,9 +156,6 @@ spec = do
 
 -- TODO: Is hspec-wai really worth the effort? Could we build better things on
 -- top of hunit? or just hspec using stdandard test stuff from wai-extra?
-
--- TODO: Tests are already getting slow. See if we can restrict ourselves to
--- one holborn database per run.
 
 -- | Create a verified key for a user.
 --

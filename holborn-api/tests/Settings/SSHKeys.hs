@@ -1,23 +1,15 @@
 -- | Tests for Holborn.API.Settings.SSHKeys
 
-module Settings.SSHKeys (tests) where
+module Settings.SSHKeys (spec) where
 
 import HolbornPrelude
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hspec (SpecWith, describe, it, testSpec)
+import Test.Tasty.Hspec (SpecWith, describe, it)
 import Test.Hspec.Wai.Internal (withApplication)
 
 import Holborn.API.Config (Config)
 
-import Fixtures (makeTestApp, withConfig)
-
-
-tests :: IO TestTree
-tests = do
-  sshKeysSpec <- testSpec "Endpoints" $ withConfig $ spec
-  pure $ testGroup "Holborn.API.Settings.SSHKeys" [ sshKeysSpec ]
-
+import Fixtures (makeTestApp)
 
 spec :: SpecWith Config
 spec = do

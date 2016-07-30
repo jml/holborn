@@ -1,6 +1,6 @@
 -- | Tests for Holborn.API.NewRepo
 
-module NewRepo (tests) where
+module NewRepo (spec) where
 
 import HolbornPrelude
 
@@ -8,26 +8,16 @@ import Data.Aeson (object, (.=))
 import Test.Hspec.Wai (shouldRespondWith)
 import Test.Hspec.Wai.Internal (withApplication)
 import Test.Hspec.Wai.JSON (fromValue)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hspec (SpecWith, testSpec, describe, it)
+import Test.Tasty.Hspec (SpecWith, describe, it)
 
 import Holborn.API.Config (Config)
 
-import Fixtures
-  ( makeTestApp
-  , withConfig
-  )
+import Fixtures (makeTestApp)
 import Helpers
   ( User(..)
   , makeArbitraryUser
   , postAs
   )
-
-tests :: IO TestTree
-tests = do
-  sshSpec <- testSpec "/v1/new-repo" $ withConfig $ spec
-  pure $ testGroup "Holborn.API.NewRepo" [ sshSpec ]
-
 
 spec :: SpecWith Config
 spec = do

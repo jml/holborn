@@ -8,6 +8,9 @@ module Main (main) where
 import HolbornPrelude
 
 import Test.Tasty (defaultMain, TestTree, testGroup)
+import Test.Tasty.Hspec (testSpec)
+
+import Fixtures (withConfig)
 
 import qualified Internal
 import qualified NewRepo
@@ -22,15 +25,22 @@ main = do
 
 tests :: IO TestTree
 tests = do
-  newRepoTests <- NewRepo.tests
-  settingsSSHKeysTests <- Settings.SSHKeys.tests
-  sshTests <- SSH.tests
+  apiTests <- waiTests
   pure $ testGroup "Holborn.API"
          [ Internal.tests
-         , newRepoTests
-         , settingsSSHKeysTests
-         , sshTests
+         , apiTests
          ]
+
+waiTests :: IO TestTree
+waiTests = do
+  testSpec "REST API tests" $ withConfig $ do
+    NewRepo.spec
+    Settings.SSHKeys.spec
+    SSH.spec
+
+-- TODO: Become very clever and figure out how to share a resource between
+-- Tasty resources and Hspec tests. Would shave off ~3s from test runs on
+-- jml's laptop.
 
 -- TODO: Update the main app to only connect when we try to talk to the
 -- database. Ideally, it should use a connection pool. See newPool and
