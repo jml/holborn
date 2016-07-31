@@ -118,7 +118,7 @@ authorizedKeys CheckKeyRequest{..} = do
     parser
     [sql|select pk.id, pk."type", pk."key", pk.comment, pk.fingerprint
          from "public_key" as pk
-         where submitted_pubkey = ?
+         where pk."key" = ?
          |] (Only key)
   return $ SSHKeys rows
 

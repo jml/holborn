@@ -8,6 +8,7 @@
 , writeText
 , postgresql
 , writeScript
+, runCommand
 , openssh
 , docker
 , lib
@@ -48,7 +49,7 @@ let
   };
 
   makeSSHKey =
-    { name, type, comment }:
+    { name, comment }:
     let dir = stdenv.mkDerivation {
       inherit name;
       buildInputs = [ openssh ];
@@ -56,18 +57,30 @@ let
       preferLocalBuild = true;
       installPhase = ''
         mkdir $out
-        ssh-keygen -q -t ${type} -N "" -C "${comment}" -f "$out/${name}"
+        ssh-keygen -q -t rsa -N "" -C "${comment}" -f "$out/${name}"
       '';
     };
     public = "${dir}/${name}.pub";
     fullKey = lib.removeSuffix "\n" (builtins.readFile public);
     in
     {
-      inherit comment fullKey public;
-      type = "ssh-${type}";
+      inherit name comment fullKey public;
+      type = "ssh-rsa";
+      dbType = "RSA";
       private = "${dir}/${name}";
-      key = lib.removeSuffix " ${comment}" (lib.removePrefix "ssh-${type} " fullKey);
+      key = lib.removeSuffix " ${comment}" (lib.removePrefix "ssh-rsa " fullKey);
     };
+
+  getFingerprint = key: builtins.readFile (
+    runCommand "${key.name}-fingerprint"
+      { publicKey = key.public;
+        preferLocalBuild = true;
+        buildInputs = [ openssh ];
+      }
+      ''
+      ssh-keygen -l -f "$publicKey" > $out
+      ''
+  );
 
   # ssh tries to create an ~/.ssh directory if it's not given a config file,
   # and it uses the home directory found in getpwent (see
@@ -87,7 +100,6 @@ let
   testKey = makeSSHKey {
     inherit comment;
     name = "holborn-openssh-test-key";
-    type = "rsa";
   };
 
   # Insert the pubkey into the database for testing
@@ -97,8 +109,12 @@ let
          ( 'alice'
          , 'alice@example.com'
          );
-    insert into public_key (submitted_pubkey, owner_id, verified, readonly) values
+    insert into public_key (submitted_pubkey, "type", "key", comment, fingerprint, owner_id, verified, readonly) values
          ( '${testKey.fullKey}'
+         , '${testKey.dbType}'
+         , '${testKey.key}'
+         , '${testKey.comment}'
+         , '${getFingerprint testKey}'
          , 1
          , true
          , false

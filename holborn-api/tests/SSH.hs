@@ -147,8 +147,6 @@ spec = do
                          ]
         post "/internal/ssh/access-repo" req `shouldRespondWith` 403
 
--- TODO: Is hspec-wai really worth the effort? Could we build better things on
--- top of hunit? or just hspec using stdandard test stuff from wai-extra?
 
 -- | Create a verified key for a user.
 --
@@ -191,10 +189,7 @@ submitAndFetchKey user fullKey = do
 
   -- Try to request it as an authorized key.
   let req = object [ "key_type" .= toJSON keyType
-                     -- TODO: We want to submit just the key bit, not the full
-                     -- key, because that's the only thing the authorized-keys
-                     -- binary gets.
-                   , "key" .= (decodeUtf8 fullKey)
+                   , "key" .= (decodeUtf8 key)
                    ]
   let expectedKey = object [ "fingerprint" .= decodeUtf8 fingerprint
                            , "key" .= decodeUtf8 key

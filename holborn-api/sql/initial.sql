@@ -106,7 +106,6 @@ create table "public_key"
     , created timestamp without time zone default (now() at time zone 'utc') not null
     );
 
+-- TODO: Add indexes for submitted_key and key
 -- TODO: Rename table to ssh_key
 -- TODO: Rename submitted_pubkey to submitted_key
--- TODO: Add parsed fields for type, comment, key, fingerprint
--- TODO: Add indexes for submitted_key and key
