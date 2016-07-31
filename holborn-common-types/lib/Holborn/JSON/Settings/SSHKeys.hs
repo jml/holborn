@@ -19,7 +19,7 @@ data ListKeysRow = ListKeysRow
     { _ListKeysRow_id :: Int
     , _ListKeysRow_key :: SSHKey
     , _ListKeysRow_verified :: Bool
-    , _ListKeysRow_read_only :: Bool
+    , _ListKeysRow_readonly :: Bool
     , _ListKeysRow_created_at :: LocalTime
     } deriving (Show, Generic)
 

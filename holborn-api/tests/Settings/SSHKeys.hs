@@ -72,7 +72,7 @@ spec = do
         let observed = getJSONBody response
         let (Just (SSHKey keyType keyData comment fingerprint)) = parseSSHKey validKey
         liftIO $ (observed `getKey` "verified") `shouldBe` False
-        liftIO $ (observed `getKey` "read_only") `shouldBe` True
+        liftIO $ (observed `getKey` "readonly") `shouldBe` True
         liftIO $ (observed `getKey` "id") `shouldBe` (1 :: Int)
         liftIO $ (observed `getKey` "key") `shouldBe`
           object [ "type" .= keyType
