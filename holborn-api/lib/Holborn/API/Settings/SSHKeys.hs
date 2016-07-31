@@ -26,10 +26,12 @@ import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
 import Holborn.API.Internal
   ( APIHandler
   , JSONCodeableError(..)
+  , IntegrityError(..)
+  , corruptDatabase
   , toServantHandler
   , throwHandlerError
   , execute
-  , query
+  , executeWith
   , queryWith
   , logDebug
   )
@@ -46,11 +48,11 @@ type API =
 -- TODO Tom would really rather have an applicative validator that can
 -- check & mark several errors at the same time because that's a much
 -- better user experience.
-data KeyError = InvalidSSHKey
-
+data KeyError = InvalidSSHKey | KeyAlreadyExists
 
 instance JSONCodeableError KeyError where
     toJSON InvalidSSHKey = (400, object ["key" .= ("Invalid SSH key" :: Text)])
+    toJSON KeyAlreadyExists = (400, object ["message" .= ("Key already exists" :: Text)])
 
 
 server :: Config -> Server API
@@ -82,12 +84,10 @@ deleteKey username keyId = do
 addKey :: Maybe Username -> AddKeyData -> APIHandler KeyError ListKeysRow
 addKey username (AddKeyData key) = do
     userId <- getUserId username
-    let sshKey = parseSSHKey (encodeUtf8 key)
-    when (isNothing sshKey) (throwHandlerError InvalidSSHKey)
-    let (Just (SSHKey keyType keyData comment fingerprint)) = sshKey
+    sshKey <- maybe (throwHandlerError InvalidSSHKey) pure $ parseSSHKey (encodeUtf8 key)
+    let SSHKey keyType keyData comment fingerprint = sshKey
 
-    -- TODO: Use 'returning' to avoid two roundtrips.
-    [Only id_] <- query [sql|
+    result <- executeWith parseListKeys [sql|
             insert into "public_key"
               ( id
               , submitted_pubkey
@@ -100,14 +100,15 @@ addKey username (AddKeyData key) = do
               , readonly
               , created
               )
-            values (default, ?, ?, ?, ?, ?, ?, false, true, default) returning id
+            values (default, ?, ?, ?, ?, ?, ?, false, true, default)
+              returning id, "type", "key", comment, fingerprint, verified, readonly, created
             |] (key, keyType, keyData, comment, fingerprint, userId)
 
-    [r] <- queryWith parseListKeys [sql|
-                   select id, "type", "key", comment, fingerprint, verified, readonly, created
-                   from "public_key" where id = ?
-               |] (Only id_ :: Only Integer)
-    return r
+    case result of
+      Left DuplicateValue -> throwHandlerError KeyAlreadyExists
+      Left e -> terror $ "Unexpected data error in addKey: " <> show e
+      Right [r] -> pure r
+      Right _ -> corruptDatabase "Inserting key in addKey returned something weird"
 
 
 parseListKeys :: RowParser ListKeysRow

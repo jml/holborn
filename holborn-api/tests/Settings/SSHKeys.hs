@@ -86,9 +86,7 @@ spec = do
       withApplication (makeTestApp config) $ do
         let req = object [ "key" .= (decodeUtf8 validKey) ]
         postAs user "/v1/user/keys" req `shouldRespondWith` 201
-        -- TODO: Should instead 400
-        postAs user "/v1/user/keys" req `shouldRespondWith` 201
-
+        postAs user "/v1/user/keys" req `shouldRespondWith` 400
 
 
 getKey :: FromJSON b => Object -> Text -> b
