@@ -107,7 +107,7 @@ spec = T.simpleSpec performAction render
           R.div []
           [ R.text key.title
           , R.text key.key.fingerprint
-          , if key.read_only
+          , if key.readonly
             then R.span [RP.className "readonly"] [R.text "readonly"]
             else R.span [RP.className "write"] [R.text "write"]
           , if key.verified

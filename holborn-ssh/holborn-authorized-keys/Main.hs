@@ -139,7 +139,7 @@ options =
       ]
 
 getKeyRequest :: Config -> CheckKeyRequest
-getKeyRequest Config{key, keyType} = CheckKeyRequest { key = key, key_type = keyType }
+getKeyRequest Config{key, keyType} = CheckKeyRequest { key, keyType }
 
 
 formatKey :: BaseUrl -> ByteString -> KeyId -> SSHKey -> ByteString
