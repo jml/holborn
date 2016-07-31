@@ -13,20 +13,26 @@ module Holborn.API.Settings.SSHKeys
 import HolbornPrelude
 
 import Database.PostgreSQL.Simple (Only (..))
+import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
+import Database.PostgreSQL.Simple.Internal (RowParser)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
+
 import Data.Aeson (object, (.=))
 import Servant
 
 import Holborn.API.Config (Config)
-import Holborn.JSON.SSHRepoCommunication (parseSSHKey)
+import Holborn.JSON.SSHRepoCommunication (SSHKey(SSHKey), parseSSHKey)
 import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
 import Holborn.API.Internal
   ( APIHandler
   , JSONCodeableError(..)
+  , IntegrityError(..)
+  , corruptDatabase
   , toServantHandler
   , throwHandlerError
   , execute
-  , query
+  , executeWith
+  , queryWith
   , logDebug
   )
 import Holborn.API.Auth (getUserId)
@@ -35,7 +41,6 @@ import Holborn.API.Types (Username)
 
 type API =
          "users" :> Capture "username" Username :> "keys" :> Get '[JSON] [ListKeysRow]
-    :<|> "user" :> "keys" :> Capture "id" Int :> Get '[JSON] ListKeysRow
     :<|> Header "GAP-Auth" Username :> "user" :> "keys" :> Capture "id" Int :> Delete '[JSON] ()
     :<|> Header "GAP-Auth" Username :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> PostCreated '[JSON] ListKeysRow
 
@@ -43,32 +48,26 @@ type API =
 -- TODO Tom would really rather have an applicative validator that can
 -- check & mark several errors at the same time because that's a much
 -- better user experience.
-data KeyError = EmptyTitle | InvalidSSHKey
-
+data KeyError = InvalidSSHKey | KeyAlreadyExists
 
 instance JSONCodeableError KeyError where
-    toJSON EmptyTitle = (400, object ["title" .= ("Title cannot be empty" :: Text)])
     toJSON InvalidSSHKey = (400, object ["key" .= ("Invalid SSH key" :: Text)])
+    toJSON KeyAlreadyExists = (400, object ["message" .= ("Key already exists" :: Text)])
 
 
 server :: Config -> Server API
 server conf = enter (toServantHandler conf) $
     listKeys
-    :<|> getKey
     :<|> deleteKey
     :<|> addKey
 
 
 listKeys :: Username -> APIHandler KeyError [ListKeysRow]
 listKeys username =
-    query [sql|
-              select id, comparison_pubkey, name, verified, readonly, created
-              from "public_key" where owner_id = (select id from "user" where username = ?)
+    queryWith parseListKeys [sql|
+              select id, "type", "key", comment, fingerprint, verified, readonly, created
+              from "ssh_key" where owner_id = (select id from "user" where username = ?)
           |] (Only username)
-
-
-getKey :: Int -> APIHandler KeyError ListKeysRow
-getKey _keyId = undefined
 
 
 deleteKey :: Maybe Username -> Int -> APIHandler KeyError ()
@@ -76,26 +75,47 @@ deleteKey username keyId = do
     userId <- getUserId username
 
     count <- execute [sql|
-            delete from "public_key" where id = ? and owner_id = ?
+            delete from "ssh_key" where id = ? and owner_id = ?
             |] (keyId, userId)
     logDebug count
     return ()
 
 
 addKey :: Maybe Username -> AddKeyData -> APIHandler KeyError ListKeysRow
-addKey username AddKeyData{..} = do
-    let sshKey = parseSSHKey (encodeUtf8 _AddKeyData_key)
-    when (isNothing sshKey) (throwHandlerError InvalidSSHKey)
-    when (_AddKeyData_title == "") (throwHandlerError EmptyTitle)
+addKey username (AddKeyData key) = do
     userId <- getUserId username
+    sshKey <- maybe (throwHandlerError InvalidSSHKey) pure $ parseSSHKey (encodeUtf8 key)
+    let SSHKey keyType keyData comment fingerprint = sshKey
 
-    [Only id_] <- query [sql|
-            insert into "public_key" (id, name, submitted_pubkey, comparison_pubkey, owner_id, verified, readonly, created)
-            values (default, ?, ?, ?, ?, false, true, default) returning id
-            |] (_AddKeyData_title, _AddKeyData_key, sshKey, userId)
+    result <- executeWith parseListKeys [sql|
+            insert into "ssh_key"
+              ( id
+              , submitted_key
+              , "type"
+              , "key"
+              , comment
+              , fingerprint
+              , owner_id
+              , verified
+              , readonly
+              , created
+              )
+            values (default, ?, ?, ?, ?, ?, ?, false, true, default)
+              returning id, "type", "key", comment, fingerprint, verified, readonly, created
+            |] (key, keyType, keyData, comment, fingerprint, userId)
 
-    [r] <- query [sql|
-                   select id, submitted_pubkey, name, verified, readonly, created
-                   from "public_key" where id = ?
-               |] (Only id_ :: Only Integer)
-    return r
+    case result of
+      Left DuplicateValue -> throwHandlerError KeyAlreadyExists
+      Left e -> terror $ "Unexpected data error in addKey: " <> show e
+      Right [r] -> pure r
+      Right _ -> corruptDatabase "Inserting key in addKey returned something weird"
+
+
+parseListKeys :: RowParser ListKeysRow
+parseListKeys = do
+  keyId <- field
+  sshKey <- fromRow
+  verified <- field
+  readonly <- field
+  created <- field
+  pure $ ListKeysRow keyId sshKey verified readonly created

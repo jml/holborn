@@ -7,8 +7,11 @@ module Holborn.API.Internal
   ( APIHandler
   , runAPIHandler
   -- | Manipulate the database
+  , IntegrityError(..)
   , query
+  , queryWith
   , execute
+  , executeWith
   , sql
   -- | Call backends
   , jsonGet'
@@ -38,6 +41,7 @@ import Control.Monad.Trans.Except (ExceptT, throwE)
 import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
 import Data.Aeson (FromJSON, ToJSON, Value, eitherDecode', encode, object, (.=))
 import qualified Database.PostgreSQL.Simple as PostgreSQL
+import Database.PostgreSQL.Simple.Internal (RowParser)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import GHC.Generics (Generic)
 import Network.HTTP.Client
@@ -194,11 +198,34 @@ getConfig :: APIHandler err AppConf
 getConfig = APIHandler ask
 
 
+-- | Data integrity errors from Postgresql.
+data IntegrityError = DuplicateValue | NotNullViolation deriving (Eq, Show)
+
 -- | Query the database
 query :: (PostgreSQL.ToRow values, PostgreSQL.FromRow row) => PostgreSQL.Query -> values -> APIHandler err [row]
 query sqlQuery values = do
   AppConf{conn} <- getConfig
   APIHandler $ liftIO $ PostgreSQL.query conn sqlQuery values
+
+-- | Query the database with a custom parser
+queryWith :: (PostgreSQL.ToRow values) => RowParser row -> PostgreSQL.Query -> values -> APIHandler err [row]
+queryWith parser sqlQuery values = do
+  AppConf{conn} <- getConfig
+  APIHandler $ liftIO $ PostgreSQL.queryWith parser conn sqlQuery values
+
+-- | Perform an operation with a custom parser.
+--
+-- Data integrity errors are returned on the Left. Other errors raised as
+-- exceptions.
+executeWith :: (PostgreSQL.ToRow values) => RowParser row -> PostgreSQL.Query -> values -> APIHandler err (Either IntegrityError [row])
+executeWith parser sqlQuery values = do
+  AppConf{conn} <- getConfig
+  APIHandler $ liftIO $ do
+    catch (Right <$> PostgreSQL.queryWith parser conn sqlQuery values) $ \e ->
+      case PostgreSQL.sqlState e of
+        "23505" -> pure $ Left DuplicateValue
+        "23502" -> pure $ Left NotNullViolation
+        _ -> throwM e
 
 -- | Execute an operation on the database, returning the number of rows affected.
 execute :: PostgreSQL.ToRow values => PostgreSQL.Query -> values -> APIHandler err Int64

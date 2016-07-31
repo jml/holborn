@@ -33,6 +33,8 @@ import Data.Proxy (Proxy(..))
 import Data.Aeson (FromJSON(..), ToJSON(..), (.=), object)
 import Servant ((:>), (:<|>)(..), Post, ReqBody, JSON, MimeRender(..), PlainText, Server, enter)
 import Database.PostgreSQL.Simple (Only (..))
+import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
+import Database.PostgreSQL.Simple.Internal (RowParser)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Web.HttpApiData (toUrlPiece)
 import Holborn.API.Config (Config)
@@ -41,6 +43,7 @@ import Holborn.API.Internal
   , JSONCodeableError(..)
   , RepoAccess(..)
   , query
+  , queryWith
   , routeRepoRequest
   , throwHandlerError
   , toServantHandler
@@ -51,7 +54,6 @@ import Holborn.JSON.SSHRepoCommunication
   , GitCommand(..)
   , SSHCommandLine(..)
   , SSHKey
-  , unparseKeyType
   , unparseSSHKey
   )
 
@@ -110,22 +112,30 @@ instance MimeRender PlainText SSHKeys where
 -- | Get all authorized keys that match the supplied keys.
 authorizedKeys :: CheckKeyRequest -> SSHHandler SSHKeys
 authorizedKeys CheckKeyRequest{..} = do
-  let comparison_pubkey = unparseKeyType key_type <> " " <> key
   -- PUPPY: We are including unverfied keys in this "authorized keys" list,
   -- which is a potential security escalation vector.
-  rows <- query [sql|select pk.id, pk.submitted_pubkey
-                     from "public_key" as pk
-                     where comparison_pubkey = ?
-                     |] (Only comparison_pubkey)
+  rows <- queryWith
+    parser
+    [sql|select id, "type", "key", comment, fingerprint
+         from "ssh_key"
+         where "key" = ?
+         |] (Only key)
   return $ SSHKeys rows
+
+  where
+    parser :: RowParser (KeyId, SSHKey)
+    parser = do
+      keyId <- field
+      sshKey <- fromRow
+      pure (keyId, sshKey)
 
 
 -- | Determine whether the user identified by their SSH key can access a repo.
 accessRepo :: CheckRepoAccessRequest -> SSHHandler RepoAccess
 accessRepo CheckRepoAccessRequest{key_id, command} = do
     rows <- query [sql|
-                   select id, pk.readonly, pk.verified
-                   from "public_key" as pk where id = ?
+                   select id, readonly, verified
+                   from "ssh_key" where id = ?
                |] (Only key_id)
 
     let SSHCommandLine command' owner name = command
