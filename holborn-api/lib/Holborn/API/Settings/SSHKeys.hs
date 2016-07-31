@@ -66,7 +66,7 @@ listKeys :: Username -> APIHandler KeyError [ListKeysRow]
 listKeys username =
     queryWith parseListKeys [sql|
               select id, "type", "key", comment, fingerprint, verified, readonly, created
-              from "public_key" where owner_id = (select id from "user" where username = ?)
+              from "ssh_key" where owner_id = (select id from "user" where username = ?)
           |] (Only username)
 
 
@@ -75,7 +75,7 @@ deleteKey username keyId = do
     userId <- getUserId username
 
     count <- execute [sql|
-            delete from "public_key" where id = ? and owner_id = ?
+            delete from "ssh_key" where id = ? and owner_id = ?
             |] (keyId, userId)
     logDebug count
     return ()
@@ -88,9 +88,9 @@ addKey username (AddKeyData key) = do
     let SSHKey keyType keyData comment fingerprint = sshKey
 
     result <- executeWith parseListKeys [sql|
-            insert into "public_key"
+            insert into "ssh_key"
               ( id
-              , submitted_pubkey
+              , submitted_key
               , "type"
               , "key"
               , comment

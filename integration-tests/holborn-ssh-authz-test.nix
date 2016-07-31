@@ -109,7 +109,7 @@ let
          ( 'alice'
          , 'alice@example.com'
          );
-    insert into public_key (submitted_pubkey, "type", "key", comment, fingerprint, owner_id, verified, readonly) values
+    insert into ssh_key (submitted_key, "type", "key", comment, fingerprint, owner_id, verified, readonly) values
          ( '${testKey.fullKey}'
          , '${testKey.dbType}'
          , '${testKey.key}'

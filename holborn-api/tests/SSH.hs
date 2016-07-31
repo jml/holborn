@@ -159,7 +159,7 @@ makeVerifiedKeyForUser :: MonadIO m => Config -> User -> m Int64
 makeVerifiedKeyForUser config user = do
   let (Just (SSHKey keyType keyData comment fingerprint)) = parseSSHKey exampleKey
   mutateDB config [sql|
-                      insert into "public_key" (id, submitted_pubkey, "type", "key", comment, fingerprint, owner_id, verified, readonly, created)
+                      insert into "ssh_key" (id, submitted_key, "type", "key", comment, fingerprint, owner_id, verified, readonly, created)
                       values (default, ?, ?, ?, ?, ?, ?, true, false, default)
                       |] (exampleKey, keyType, keyData, comment, fingerprint, (userId user))
 

@@ -93,9 +93,10 @@ drop type  if exists "ssh_key_type" cascade;
 create type ssh_key_type as enum ('RSA', 'DSA');
 
 drop table if exists "public_key" cascade;
-create table "public_key"
+drop table if exists "ssh_key" cascade;
+create table "ssh_key"
     ( id serial primary key
-    , submitted_pubkey varchar(1024) unique not null -- The original pubkey
+    , submitted_key varchar(1024) unique not null -- The original pubkey
     , type ssh_key_type not null
     , key varchar(1024) unique not null
     , comment varchar(1024)
@@ -105,6 +106,3 @@ create table "public_key"
     , readonly boolean not null
     , created timestamp without time zone default (now() at time zone 'utc') not null
     );
-
--- TODO: Rename table to ssh_key
--- TODO: Rename submitted_pubkey to submitted_key

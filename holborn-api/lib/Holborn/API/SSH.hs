@@ -116,9 +116,9 @@ authorizedKeys CheckKeyRequest{..} = do
   -- which is a potential security escalation vector.
   rows <- queryWith
     parser
-    [sql|select pk.id, pk."type", pk."key", pk.comment, pk.fingerprint
-         from "public_key" as pk
-         where pk."key" = ?
+    [sql|select id, "type", "key", comment, fingerprint
+         from "ssh_key"
+         where "key" = ?
          |] (Only key)
   return $ SSHKeys rows
 
@@ -134,8 +134,8 @@ authorizedKeys CheckKeyRequest{..} = do
 accessRepo :: CheckRepoAccessRequest -> SSHHandler RepoAccess
 accessRepo CheckRepoAccessRequest{key_id, command} = do
     rows <- query [sql|
-                   select id, pk.readonly, pk.verified
-                   from "public_key" as pk where id = ?
+                   select id, readonly, verified
+                   from "ssh_key" where id = ?
                |] (Only key_id)
 
     let SSHCommandLine command' owner name = command
