@@ -132,20 +132,20 @@ authorizedKeys CheckKeyRequest{..} = do
 
 -- | Determine whether the user identified by their SSH key can access a repo.
 accessRepo :: CheckRepoAccessRequest -> SSHHandler RepoAccess
-accessRepo CheckRepoAccessRequest{key_id, command} = do
+accessRepo CheckRepoAccessRequest{keyId, command} = do
     rows <- query [sql|
                    select id, readonly, verified
                    from "ssh_key" where id = ?
-               |] (Only key_id)
+               |] (Only keyId)
 
     let SSHCommandLine command' owner name = command
     case rows of
       []                        -> throwHandlerError NoSSHKey
       _:_:_                     -> throwHandlerError MultipleSSHKeys
       [(_, _, False)]           -> throwHandlerError UnverifiedKey
-      [(keyId, readOnly, True)] ->
+      [(keyId', readOnly, True)] ->
         case (command', readOnly) of
-          (GitReceivePack, True)  -> throwHandlerError $ ReadOnlyKey keyId
+          (GitReceivePack, True)  -> throwHandlerError $ ReadOnlyKey keyId'
           _                       -> do
             access <- routeRepoRequest command' owner name
             maybe (throwHandlerError $ NoSuchRepo owner name) pure access
@@ -153,7 +153,7 @@ accessRepo CheckRepoAccessRequest{key_id, command} = do
 
 data CheckKeyRequest = CheckKeyRequest
     { key :: Text
-    , key_type :: KeyType
+    , keyType :: KeyType
     } deriving (Show, Generic, Eq, Ord)
 instance FromJSON CheckKeyRequest
 instance ToJSON CheckKeyRequest
@@ -162,7 +162,7 @@ type KeyId = Int
 
 
 data CheckRepoAccessRequest = CheckRepoAccessRequest
-    { key_id :: KeyId
+    { keyId :: KeyId
     , command :: SSHCommandLine
     } deriving (Show, Generic)
 

@@ -34,7 +34,7 @@ spec = do
   describe "/internal/ssh/authorized-keys" $ do
     it "rejects invalid keys" $ \config -> do
       withApplication (makeTestApp config) $ do
-        let badRequest = object [ "key_type" .= ("huh" :: Text)
+        let badRequest = object [ "keyType" .= ("huh" :: Text)
                                 , "key" .=  ("what?" :: Text)
                                 ]
         post "/internal/ssh/authorized-keys" badRequest
@@ -43,7 +43,7 @@ spec = do
     it "returns empty if there are no matching keys" $ \config -> do
       withApplication (makeTestApp config) $ do
         let (Just (SSHKey keyType key _ _)) = parseSSHKey exampleKey
-        let req = object [ "key_type" .= toJSON keyType
+        let req = object [ "keyType" .= toJSON keyType
                          , "key" .= decodeUtf8 key
                          ]
         post "/internal/ssh/authorized-keys" req `respondsWithJSON` ([] :: [SSHKey])
@@ -71,7 +71,7 @@ spec = do
   describe "/internal/ssh/access-repo" $ do
     it "rejects requests for non-existent keys" $ \config -> do
       withApplication (makeTestApp config) $ do
-        let req = object [ "key_id" .= (1 :: Int)
+        let req = object [ "keyId" .= (1 :: Int)
                          , "command" .= ("git-upload-pack '/no-such-org/no-such-repo'" :: Text)
                          ]
         post "/internal/ssh/access-repo" req
@@ -81,7 +81,7 @@ spec = do
       user <- makeArbitraryUser config
       keyId <- makeVerifiedKeyForUser config user
       withApplication (makeTestApp config) $ do
-        let req = object [ "key_id" .= keyId
+        let req = object [ "keyId" .= keyId
                          , "command" .= ("git-upload-pack '/no-such-org/no-such-repo'" :: Text)
                          ]
         post "/internal/ssh/access-repo" req
@@ -107,7 +107,7 @@ spec = do
 
         -- Try to get the repo
         let command = "git-upload-pack '/" <> toUrlPiece (userName user) <> "/" <> repoName <> "'"
-        let req = object [ "key_id" .= keyId
+        let req = object [ "keyId" .= keyId
                          , "command" .= command
                          ]
         let expected = fromList [ toJSON (configRepoHostname config)
@@ -142,7 +142,7 @@ spec = do
 
         -- Try to get the repo
         let command = "git-upload-pack '/" <> toUrlPiece (userName user) <> "/" <> repoName <> "'"
-        let req = object [ "key_id" .= keyId
+        let req = object [ "keyId" .= keyId
                          , "command" .= command
                          ]
         post "/internal/ssh/access-repo" req `shouldRespondWith` 403
@@ -188,7 +188,7 @@ submitAndFetchKey user fullKey = do
   let (Just keyId) = parseMaybe (\obj -> obj .: "id") (getJSONBody resp) :: Maybe Int
 
   -- Try to request it as an authorized key.
-  let req = object [ "key_type" .= toJSON keyType
+  let req = object [ "keyType" .= toJSON keyType
                    , "key" .= (decodeUtf8 key)
                    ]
   let expectedKey = object [ "fingerprint" .= decodeUtf8 fingerprint
