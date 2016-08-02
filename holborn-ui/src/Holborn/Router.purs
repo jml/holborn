@@ -1,4 +1,4 @@
-module Components.Router where
+module Holborn.Router where
 
 import Prelude
 import Control.Alt ((<|>))

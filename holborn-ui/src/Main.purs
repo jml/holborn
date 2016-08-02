@@ -6,7 +6,7 @@ module Main (main) where
 
 import Prelude (Unit, (<$>), (<<<), bind, (>>=), void, pure, unit)
 
-import Components.Router as Router
+import Holborn.Router as Router
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE())
 import DOM (DOM) as DOM
