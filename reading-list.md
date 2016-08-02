@@ -25,3 +25,5 @@
 * [Pin repos](https://news.ycombinator.com/item?id=11918818) - I wanted this for a while but not like this. I want a front page that represents me well.
 
 * [popular security scanner apparently](https://www.reddit.com/r/programming/comments/4q9w6n/versioneye_goes_open_source/)
+
+* [ssl config for our http proxy](https://wiki.mozilla.org/Security/Server_Side_TLS)
