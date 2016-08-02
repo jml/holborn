@@ -18,6 +18,7 @@ import React.DOM.Props as RP
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Argonaut.Decode (decodeJson)
 
+import DOM (DOM)
 import DOM.HTML (window) as DOM
 import DOM.HTML.Window (location) as DOM
 import DOM.HTML.Location (assign) as DOM
@@ -37,6 +38,7 @@ import Debug.Trace (spy)
 import Holborn.ManualEncoding.Profile as ManualCodingProfile
 import Holborn.DomHelpers (scroll)
 import Network.HTTP.StatusCode (StatusCode(..))
+import Control.Monad.Trans (lift)
 
 
 data UserMeta =
@@ -77,12 +79,15 @@ data Action =
   | BurgerMenuToggle
 
 
+auth_token_name :: String
+auth_token_name = "auth_token"
+
 -- TODO: As jml observed fetching (and our entire app) is essentially
 -- a state monad but it's a bit unclear how to fit that observation
 -- into real code.
 instance fetchRootRoutes :: Fetchable RootRoutes State where
   fetch route state@(RouterState { _userMeta: NotLoaded }) = do
-      maybeToken <- liftEff (C.getCookie "auth-token")
+      maybeToken <- liftEff (C.getCookie auth_token_name)
       newState <- case maybeToken of
         Nothing -> pure (set userMeta Anonymous state)
         Just _ -> do
@@ -91,7 +96,7 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
           -- Delete cookie if we get unauthorized for this cookie
           -- (might be expired or maybe never was valid).
           case r.status of
-            StatusCode 401 -> liftEff (C.deleteCookie "auth-token")
+            StatusCode 401 -> liftEff (C.deleteCookie auth_token_name)
             _ -> pure unit
 
           case decodeJson r.response of
@@ -170,7 +175,7 @@ spec404 = T.simpleSpec T.defaultPerformAction render
   where
     render _ _ _ _ = [R.text "404"]
 
-spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
+spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE, dom :: DOM | eff) State props Action
 spec = container $ handleActions $ fold
        [ T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  Settings.spec))
        , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction  Browse.spec))
@@ -244,12 +249,11 @@ spec = container $ handleActions $ fold
     -- TODO error handling when fetch fails
     handleAction BurgerMenuToggle p s = void $ T.cotransform (\s -> over burgerOpen not s)
 
-    handleAction action@(UpdateRoute r) p s = void $ T.cotransform id
+    handleAction action@(UpdateRoute r) p s = do
+      lift (fetch r s)
+      void (T.cotransform id)
 
-    handleAction _ _ _ = void $ T.cotransform id
-
---      runAff (\err -> traceAnyM err >>= const (k id)) (\result -> k \s -> result) (fetch r s)
---    handleAction _ _ _ _ = pure unit
+    handleAction _ _ _ = void (T.cotransform id)
 
 
 -- The following is a hack to listen on route changes for the "root"
