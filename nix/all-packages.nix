@@ -94,6 +94,12 @@ haskellPackages.override {
 
       # Don't check because tests need phantomjs
       wai-cors = haskell.lib.dontCheck haskellPackages.wai-cors;
+
+      # purescript needs http-client <0.5 and protolude > 0.1.6 ATM
+      # re-check http-client after next purescript version and protolude after next nixpkgs HEAD update
+      http-client = self.callPackage ./http-client.nix {};
+      protolude = self.callPackage ./protolude.nix {};
+
       # Don't check because tests need nodejs
       purescript = haskell.lib.dontCheck (self.callPackage ./purescript.nix {});
     };

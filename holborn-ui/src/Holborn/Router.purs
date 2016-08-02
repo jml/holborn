@@ -18,6 +18,11 @@ import React.DOM.Props as RP
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Argonaut.Decode (decodeJson)
 
+import DOM.HTML (window) as DOM
+import DOM.HTML.Window (location) as DOM
+import DOM.HTML.Location (assign) as DOM
+
+
 import Text.Parsing.Simple (Parser, string)
 import Standalone.Router.Dispatch (matches, navigate)
 import Thermite as T
@@ -26,7 +31,6 @@ import Web.Cookies as C
 import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
 import Holborn.SettingsRoute as Settings
-import Holborn.Signin as Signin
 import Holborn.Config (makeUrl)
 import Holborn.Auth as Auth
 import Debug.Trace (spy)
@@ -35,7 +39,12 @@ import Holborn.DomHelpers (scroll)
 import Network.HTTP.StatusCode (StatusCode(..))
 
 
-data UserMeta = SignedIn { username :: String, about :: String } | NotLoaded | Anonymous
+data UserMeta =
+    NotLoaded -- | we need to fetch from the server to determine the
+              -- user's state before rendering otherwise there could
+              -- be some flickering from Anonymous to SignedIn
+  | Anonymous
+  | SignedIn { username :: String, about :: String }
 
 data State = RouterState
     { currentRoute :: RootRoutes
@@ -47,7 +56,6 @@ data State = RouterState
 data RootRoutes =
     EmptyRoute
   | Route404
-  | SigninRoute Signin.State
   | SettingsRoute Settings.State -- TODO fix inconsitent naming
   | BrowseRoute Browse.State
 
@@ -57,7 +65,6 @@ rootRoutes :: Parser String RootRoutes
 rootRoutes =
   string "/" *>
     ( string "settings/" *> (map SettingsRoute Settings.settingsRoutes)
-      <|> string "signin" *> pure (SigninRoute Signin.initialState)
       <|> map BrowseRoute Browse.browseRoutes
       <|> pure Route404
     )
@@ -65,7 +72,6 @@ rootRoutes =
 
 data Action =
   UpdateRoute RootRoutes
-  | SigninAction Signin.Action
   | SettingsAction Settings.Action
   | BrowseAction Browse.Action
   | BurgerMenuToggle
@@ -89,8 +95,9 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
             _ -> pure unit
 
           case decodeJson r.response of
-            Left err ->
-              pure (set routeLens (SigninRoute Signin.initialState) state)
+            Left err -> do
+              liftEff (DOM.window >>= DOM.location >>= \location -> DOM.assign "norf.co:5556" location)
+              pure state
 
             Right (ManualCodingProfile.Profile json) ->
               pure (set userMeta (SignedIn {username: json.username, about: json.about}) state)
@@ -126,18 +133,6 @@ burgerOpen = lens (\(RouterState s) -> s._burgerOpen) (\(RouterState s) x -> Rou
 userMeta :: LensP State UserMeta
 userMeta = lens (\(RouterState s) -> s._userMeta) (\(RouterState s) x -> RouterState (s { _userMeta = x }))
 
-
-_SigninState :: PrismP RootRoutes Signin.State
-_SigninState = prism SigninRoute \route ->
-  case route of
-    SigninRoute s -> Right s
-    _ -> Left route
-
-_SigninAction :: PrismP Action Signin.Action
-_SigninAction = prism SigninAction \action ->
-  case action of
-    SigninAction x -> Right x
-    _ -> Left action
 
 _SettingsState :: PrismP RootRoutes Settings.State
 _SettingsState = prism SettingsRoute \route ->
@@ -177,8 +172,7 @@ spec404 = T.simpleSpec T.defaultPerformAction render
 
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
 spec = container $ handleActions $ fold
-       [ T.focusState routeLens (T.split _SigninState (T.match _SigninAction Signin.spec))
-       , T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  Settings.spec))
+       [ T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  Settings.spec))
        , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction  Browse.spec))
        , T.focusState routeLens (T.split _404State spec404)
        ]
@@ -187,7 +181,7 @@ spec = container $ handleActions $ fold
       NotLoaded -> [R.text "loading UI ..."]
 
       Anonymous ->
-        [ R.div [RP.onClick handleLinks] [R.a [RP.href "/signin"] [R.text "sign in here ..."]]
+        [ R.div [] [R.a [RP.href "/signin"] [R.text "sign in here ..."]] -- signin handled by dex
         , R.div [RP.onClick handleLinks] (render d p s c)
         ]
 
@@ -227,7 +221,6 @@ spec = container $ handleActions $ fold
     contextLabel s = case view routeLens s of
       EmptyRoute -> "loading.."
       Route404 -> "404"
-      SigninRoute _ -> "Sign In"
       SettingsRoute _ -> "Settings"
       BrowseRoute _ -> "Browse"
 
