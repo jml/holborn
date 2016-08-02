@@ -11,7 +11,6 @@ import React.DOM.Props as RP
 import React as React
 import Control.Monad.Eff.Exception as E
 import Network.HTTP.Affjax as AJ
-import Web.Cookies as C
 import Data.Lens(PrismP, prism, over, lens, view, LensP, set)
 import Data.Either (Either(..))
 import Holborn.Settings.SSHKeys as SSHKeys
@@ -101,7 +100,7 @@ _SSHKeysState = prism (\state -> SSHKeySettingsOK state) \state->
     _ -> Left state
 
 
-spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
+spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) State props Action
 spec = container $ fold
        [ T.match _SSHKeysAction (T.focusState routeLens (T.split _SSHKeysState SSHKeys.spec))
 --       , T.match _ProfileAction (T.split _ProfileState Profile.spec)

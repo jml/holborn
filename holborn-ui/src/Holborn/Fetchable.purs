@@ -3,7 +3,6 @@ module Holborn.Fetchable where
 import Prelude
 import Control.Monad.Aff (Aff)
 import Network.HTTP.Affjax as AJ
-import Web.Cookies as C
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (decodeJson, class DecodeJson)
 import Data.Either (Either(..))
@@ -19,7 +18,7 @@ import DOM (DOM)
 -- TODO fetching can always fail so the return value should be an Either
 -- so that downstream can deal with the error.
 
-type Fetch eff state = Aff (ajax :: AJ.AJAX, cookie :: C.COOKIE, dom :: DOM | eff) state
+type Fetch eff state = Aff (ajax :: AJ.AJAX, dom :: DOM | eff) state
 
 class Fetchable action state where
   fetch :: forall eff. action -> state -> Fetch eff state

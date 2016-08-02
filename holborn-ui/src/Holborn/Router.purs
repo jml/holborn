@@ -10,7 +10,6 @@ import Control.Monad.Eff.Class (liftEff)
 import Data.Either (Either(..))
 import Data.Foldable (fold)
 import Data.Lens(PrismP, prism, over, lens, LensP, view, set)
-import Data.Maybe (Maybe(..))
 import Network.HTTP.Affjax as AJ
 import React as React
 import React.DOM as R
@@ -27,7 +26,6 @@ import DOM.HTML.Location (assign) as DOM
 import Text.Parsing.Simple (Parser, string)
 import Standalone.Router.Dispatch (matches, navigate)
 import Thermite as T
-import Web.Cookies as C
 
 import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
@@ -79,35 +77,24 @@ data Action =
   | BurgerMenuToggle
 
 
-auth_token_name :: String
-auth_token_name = "auth_token"
-
 -- TODO: As jml observed fetching (and our entire app) is essentially
 -- a state monad but it's a bit unclear how to fit that observation
 -- into real code.
 instance fetchRootRoutes :: Fetchable RootRoutes State where
   fetch route state@(RouterState { _userMeta: NotLoaded }) = do
-      maybeToken <- liftEff (C.getCookie auth_token_name)
-      newState <- case maybeToken of
-        Nothing -> pure (set userMeta Anonymous state)
-        Just _ -> do
-          r <- Auth.get (makeUrl "/v1/user")
+    r <- Auth.get (makeUrl "/v1/user")
 
-          -- Delete cookie if we get unauthorized for this cookie
-          -- (might be expired or maybe never was valid).
-          case r.status of
-            StatusCode 401 -> liftEff (C.deleteCookie auth_token_name)
-            _ -> pure unit
+    newState <- case r.status of
+      StatusCode 401 -> pure (set userMeta Anonymous state)
+      _ -> case decodeJson r.response of
+        Left err -> do
+          -- TODO parser errors are not a redirect
+          pure state
 
-          case decodeJson r.response of
-            Left err -> do
-              liftEff (DOM.window >>= DOM.location >>= \location -> DOM.assign "norf.co:5556" location)
-              pure state
+        Right (ManualCodingProfile.Profile json) ->
+          pure (set userMeta (SignedIn {username: json.username, about: json.about}) state)
 
-            Right (ManualCodingProfile.Profile json) ->
-              pure (set userMeta (SignedIn {username: json.username, about: json.about}) state)
-
-      fetch route newState
+    fetch route (spy newState)
 
   fetch (SettingsRoute s) state = do
       sr <- fetch (view Settings.routeLens s) s -- of type SettingsRoute
@@ -170,12 +157,12 @@ _BrowseAction = prism BrowseAction \action ->
     _ -> Left action
 
 
-spec404 :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) state props action
+spec404 :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) state props action
 spec404 = T.simpleSpec T.defaultPerformAction render
   where
     render _ _ _ _ = [R.text "404"]
 
-spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE, dom :: DOM | eff) State props Action
+spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM | eff) State props Action
 spec = container $ handleActions $ fold
        [ T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  Settings.spec))
        , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction  Browse.spec))
@@ -186,8 +173,11 @@ spec = container $ handleActions $ fold
       NotLoaded -> [R.text "loading UI ..."]
 
       Anonymous ->
-        [ R.div [] [R.a [RP.href "/signin"] [R.text "sign in here ..."]] -- signin handled by dex
-        , R.div [RP.onClick handleLinks] (render d p s c)
+        [ pageHeader d p s c
+        , R.div [] [R.a [RP.href "/signin"] [R.text "sign in here ..."]] -- signin handled by dex
+        , R.section
+          [ RP.className if view burgerOpen s then "content burger-menu-open" else "content", RP.onClick handleLinks] (render d p s c)
+        , burgerMenu s
         ]
 
       SignedIn { username, about } ->
@@ -195,13 +185,7 @@ spec = container $ handleActions $ fold
         -- the top-level div is never called so I need to add more
         -- specific onClick handlers
         [ R.div [RP.onClick handleLinks]
-          [ R.header []
-            [ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
-            , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
-            , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
-            , R.div [RP.className "pad" ] []
-            , R.div [RP.className "me" ] [ R.text "ME" ]
-            ]
+          [ pageHeader d p s c
           , R.div []
             [ R.text username
             , R.text about
@@ -212,6 +196,14 @@ spec = container $ handleActions $ fold
           [ RP.className if view burgerOpen s then "content burger-menu-open" else "content", RP.onClick handleLinks] (render d p s c)
         , burgerMenu s
         ]
+
+    pageHeader d p s c = R.header []
+            [ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
+            , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
+            , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
+            , R.div [RP.className "pad" ] []
+            , R.div [RP.className "me" ] [ R.text "ME" ]
+            ]
 
     burgerMenu s =
       R.div [RP.className if spy (view burgerOpen s) then "burger-menu open" else "burger-menu", RP.onClick handleLinks]
@@ -250,18 +242,18 @@ spec = container $ handleActions $ fold
     handleAction BurgerMenuToggle p s = void $ T.cotransform (\s -> over burgerOpen not s)
 
     handleAction action@(UpdateRoute r) p s = do
-      lift (fetch r s)
-      void (T.cotransform id)
+      s' <- lift (fetch r s)
+      void (T.cotransform (const s'))
 
     handleAction _ _ _ = void (T.cotransform id)
 
 
 -- The following is a hack to listen on route changes for the "root"
--- component that controls everything else. `dispatch` can be
+-- component that controls everything else. `dispatch` could be
 -- extracted from the spec but takes a `this` pointer which is only
 -- valid once we mounted a component.
 componentDidMount :: forall props eff. (React.ReactThis props State -> Action -> T.EventHandler)
-                     -> React.ComponentDidMount props State (console :: CONSOLE, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff)
+                     -> React.ComponentDidMount props State (console :: CONSOLE, ajax :: AJ.AJAX | eff)
 componentDidMount dispatch this = do
     matches rootRoutes callback
   where
@@ -269,8 +261,7 @@ componentDidMount dispatch this = do
                 -> Eff ( props :: React.ReactProps
                        , state :: React.ReactState React.ReadWrite
                        , refs :: React.ReactRefs refs
-                       , ajax :: AJ.AJAX
-                       , cookie :: C.COOKIE | eff2) Unit
+                       , ajax :: AJ.AJAX | eff2) Unit
     callback rt = dispatch this (UpdateRoute rt)
 
 
