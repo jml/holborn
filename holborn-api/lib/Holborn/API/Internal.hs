@@ -49,7 +49,7 @@ import Network.HTTP.Client
   , defaultManagerSettings
   , httpLbs
   , newManager
-  , parseUrl
+  , parseUrlThrow
   , requestHeaders
   , responseBody
   )
@@ -241,7 +241,7 @@ execute sqlQuery values = do
 jsonGet' :: (FromJSON a) => Text -> APIHandler err (Either String a)
 jsonGet' endpoint = do
     AppConf{httpManager} <- getConfig
-    r <- parseUrl (textToString endpoint)
+    r <- parseUrlThrow (textToString endpoint)
     let rJson = r { requestHeaders = [(hAccept, "application/json")] }
     APIHandler $ liftIO (httpLbs rJson httpManager) >>= \response -> return (eitherDecode' (responseBody response))
 

@@ -97,6 +97,7 @@ haskellPackages.override {
 
       # purescript needs http-client <0.5 and protolude > 0.1.6 ATM
       # re-check http-client after next purescript version and protolude after next nixpkgs HEAD update
+      # See: https://github.com/purescript/purescript/issues/2237
       http-client = self.callPackage ./http-client.nix {};
       protolude = self.callPackage ./protolude.nix {};
 
