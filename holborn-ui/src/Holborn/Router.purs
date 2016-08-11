@@ -6,7 +6,6 @@ import Control.Apply ((*>))
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE())
 import Control.Monad.Eff.Exception as E
-import Control.Monad.Eff.Class (liftEff)
 import Data.Either (Either(..))
 import Data.Foldable (fold)
 import Data.Lens(PrismP, prism, over, lens, LensP, view, set)
@@ -18,9 +17,6 @@ import Unsafe.Coerce (unsafeCoerce)
 import Data.Argonaut.Decode (decodeJson)
 
 import DOM (DOM)
-import DOM.HTML (window) as DOM
-import DOM.HTML.Window (location) as DOM
-import DOM.HTML.Location (assign) as DOM
 
 
 import Text.Parsing.Simple (Parser, string)
@@ -38,13 +34,15 @@ import Holborn.DomHelpers (scroll)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Control.Monad.Trans (lift)
 
-
+-- | UserMeta records the state of the visiting user from the
+-- database.
 data UserMeta =
     NotLoaded -- | we need to fetch from the server to determine the
               -- user's state before rendering otherwise there could
               -- be some flickering from Anonymous to SignedIn
   | Anonymous
   | SignedIn { username :: String, about :: String }
+
 
 data State = RouterState
     { currentRoute :: RootRoutes
@@ -56,8 +54,9 @@ data State = RouterState
 data RootRoutes =
     EmptyRoute
   | Route404
-  | SettingsRoute Settings.State -- TODO fix inconsitent naming
+  | SettingsRoute Settings.State
   | BrowseRoute Browse.State
+
 
 -- TODO tom: Routes should really be "invertible" so I can create a
 -- KeySettings route string from the value.
@@ -88,7 +87,10 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
       StatusCode 401 -> pure (set userMeta Anonymous state)
       _ -> case decodeJson r.response of
         Left err -> do
-          -- TODO parser errors are not a redirect
+          -- TODO JSON parser errors should show up as a generic
+          -- error, e.g. by having a state that shows a message to the
+          -- user. Returning "pure state" is the worst because it
+          -- ignores the parser error.
           pure state
 
         Right (ManualCodingProfile.Profile json) ->
@@ -162,6 +164,11 @@ spec404 = T.simpleSpec T.defaultPerformAction render
   where
     render _ _ _ _ = [R.text "404"]
 
+
+-- | spec is a Thermite-ism. It controls the flow of actions and
+-- dispatches rendering code. Based on the state of the route
+-- component we both focus and split into subcomponents (and the
+-- subcompontents may do the same).
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM | eff) State props Action
 spec = container $ handleActions $ fold
        [ T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  Settings.spec))
@@ -225,8 +232,10 @@ spec = container $ handleActions $ fold
 
     -- Override link navigation to use pushState instead of the
     -- browser following the link.
+    --
     -- TODO: add escape-hatch, e.g. `data-external=true` attribute or
-    -- where the path is non-local
+    -- where the path is non-local. This allows us to link
+    -- e.g. off-site.
     handleLinks ev = do
       case (unsafeCoerce ev).target.nodeName of
         "A" -> do
