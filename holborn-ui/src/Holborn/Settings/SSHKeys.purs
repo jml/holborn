@@ -1,7 +1,6 @@
--- | Example module for how to do an UI element in our UI.
+-- | ssh key upload
 
 module Holborn.Settings.SSHKeys where
-
 
 import Prelude
 
@@ -127,7 +126,20 @@ spec = T.simpleSpec performAction render
       T.cotransform (\state -> state { loading = true })
       void $ lift (removeKey keyId)
       void $ T.cotransform (\state -> state { loading = false })
-    performAction AddKey _ _  = void $ T.cotransform id
+
+    performAction AddKey _ state  = do
+      r <- lift $ HA.post (makeUrl "/v1/user/keys") (encodeJson state.formData)
+      void $ case r.status of
+         StatusCode 201 -> case decodeJson r.response of
+            Left err -> T.cotransform (\state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpeced broke." })
+            Right key -> T.cotransform
+                (\state -> state { loading = false
+                                 , keys = key : state.keys
+                                 , formData = emptyAddKeyData
+                                 , formErrors = emptyAddKeyDataError
+                                 })
+         _ -> T.cotransform id
+
 
     removeKey :: forall eff. Int -> Aff (ajax :: AJAX | eff) (State -> State)
     removeKey keyId = do
