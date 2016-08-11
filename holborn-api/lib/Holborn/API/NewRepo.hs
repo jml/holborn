@@ -26,12 +26,12 @@ import Holborn.API.Internal
   )
 import Holborn.JSON.NewRepo (NewRepoRequest(..))
 import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName)
-import Holborn.API.Types (Username)
+import Holborn.API.Types (DexMail)
 
 
 type API =
     "new-repo"
-    :> Header "GAP-Auth" Username
+    :> Header "x-dex-email" DexMail
     :> ReqBody '[JSON] NewRepoRequest
     :> Post '[JSON] RepoMeta
 
@@ -49,8 +49,8 @@ server conf =
   enter (toServantHandler conf) newRepo
 
 
-newRepo :: Maybe Username -> NewRepoRequest -> APIHandler NewRepoError RepoMeta
-newRepo _username NewRepoRequest{..} = do
+newRepo :: Maybe DexMail -> NewRepoRequest -> APIHandler NewRepoError RepoMeta
+newRepo _dexMail NewRepoRequest{..} = do
     -- TODO user permissions and userId to check whether user is
     -- allowed to create repo.
 

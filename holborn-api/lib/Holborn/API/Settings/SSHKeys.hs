@@ -36,13 +36,13 @@ import Holborn.API.Internal
   , logDebug
   )
 import Holborn.API.Auth (getUserId)
-import Holborn.API.Types (Username)
+import Holborn.API.Types (Username, DexMail)
 
 
 type API =
          "users" :> Capture "username" Username :> "keys" :> Get '[JSON] [ListKeysRow]
-    :<|> Header "GAP-Auth" Username :> "user" :> "keys" :> Capture "id" Int :> Delete '[JSON] ()
-    :<|> Header "GAP-Auth" Username :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> PostCreated '[JSON] ListKeysRow
+    :<|> Header "x-dex-email" DexMail :> "user" :> "keys" :> Capture "id" Int :> Delete '[JSON] ()
+    :<|> Header "x-dex-email" DexMail :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> PostCreated '[JSON] ListKeysRow
 
 
 -- TODO Tom would really rather have an applicative validator that can
@@ -70,9 +70,9 @@ listKeys username =
           |] (Only username)
 
 
-deleteKey :: Maybe Username -> Int -> APIHandler KeyError ()
-deleteKey username keyId = do
-    userId <- getUserId username
+deleteKey :: Maybe DexMail -> Int -> APIHandler KeyError ()
+deleteKey dexMail keyId = do
+    userId <- getUserId dexMail
 
     count <- execute [sql|
             delete from "ssh_key" where id = ? and owner_id = ?
@@ -81,9 +81,9 @@ deleteKey username keyId = do
     return ()
 
 
-addKey :: Maybe Username -> AddKeyData -> APIHandler KeyError ListKeysRow
-addKey username (AddKeyData key) = do
-    userId <- getUserId username
+addKey :: Maybe DexMail -> AddKeyData -> APIHandler KeyError ListKeysRow
+addKey dexMail (AddKeyData key) = do
+    userId <- getUserId dexMail
     sshKey <- maybe (throwHandlerError InvalidSSHKey) pure $ parseSSHKey (encodeUtf8 key)
     let SSHKey keyType keyData comment fingerprint = sshKey
 

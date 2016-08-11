@@ -3,9 +3,11 @@ module Holborn.API.Types
        , newEmail
        , newPassword
        , checkPassword
+       , newDexMail
        , Username
        , Email
        , Password
+       , DexMail
        , ApiError(..)
        ) where
 
@@ -20,6 +22,8 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 
 
 newtype Username = Username Text deriving (Eq, Ord, Show, ToField, FromHttpApiData, ToHttpApiData, IsString)
+newtype DexMail = DexMail Text deriving (Eq, Ord, Show, ToField, FromField, FromHttpApiData, ToHttpApiData, IsString)
+
 newtype Email = Email Text deriving (Eq, Ord, Show, ToField, FromField)
 newtype Password = Password ByteString deriving (ToField)
 
@@ -27,6 +31,10 @@ newtype Password = Password ByteString deriving (ToField)
 -- TODO: Validate username
 newUsername :: Text -> Username
 newUsername = Username
+
+
+newDexMail :: Text -> DexMail
+newDexMail = DexMail
 
 
 -- TODO: validate email (at least has an @ in it)
