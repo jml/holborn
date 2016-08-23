@@ -53,6 +53,15 @@ executables:
       - warp >= 3.1
       - postgresql-simple
 
+  gen-purescript:
+    main: Main.hs
+    source-dirs: gen-purescript
+    dependencies:
+      - holborn-api
+      - purescript-bridge
+      - servant-purescript
+
+
 tests:
   holborn-api-tests:
     main: Main.hs

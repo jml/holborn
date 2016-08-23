@@ -103,5 +103,10 @@ haskellPackages.override {
 
       # Don't check because tests need nodejs
       purescript = haskell.lib.dontCheck (self.callPackage ./purescript.nix {});
+
+      # not yet in the nix package repo, remove when it's there. broken tests
+      servant-subscriber = haskell.lib.dontCheck (self.callPackage ./servant-subscriber.nix {});
+      # not yet in the nix package repo, remove when it's there:
+      servant-purescript = self.callPackage ./servant-purescript.nix {};
     };
 }
