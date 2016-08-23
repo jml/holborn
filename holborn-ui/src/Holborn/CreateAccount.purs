@@ -1,27 +1,22 @@
 module Holborn.CreateAccount where
 
-import Prelude
+import Prelude (Unit, void, bind, id, ($), (<<<))
+
 import Thermite as T
 import Control.Monad.Eff.Exception as E
 import Control.Apply ((<*))
 import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
 import Control.Monad.Aff (attempt)
+import Standalone.Router.Dispatch (navigate)
 
 import React.DOM as R
 import React.DOM.Props as RP
-import React as React
-import Data.Lens (lens, LensP, set, view, toListOf)
-import Data.Lens.Traversal (traversed)
-import Data.Maybe (Maybe(..), maybe)
-import Data.Monoid.Endo (Endo)
-import Data.Lens.Types (Fold())
-import Data.List (toUnfoldable, List)
-import Data.Foldable (intercalate)
-import Data.Array (range)
+import Data.Maybe (Maybe(..))
 import Control.Monad.Trans (lift)
+import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff (Eff)
 
-import Holborn.Fetchable (class Fetchable, fetch, Fetch, decodeResponse)
 import Holborn.Config (makeUrl)
 import Holborn.ManualEncoding.CreateAccount (CreateAccountData(..), CreateAccountDataError(..), username)
 import Holborn.Auth as Auth
@@ -54,7 +49,7 @@ data Action = CreateAccount | UpdateFormData CreateAccountData
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) State props Action
 spec = T.simpleSpec performAction render
   where
-    render :: forall props. T.Render State props Action
+    render :: T.Render State props Action
     render dispatch props ({ formData, formErrors: CreateAccountDataError err, loading }) _ =
       [ R.h1 [] [R.text "Last step! Pick a username for code.space"]
       , R.form [RP.onSubmit onSubmit]
@@ -67,7 +62,7 @@ spec = T.simpleSpec performAction render
           (unsafeCoerce ev).preventDefault
           dispatch CreateAccount
 
-    performAction :: forall a. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) State props Action
+    performAction :: forall eff'. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff') State props Action
     performAction CreateAccount props state = do
       T.cotransform (\state -> spy (state { loading = true }))
       r <- lift $ attempt (Auth.post (makeUrl "/v1/create-account") (encodeJson state.formData))
@@ -78,6 +73,10 @@ spec = T.simpleSpec performAction render
            void $ T.cotransform id
 
          _ -> void $ T.cotransform id
+
+      -- The type checker isn't clever enough to figure out the effect
+      -- of navigate so we need to specify it explicityly.
+      lift $ liftEff $ (navigate "/settings/ssh-keys" :: Eff (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff') Unit)
       void $ T.cotransform (\state -> spy (state { loading = false }))
 
     performAction (UpdateFormData x) _ state = void $ T.cotransform $ \state -> state { formData = x }
