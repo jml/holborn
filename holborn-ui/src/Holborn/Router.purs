@@ -300,7 +300,10 @@ componentDidMount dispatch this = do
 
 
 componentDidUpdate :: forall props eff state. React.ComponentDidUpdate props state eff
-componentDidUpdate this props state = scroll 0 0
+componentDidUpdate this props state = do
+  -- TODO shall we allow our app to hook into state changes?
+  -- That would e.g. allow us to catch the CreateAccount finished state change.
+  scroll 0 0
 
 
 component :: forall props. React.ReactClass props

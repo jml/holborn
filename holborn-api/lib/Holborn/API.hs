@@ -17,6 +17,7 @@ import qualified Holborn.Docs
 import qualified Holborn.API.SSH
 import qualified Holborn.API.Browse
 import qualified Holborn.API.NewRepo
+import qualified Holborn.API.CreateAccount
 import Holborn.API.Config (Config)
 import qualified Holborn.API.Settings.SSHKeys
 import qualified Holborn.API.Settings.Profile
@@ -28,6 +29,7 @@ type FullAPI =
     :<|> "v1" :> ( Holborn.API.Settings.SSHKeys.API
                    :<|> Holborn.API.Settings.Profile.API
                    :<|> Holborn.API.NewRepo.API
+                   :<|> Holborn.API.CreateAccount.API
                  )
     :<|> "v1" :> "repos" :> Holborn.API.Browse.API
 
@@ -42,6 +44,7 @@ server conf = Holborn.API.SSH.server conf
               :<|> (Holborn.API.Settings.SSHKeys.server conf
                     :<|> Holborn.API.Settings.Profile.server conf
                     :<|> Holborn.API.NewRepo.server conf
+                    :<|> Holborn.API.CreateAccount.server conf
                    )
               :<|> Holborn.API.Browse.server conf
 

@@ -18,6 +18,7 @@ library
       Holborn.API.Auth
       Holborn.API.Browse
       Holborn.API.Config
+      Holborn.API.CreateAccount
       Holborn.API.Internal
       Holborn.API.NewRepo
       Holborn.API.Settings.Profile
