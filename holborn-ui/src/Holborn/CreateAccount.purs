@@ -39,6 +39,7 @@ initialState =
   , formData: CreateAccountData {username: ""}
   , loading: false
   }
+
 data Action = CreateAccount | UpdateFormData CreateAccountData
 
 
@@ -53,6 +54,6 @@ spec = T.simpleSpec performAction render
         ]
       ]
 
-    performAction :: forall eff a. T.PerformAction (ajax :: AJ.AJAX | eff) State props Action
+    performAction :: forall eff' a. T.PerformAction eff' State props Action
     performAction (CreateAccount) props state = void $ T.cotransform id
     performAction (UpdateFormData x) _ state = void $ T.cotransform $ \state -> state { formData = x }

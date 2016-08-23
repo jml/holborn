@@ -199,11 +199,10 @@ spec = container $ handleActions $ fold
       NotLoaded -> [R.text "loading UI ..."]
 
       Anonymous ->
-        [ pageHeader d p s c
+        [ pageHeaderSignedOut d p s c
         , R.div [] [R.a [RP.href "/signin"] [R.text "sign in here ..."]] -- signin handled by dex
         , R.section
-          [ RP.className if view burgerOpen s then "content burger-menu-open" else "content", RP.onClick handleLinks] (render d p s c)
-        , burgerMenu s
+          [ RP.className "content", RP.onClick handleLinks] (render d p s c)
         ]
 
       SignedIn { username, about } ->
@@ -211,7 +210,7 @@ spec = container $ handleActions $ fold
         -- the top-level div is never called so I need to add more
         -- specific onClick handlers
         [ R.div [RP.onClick handleLinks]
-          [ pageHeader d p s c
+          [ pageHeaderSignedIn d p s c
           , R.div []
             [ R.text username
             , R.text about
@@ -223,12 +222,18 @@ spec = container $ handleActions $ fold
         , burgerMenu s
         ]
 
-    pageHeader d p s c = R.header []
+    pageHeaderSignedIn d p s c = R.header []
             [ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
             , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
             , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
             , R.div [RP.className "pad" ] []
             , R.div [RP.className "me" ] [ R.text "ME" ]
+            ]
+
+    pageHeaderSignedOut d p s c = R.header []
+            [ R.div [RP.className "context" ] [ R.text (contextLabel s) ]
+            , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
+            , R.div [RP.className "pad" ] []
             ]
 
     burgerMenu s =
