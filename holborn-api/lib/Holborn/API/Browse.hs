@@ -75,9 +75,9 @@ browse _maybeUsername owner repo = do
             throwHandlerError NotFound
     -- TODO: FAKE: Fake description in repository metadata
     return BrowseMetaResponse
-      { _BrowseMetaResponse_repo_meta = repoMeta { _RepoMeta_owner = owner }
-      , _BrowseMetaResponse_description = "fake description"
-      , _BrowseMetaResponse_created_at = Time.LocalTime (Time.ModifiedJulianDay 2000) (Time.TimeOfDay 1 1 1)
+      { repo_meta = repoMeta { owner = owner }
+      , description = "fake description"
+      , created_at = Time.LocalTime (Time.ModifiedJulianDay 2000) (Time.TimeOfDay 1 1 1)
       }
 
 -- Tree, commit & blob are passed straight through if they meet the

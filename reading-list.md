@@ -27,3 +27,7 @@
 * [popular security scanner apparently](https://www.reddit.com/r/programming/comments/4q9w6n/versioneye_goes_open_source/)
 
 * [ssl config for our http proxy](https://wiki.mozilla.org/Security/Server_Side_TLS)
+
+* [https://react-server.io/](someone did what I wanted to do: render react stuff on the server to send down as html for initial load)
+
+* [https://www.reddit.com/r/programming/comments/4z1ou1/gitlab_has_added_a_kanban_issue_management_board/d6sqith](more github grieving)

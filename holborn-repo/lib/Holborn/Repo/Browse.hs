@@ -9,7 +9,8 @@
 
 module Holborn.Repo.Browse (BrowseAPI, browseAPI, codeBrowser) where
 
-import HolbornPrelude
+import HolbornPrelude hiding (id)
+import qualified HolbornPrelude (id)
 
 import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Except (ExceptT, throwE)
@@ -69,7 +70,7 @@ type RepoBrowser = ExceptT BrowseException IO
 --
 -- See http://haskell-servant.github.io/tutorial/server.html#using-another-monad-for-your-handlers
 gitBrowserT :: ExceptT BrowseException IO :~> ExceptT ServantErr IO
-gitBrowserT = Nat (bimapExceptT browseExceptionToServantErr id)
+gitBrowserT = Nat (bimapExceptT browseExceptionToServantErr HolbornPrelude.id)
   where
     browseExceptionToServantErr (GitException e) = err500 { errBody = fromStrict (encodeUtf8 (show e)) }
     browseExceptionToServantErr BlobNotFoundException = err404 { errBody = "not found" }

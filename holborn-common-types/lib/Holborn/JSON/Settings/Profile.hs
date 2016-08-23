@@ -5,8 +5,7 @@ module Holborn.JSON.Settings.Profile
        ) where
 
 import HolbornPrelude
-import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, defaultOptions)
-import Data.Aeson.Types (Options(fieldLabelModifier))
+import Data.Aeson (ToJSON, FromJSON)
 import Data.Time.LocalTime (LocalTime)
 import GHC.Generics (Generic)
 
@@ -14,17 +13,12 @@ import GHC.Generics (Generic)
 -- (number of repos, gravatar, followers, following, gists, company,
 -- ...)
 data ProfileData = ProfileData
-    { _ProfileData_id :: Int
-    , _ProfileData_username :: Text
-    , _ProfileData_about :: Text
-    , _ProfileData_date_joined :: LocalTime
+    { id :: Int
+    , username :: Text
+    , about :: Text
+    , date_joined :: LocalTime
     } deriving (Show, Generic)
 
 
-instance ToJSON ProfileData where
-  toJSON = genericToJSON defaultOptions
-    { fieldLabelModifier = drop (length ("_ProfileData_" :: String)) }
-
-instance FromJSON ProfileData where
-  parseJSON = genericParseJSON defaultOptions
-    { fieldLabelModifier = drop (length ("_ProfileData_" :: String)) }
+instance ToJSON ProfileData
+instance FromJSON ProfileData
