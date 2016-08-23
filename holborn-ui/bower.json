@@ -80,6 +80,7 @@
     "purescript-generics": "~1.0.1",
     "purescript-random": "~1.0.0",
     "purescript-quickcheck": "~1.0.0",
-    "purescript-cookies": "master"
+    "purescript-cookies": "master",
+    "purescript-coroutines": "^2.0.1"
   }
 }
