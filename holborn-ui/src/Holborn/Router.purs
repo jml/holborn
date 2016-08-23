@@ -195,7 +195,7 @@ spec = container $ handleActions $ fold
        , T.focusState routeLens (T.split _404State spec404)
        ]
   where
-    container = over T._render \render d p s c -> case view userMeta (spy s) of
+    container = over T._render \render d p s c -> case view userMeta s of
       NotLoaded -> [R.text "loading UI ..."]
 
       Anonymous ->
