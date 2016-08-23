@@ -26,6 +26,8 @@ import Thermite as T
 import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
 import Holborn.SettingsRoute as Settings
+import Holborn.CreateAccount as CreateAccount
+
 import Holborn.Config (makeUrl)
 import Holborn.Auth as Auth
 import Debug.Trace (spy)
@@ -56,6 +58,7 @@ data RootRoutes =
   | Route404
   | SettingsRoute Settings.State
   | BrowseRoute Browse.State
+  | CreateAccountRoute CreateAccount.State
 
 
 -- TODO tom: Routes should really be "invertible" so I can create a
@@ -73,6 +76,7 @@ data Action =
   UpdateRoute RootRoutes
   | SettingsAction Settings.Action
   | BrowseAction Browse.Action
+  | CreateAccountAction CreateAccount.Action
   | BurgerMenuToggle
 
 
@@ -83,20 +87,22 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
   fetch route state@(RouterState { _userMeta: NotLoaded }) = do
     r <- Auth.get (makeUrl "/v1/user")
 
-    newState <- case r.status of
-      StatusCode 401 -> pure (set userMeta Anonymous state)
+    case r.status of
+      StatusCode 401 -> fetch route (set userMeta Anonymous state)
+
+      -- 418 is the no-user-account-yet error. It always forces a
+      -- redirect to the CreateAccount route.
+      StatusCode 418 -> fetch (CreateAccountRoute CreateAccount.initialState) (set userMeta Anonymous state)
+
+      -- TODO JSON parser errors should show up as a generic error,
+      -- e.g. by having a state that shows a message to the
+      -- user. Returning "pure state" is the worst because it ignores
+      -- the parser error.
       _ -> case decodeJson r.response of
         Left err -> do
-          -- TODO JSON parser errors should show up as a generic
-          -- error, e.g. by having a state that shows a message to the
-          -- user. Returning "pure state" is the worst because it
-          -- ignores the parser error.
-          pure state
-
+          fetch route state
         Right (ManualCodingProfile.Profile json) ->
-          pure (set userMeta (SignedIn {username: json.username, about: json.about}) state)
-
-    fetch route (spy newState)
+          fetch route (set userMeta (SignedIn {username: json.username, about: json.about}) state)
 
   fetch (SettingsRoute s) state = do
       sr <- fetch (view Settings.routeLens s) s -- of type SettingsRoute
@@ -116,7 +122,6 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
 
 initialState :: State
 initialState = RouterState { currentRoute: EmptyRoute, _userMeta: NotLoaded, _burgerOpen: false }
-
 
 routeLens :: LensP State RootRoutes
 routeLens = lens (\(RouterState s) -> s.currentRoute) (\(RouterState s) x -> RouterState (s { currentRoute = x }))
@@ -159,6 +164,19 @@ _BrowseAction = prism BrowseAction \action ->
     _ -> Left action
 
 
+_CreateAccountState :: PrismP RootRoutes CreateAccount.State
+_CreateAccountState = prism CreateAccountRoute \route ->
+  case route of
+    CreateAccountRoute x -> Right x
+    _ -> Left route
+
+_CreateAccountAction :: PrismP Action CreateAccount.Action
+_CreateAccountAction = prism CreateAccountAction \action ->
+  case action of
+    CreateAccountAction x -> Right x
+    _ -> Left action
+
+
 spec404 :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) state props action
 spec404 = T.simpleSpec T.defaultPerformAction render
   where
@@ -173,10 +191,11 @@ spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DO
 spec = container $ handleActions $ fold
        [ T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  Settings.spec))
        , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction  Browse.spec))
+       , T.focusState routeLens (T.split _CreateAccountState (T.match _CreateAccountAction  CreateAccount.spec))
        , T.focusState routeLens (T.split _404State spec404)
        ]
   where
-    container = over T._render \render d p s c -> case view userMeta s of
+    container = over T._render \render d p s c -> case view userMeta (spy s) of
       NotLoaded -> [R.text "loading UI ..."]
 
       Anonymous ->
@@ -213,7 +232,7 @@ spec = container $ handleActions $ fold
             ]
 
     burgerMenu s =
-      R.div [RP.className if spy (view burgerOpen s) then "burger-menu open" else "burger-menu", RP.onClick handleLinks]
+      R.div [RP.className if view burgerOpen s then "burger-menu open" else "burger-menu", RP.onClick handleLinks]
       [ R.ul []
         [ R.li [] [R.text "Dashboard"]
         , R.li [] [R.text "My Projects"]
@@ -227,6 +246,7 @@ spec = container $ handleActions $ fold
       Route404 -> "404"
       SettingsRoute _ -> "Settings"
       BrowseRoute _ -> "Browse"
+      CreateAccountRoute _ -> "Last step!"
 
     burgerMenuToggle dispatch ev = dispatch BurgerMenuToggle
 

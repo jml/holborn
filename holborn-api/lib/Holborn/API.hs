@@ -1,6 +1,6 @@
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeFamilies  #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Holborn.API
   ( FullAPI
