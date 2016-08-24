@@ -69,6 +69,7 @@ rootRoutes :: Parser String RootRoutes
 rootRoutes =
   string "/" *>
     ( string "settings/" *> (map SettingsRoute Settings.settingsRoutes)
+      <|> string "create-account" *> pure (CreateAccountRoute CreateAccount.initialState)
       <|> map BrowseRoute Browse.browseRoutes
       <|> pure Route404
     )
