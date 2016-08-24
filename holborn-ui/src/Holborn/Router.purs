@@ -4,6 +4,7 @@ import Prelude
 import Control.Alt ((<|>))
 import Control.Apply ((*>))
 import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE())
 import Control.Monad.Eff.Exception as E
 import Data.Either (Either(..))
@@ -15,12 +16,13 @@ import React.DOM as R
 import React.DOM.Props as RP
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Argonaut.Decode (decodeJson)
+import Standalone.Router.Dispatch (Navigate)
 
 import DOM (DOM)
 
 
 import Text.Parsing.Simple (Parser, string)
-import Standalone.Router.Dispatch (matches, navigate)
+import Standalone.Router.Dispatch (matches, navigate, navigateA)
 import Thermite as T
 
 import Holborn.Browse as Browse
@@ -92,7 +94,9 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
 
       -- 418 is the no-user-account-yet error. It always forces a
       -- redirect to the CreateAccount route.
-      StatusCode 418 -> fetch (CreateAccountRoute CreateAccount.initialState) (set userMeta Anonymous state)
+      StatusCode 418 -> do
+        navigateA "/create-account"
+        fetch (CreateAccountRoute CreateAccount.initialState) (set userMeta Anonymous state)
 
       -- TODO JSON parser errors should show up as a generic error,
       -- e.g. by having a state that shows a message to the
@@ -187,7 +191,7 @@ spec404 = T.simpleSpec T.defaultPerformAction render
 -- dispatches rendering code. Based on the state of the route
 -- component we both focus and split into subcomponents (and the
 -- subcompontents may do the same).
-spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM | eff) State props Action
+spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
 spec = container $ handleActions $ fold
        [ T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  Settings.spec))
        , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction  Browse.spec))
@@ -295,7 +299,7 @@ componentDidMount dispatch this = do
                 -> Eff ( props :: React.ReactProps
                        , state :: React.ReactState React.ReadWrite
                        , refs :: React.ReactRefs refs
-                       , ajax :: AJ.AJAX | eff2) Unit
+                       , ajax :: AJ.AJAX| eff2) Unit
     callback rt = dispatch this (UpdateRoute rt)
 
 

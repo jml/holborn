@@ -8,6 +8,7 @@ import Data.Argonaut.Decode (decodeJson, class DecodeJson)
 import Data.Either (Either(..))
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 import DOM (DOM)
+import Standalone.Router.Dispatch (Navigate)
 
 -- | Route changes generally imply the need to fetch fresh data from
 -- the server (e.g. account data) but we don't know what routes and
@@ -18,7 +19,7 @@ import DOM (DOM)
 -- TODO fetching can always fail so the return value should be an Either
 -- so that downstream can deal with the error.
 
-type Fetch eff state = Aff (ajax :: AJ.AJAX, dom :: DOM | eff) state
+type Fetch eff state = Aff (ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) state
 
 class Fetchable action state where
   fetch :: forall eff. action -> state -> Fetch eff state

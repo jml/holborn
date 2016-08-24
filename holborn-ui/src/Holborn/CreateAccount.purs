@@ -27,6 +27,7 @@ import Data.Argonaut.Decode (decodeJson)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Data.Either (Either(..))
 import Unsafe.Coerce (unsafeCoerce)
+import Standalone.Router.Dispatch (Navigate)
 
 import Debug.Trace
 
@@ -46,7 +47,7 @@ initialState =
 data Action = CreateAccount | UpdateFormData CreateAccountData
 
 
-spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) State props Action
+spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
 spec = T.simpleSpec performAction render
   where
     render :: T.Render State props Action
@@ -62,7 +63,7 @@ spec = T.simpleSpec performAction render
           (unsafeCoerce ev).preventDefault
           dispatch CreateAccount
 
-    performAction :: forall eff'. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff') State props Action
+    performAction :: forall eff'. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff') State props Action
     performAction CreateAccount props state = do
       T.cotransform (\state -> spy (state { loading = true }))
       r <- lift $ attempt (Auth.post (makeUrl "/v1/create-account") (encodeJson state.formData))
@@ -76,7 +77,7 @@ spec = T.simpleSpec performAction render
 
       -- The type checker isn't clever enough to figure out the effect
       -- of navigate so we need to specify it explicityly.
-      lift $ liftEff $ (navigate "/settings/ssh-keys" :: Eff (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff') Unit)
+      lift $ liftEff $ (navigate "/settings/ssh-keys" :: Eff (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff') Unit)
       void $ T.cotransform (\state -> spy (state { loading = false }))
 
     performAction (UpdateFormData x) _ state = void $ T.cotransform $ \state -> state { formData = x }
