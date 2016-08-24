@@ -8,13 +8,12 @@ import Control.Apply ((<*))
 import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
 import Control.Monad.Aff (attempt)
-import Standalone.Router.Dispatch (navigate)
+import Standalone.Router.Dispatch (navigateA)
 
 import React.DOM as R
 import React.DOM.Props as RP
 import Data.Maybe (Maybe(..))
 import Control.Monad.Trans (lift)
-import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff (Eff)
 
 import Holborn.Config (makeUrl)
@@ -75,9 +74,7 @@ spec = T.simpleSpec performAction render
 
          _ -> void $ T.cotransform id
 
-      -- The type checker isn't clever enough to figure out the effect
-      -- of navigate so we need to specify it explicityly.
-      lift $ liftEff $ (navigate "/settings/ssh-keys" :: Eff (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff') Unit)
+      lift $ navigateA "/settings/ssh-keys"
       void $ T.cotransform (\state -> spy (state { loading = false }))
 
     performAction (UpdateFormData x) _ state = void $ T.cotransform $ \state -> state { formData = x }

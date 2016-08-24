@@ -194,9 +194,9 @@ spec404 = T.simpleSpec T.defaultPerformAction render
 -- subcompontents may do the same).
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
 spec = container $ handleActions $ fold
-       [ T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction  Settings.spec))
-       , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction  Browse.spec))
-       , T.focusState routeLens (T.split _CreateAccountState (T.match _CreateAccountAction  CreateAccount.spec))
+       [ T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction Settings.spec))
+       , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction Browse.spec))
+       , T.focusState routeLens (T.split _CreateAccountState (T.match _CreateAccountAction CreateAccount.spec))
        , T.focusState routeLens (T.split _404State spec404)
        ]
   where

@@ -27,7 +27,7 @@ foreign import pushState :: forall e. String -> Eff e Unit
 
 
 -- | Push new path to history.
-navigate :: forall e. String -> Eff e Unit
+navigate :: forall e. String -> Eff (navigate :: Navigate | e) Unit
 navigate = pushState
 
 
@@ -35,7 +35,7 @@ navigate = pushState
 liftEff2 = liftEff :: forall eff a. Eff eff a -> Aff eff a
 
 -- | Needed to make the type checker happy
-navigateA :: forall e. String -> Aff e Unit
+navigateA :: forall e. String -> Aff (navigate :: Navigate | e) Unit
 navigateA s = liftEff2 (pushState s)
 
 
