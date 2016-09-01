@@ -1,4 +1,3 @@
--- | Create new repositories for either a user or an org
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes        #-}

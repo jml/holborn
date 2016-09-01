@@ -131,7 +131,7 @@ spec = T.simpleSpec performAction render
       r <- lift $ HA.post (makeUrl "/v1/user/keys") (encodeJson state.formData)
       void $ case r.status of
          StatusCode 201 -> case decodeJson r.response of
-            Left err -> T.cotransform (\state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpeced broke." })
+            Left err -> T.cotransform (\state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpected broke." })
             Right key -> T.cotransform
                 (\state -> state { loading = false
                                  , keys = key : state.keys

@@ -86,6 +86,9 @@ spec = T.simpleSpec performAction render
            traceAnyM (response :: Unit)
            -- TODO redirect to home?
            void $ T.cotransform id
+
+         -- Left means a general Aff error, could be network, could be
+         -- an exception throw in JS.
          Left err -> do
            void $ T.cotransform id
          _ -> void $ T.cotransform id

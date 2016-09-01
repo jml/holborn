@@ -1,3 +1,5 @@
+-- | Custom network functions that send the correct headers (and other
+-- modififications as necessary).
 module Holborn.Auth where
 
 import Prelude
@@ -16,9 +18,6 @@ import Network.HTTP.StatusCode (StatusCode(..))
 import Data.Either (Either(Left))
 
 
-
--- | Custom post that sends the correct auth header derived from the
--- COOKIE.
 post :: forall e a b. (Requestable a, Respondable b) => URL -> a -> Affjax e b
 post u c = do
   affjax $ defaultRequest
@@ -28,8 +27,6 @@ post u c = do
     , headers = [RequestHeader "Accept" "application/json"]
     }
 
--- | Custom get that sends the correct auth header derived from the
--- COOKIE.
 get :: forall e a. (Respondable a) => URL -> Affjax e a
 get u = do
   affjax $ defaultRequest

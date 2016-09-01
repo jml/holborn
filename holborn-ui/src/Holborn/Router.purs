@@ -210,7 +210,9 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
 
       Anonymous ->
         [ pageHeaderSignedOut d p s c
-        , R.div [] [R.a [RP.href "/signin"] [R.text "sign in here ..."]] -- signin handled by dex
+          -- /signing is a *real* link that doesn't go through pushState,
+          -- the frontend terminator will capture this and redirect to dex.
+        , R.div [] [R.a [RP.href "/signin"] [R.text "sign in here ..."]]
         , R.section
           [ RP.className "content", RP.onClick handleLinks] (render d p s c)
         ]
@@ -256,6 +258,9 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
         ]
       ]
 
+    -- The `contextLabel` is the little message in the top left
+    -- telling us where we are. Not sure whether we want to keep this
+    -- or not but useful for development ATM.
     contextLabel s = case view routeLens s of
       EmptyRoute -> "loading.."
       Route404 -> "404"
