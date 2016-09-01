@@ -8,7 +8,7 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE())
 import Control.Monad.Eff.Exception as E
 import Data.Either (Either(..))
-import Data.Foldable (fold)
+import Data.Foldable (foldMap)
 import Data.Lens(PrismP, prism, over, lens, LensP, view, set)
 import Network.HTTP.Affjax as AJ
 import React as React
@@ -198,11 +198,11 @@ spec404 = T.simpleSpec T.defaultPerformAction render
 -- component we both focus and split into subcomponents (and the
 -- subcompontents may do the same).
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
-spec = container $ handleActions $ fold
-       [ T.focusState routeLens (T.split _SettingsState (T.match _SettingsAction Settings.spec))
-       , T.focusState routeLens (T.split _BrowseState (T.match _BrowseAction Browse.spec))
-       , T.focusState routeLens (T.split _CreateAccountState (T.match _CreateAccountAction CreateAccount.spec))
-       , T.focusState routeLens (T.split _404State spec404)
+spec = container $ handleActions $ foldMap (T.focusState routeLens)
+       [ T.split _SettingsState (T.match _SettingsAction Settings.spec)
+       , T.split _BrowseState (T.match _BrowseAction Browse.spec)
+       , T.split _CreateAccountState (T.match _CreateAccountAction CreateAccount.spec)
+       , T.split _404State spec404
        ]
   where
     container = over T._render \render d p s c -> case view userMeta s of
