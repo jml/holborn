@@ -1,7 +1,6 @@
--- | Example module for how to do an UI element in our UI.
+-- | ssh key upload
 
 module Holborn.Settings.SSHKeys where
-
 
 import Prelude
 
@@ -21,7 +20,6 @@ import Data.Argonaut.Encode (encodeJson)
 import Data.List (List(..), (:), toUnfoldable)
 import Data.Lens (view, set)
 import Data.Maybe (Maybe(..))
-import Web.Cookies as C
 
 import Holborn.ManualEncoding.SSHKeys (Key(..), AddKeyData(..), AddKeyDataError(..), title, key)
 import Holborn.Auth as HA
@@ -80,7 +78,7 @@ renderGlobalError err = case err of
   Just msg -> R.div [] [R.text msg]
 
 
-spec :: forall eff props. T.Spec (ajax :: AJAX, cookie :: C.COOKIE | eff) State props Action
+spec :: forall eff props. T.Spec (ajax :: AJAX | eff) State props Action
 spec = T.simpleSpec performAction render
   where
     -- render is a react-ism. It renders the DOM fragment below and
@@ -122,17 +120,30 @@ spec = T.simpleSpec performAction render
     -- performAction is a purescript-thermite callback. It takes an
     -- action and modifies the state by calling the callback k and
     -- passing it the modified state.
-    performAction :: forall eff a. T.PerformAction (ajax :: AJAX, cookie :: C.COOKIE | eff) State props Action
+    performAction :: forall eff a. T.PerformAction (ajax :: AJAX | eff) State props Action
     performAction (UpdateFormData x) props state =  void $ T.cotransform $ \state -> state { formData = x }
     performAction (RemoveKey keyId) props state = do
       T.cotransform (\state -> state { loading = true })
       void $ lift (removeKey keyId)
       void $ T.cotransform (\state -> state { loading = false })
-    performAction AddKey _ _  = void $ T.cotransform id
 
-    removeKey :: forall eff. Int -> Aff (ajax :: AJAX, cookie :: C.COOKIE | eff) (State -> State)
+    performAction AddKey _ state  = do
+      r <- lift $ HA.post (makeUrl "/v1/user/keys") (encodeJson state.formData)
+      void $ case r.status of
+         StatusCode 201 -> case decodeJson r.response of
+            Left err -> T.cotransform (\state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpected broke." })
+            Right key -> T.cotransform
+                (\state -> state { loading = false
+                                 , keys = key : state.keys
+                                 , formData = emptyAddKeyData
+                                 , formErrors = emptyAddKeyDataError
+                                 })
+         _ -> T.cotransform id
+
+
+    removeKey :: forall eff. Int -> Aff (ajax :: AJAX | eff) (State -> State)
     removeKey keyId = do
-      r <- HA.delete ((makeUrl "/v1/user/keys/") <> show keyId) :: AJ.Affjax (cookie :: C.COOKIE | eff) Unit
+      r <- HA.delete ((makeUrl "/v1/user/keys/") <> show keyId) :: AJ.Affjax eff Unit
       pure $ case r.status of
           StatusCode 204 -> \state -> state { keys = filter (\(Key { id }) -> id /= keyId) state.keys, loading = false }
           _ -> id -- TODO error handling

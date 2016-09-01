@@ -21,7 +21,8 @@ module Holborn.Repo.GitLayer
        , fillRepoMeta
        ) where
 
-import HolbornPrelude
+import HolbornPrelude hiding (id)
+import qualified HolbornPrelude (id)
 import Control.Error (bimapExceptT, syncIO)
 import Control.Monad.Reader (ReaderT)
 import Control.Monad.Trans.Except (ExceptT)
@@ -88,7 +89,7 @@ makeRepository = Repo
 -- XXX: Store "Repository" in Reader(T)
 withRepository :: Repository -> (Repository -> GitM IO a) -> ExceptT BrowseException IO a
 withRepository repo action =
-  bimapExceptT justBrowseException id $ syncIO $ do
+  bimapExceptT justBrowseException HolbornPrelude.id $ syncIO $ do
     repoExists <- doesDirectoryExist (_repoPath repo)
     if repoExists
       then Git.withRepository' lgFactory options (action repo)
@@ -443,4 +444,4 @@ instance ToMarkup RepoMeta where
   toMarkup RepoMeta{..} = do
     H.h1 "debug rendering for root metadata"
     -- TODO: FAKE: Hardcodes master
-    H.a ! A.href (H.toValue ("/v1/repos/" <> toUrlPiece _RepoMeta_id <> "/git/trees/master")) $ "tree-root"
+    H.a ! A.href (H.toValue ("/v1/repos/" <> toUrlPiece id <> "/git/trees/master")) $ "tree-root"

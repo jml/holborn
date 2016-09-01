@@ -49,7 +49,7 @@ import Network.HTTP.Client
   , defaultManagerSettings
   , httpLbs
   , newManager
-  , parseUrl
+  , parseUrlThrow
   , requestHeaders
   , responseBody
   )
@@ -111,12 +111,15 @@ data APIError a =
       -- ^ Some code threw an exception that we couldn't understand
     | BrokenCode String
       -- ^ We called 'fail' when we should not have
+    | NoUserAccount
+      -- ^ Registered on dex but on the DB yet
   deriving (Show)
 
 
 instance (JSONCodeableError a) => JSONCodeableError (APIError a) where
     toJSON MissingAuthToken = (401, object [])
     toJSON InvalidAuthToken = (401, object [])
+    toJSON NoUserAccount = (418, object [])
     toJSON InsufficientPermissions = (403, object [])
     toJSON (SubAPIError x) = toJSON x
     toJSON (UnexpectedException e) = (500, object [ "message" .= show e
@@ -241,7 +244,7 @@ execute sqlQuery values = do
 jsonGet' :: (FromJSON a) => Text -> APIHandler err (Either String a)
 jsonGet' endpoint = do
     AppConf{httpManager} <- getConfig
-    r <- parseUrl (textToString endpoint)
+    r <- parseUrlThrow (textToString endpoint)
     let rJson = r { requestHeaders = [(hAccept, "application/json")] }
     APIHandler $ liftIO (httpLbs rJson httpManager) >>= \response -> return (eitherDecode' (responseBody response))
 

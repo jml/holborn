@@ -15,8 +15,7 @@ module Holborn.JSON.RepoMeta
 
 import HolbornPrelude
 
-import Data.Aeson (ToJSON(..), FromJSON(..), genericToJSON, genericParseJSON, Value(String), withText)
-import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
+import Data.Aeson (ToJSON(..), FromJSON(..), Value(String), withText)
 import GHC.Generics (Generic)
 import qualified Data.Attoparsec.Text as AT
 import Data.Char (isDigit, isAsciiUpper, isAsciiLower)
@@ -102,21 +101,16 @@ ownerNameParser = nameParser
 -- TODO: rename to ProjectMeta
 -- TODO: put in the fields we think are needed to write tools
 data RepoMeta = RepoMeta
-    { _RepoMeta_id :: RepoId
-    , _RepoMeta_number_commits :: Int -- git rev-list --count master
-    , _RepoMeta_number_objects :: Int -- git count-objects
-    , _RepoMeta_size :: Int -- git count-objects
-    , _RepoMeta_owner :: OwnerName
+    { id :: RepoId
+    , number_commits :: Int -- git rev-list --count master
+    , number_objects :: Int -- git count-objects
+    , size :: Int -- git count-objects
+    , owner :: OwnerName
     -- TODO newest commit
     -- TODO branches, tags, ..., everything needed to render the landing page
     } deriving (Show, Generic)
 
 
-instance ToJSON RepoMeta where
-  toJSON = genericToJSON defaultOptions
-    { fieldLabelModifier = drop (length ("_RepoMeta_" :: String)) }
+instance ToJSON RepoMeta
 
-
-instance FromJSON RepoMeta where
-  parseJSON = genericParseJSON defaultOptions
-    { fieldLabelModifier = drop (length ("_RepoMeta_" :: String)) }
+instance FromJSON RepoMeta

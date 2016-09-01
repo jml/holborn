@@ -94,7 +94,19 @@ haskellPackages.override {
 
       # Don't check because tests need phantomjs
       wai-cors = haskell.lib.dontCheck haskellPackages.wai-cors;
+
+      # purescript needs http-client <0.5 and protolude > 0.1.6 ATM
+      # re-check http-client after next purescript version and protolude after next nixpkgs HEAD update
+      # See: https://github.com/purescript/purescript/issues/2237
+      http-client = self.callPackage ./http-client.nix {};
+      protolude = self.callPackage ./protolude.nix {};
+
       # Don't check because tests need nodejs
       purescript = haskell.lib.dontCheck (self.callPackage ./purescript.nix {});
+
+      # not yet in the nix package repo, remove when it's there. broken tests
+      servant-subscriber = haskell.lib.dontCheck (self.callPackage ./servant-subscriber.nix {});
+      # not yet in the nix package repo, remove when it's there:
+      servant-purescript = self.callPackage ./servant-purescript.nix {};
     };
 }

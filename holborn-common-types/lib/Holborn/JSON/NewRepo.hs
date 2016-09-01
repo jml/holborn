@@ -6,20 +6,17 @@ module Holborn.JSON.NewRepo
        where
 
 import HolbornPrelude
-import Data.Aeson (FromJSON(..), genericParseJSON)
-import Data.Aeson.TH (defaultOptions, fieldLabelModifier)
+import Data.Aeson (FromJSON)
 import GHC.Generics (Generic)
 import Holborn.JSON.RepoMeta (OwnerName, RepoName)
 
 data NewRepoRequest = NewRepoRequest
-    { _NewRepoRequest_owner :: OwnerName
-    , _NewRepoRequest_name :: RepoName
-    , _NewRepoRequest_description :: Text
-    , _NewRepoRequest_private :: Bool
-    , _NewRepoRequest_initialize :: Bool
+    { owner :: OwnerName
+    , name :: RepoName
+    , description :: Text
+    , private :: Bool
+    , initialize :: Bool
     } deriving (Show, Generic)
 
 
-instance FromJSON NewRepoRequest where
-  parseJSON = genericParseJSON defaultOptions
-    { fieldLabelModifier = drop (length ("_NewRepoRequest_" :: String)) }
+instance FromJSON NewRepoRequest

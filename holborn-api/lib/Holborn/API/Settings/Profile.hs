@@ -18,15 +18,15 @@ import Servant
 
 import Holborn.API.Config (Config)
 import Holborn.JSON.Settings.Profile (ProfileData(..))
-import Holborn.API.Types (Username)
+import Holborn.API.Types (Username, DexMail)
 import Holborn.API.Auth (getUserId)
 import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, throwHandlerError, query)
 
 
 type API =
          "users" :> Capture "username" Username :> Get '[JSON] ProfileData
-    :<|> Header "GAP-Auth" Username :> "user" :> Get '[JSON] ProfileData
-    :<|> Header "GAP-Auth" Username :> "user" :> ReqBody '[JSON] ProfileData :> Post '[JSON] ()
+    :<|> Header "x-dex-email" DexMail :> "user" :> Get '[JSON] ProfileData
+    :<|> Header "x-dex-email" DexMail :> "user" :> ReqBody '[JSON] ProfileData :> Post '[JSON] ()
 
 
 data Error = InvalidUrl | UserNotFound Text | UserNotInDb
@@ -60,9 +60,9 @@ getUser username = do
 
 -- TODO The function to fetch the current user should go somewhere
 -- other than profile settings?
-getAuthorizedUser :: Maybe Username -> APIHandler Error ProfileData
-getAuthorizedUser username = do
-    userId <- getUserId username
+getAuthorizedUser :: Maybe DexMail -> APIHandler Error ProfileData
+getAuthorizedUser dexMail = do
+    userId <- getUserId dexMail
     r <- query [sql|
                    select username, created
                    from "user" where id = ?
@@ -72,5 +72,5 @@ getAuthorizedUser username = do
         _ -> throwHandlerError UserNotInDb
 
 
-postAuthorizedUser :: Maybe Username -> ProfileData -> APIHandler Error ()
-postAuthorizedUser _username _newProfile = undefined
+postAuthorizedUser :: Maybe DexMail -> ProfileData -> APIHandler Error ()
+postAuthorizedUser _dexMail _newProfile = undefined

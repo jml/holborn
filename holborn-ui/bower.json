@@ -23,7 +23,8 @@
     "purescript-console": "~1.0.0",
     "purescript-random": "~1.0.0",
     "purescript-quickcheck": "~1.0.0",
-    "purescript-debug": "~1.0.0"
+    "purescript-debug": "~1.0.0",
+    "purescript-coroutines": "^2.0.1"
   },
   "resolutions": {
     "purescript-react": "^1.0.0",
@@ -79,6 +80,7 @@
     "purescript-generics": "~1.0.1",
     "purescript-random": "~1.0.0",
     "purescript-quickcheck": "~1.0.0",
-    "purescript-cookies": "master"
+    "purescript-cookies": "master",
+    "purescript-coroutines": "^2.0.1"
   }
 }

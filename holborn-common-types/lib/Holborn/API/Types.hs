@@ -3,9 +3,11 @@ module Holborn.API.Types
        , newEmail
        , newPassword
        , checkPassword
+       , newDexMail
        , Username
        , Email
        , Password
+       , DexMail
        , ApiError(..)
        ) where
 
@@ -20,13 +22,19 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 
 
 newtype Username = Username Text deriving (Eq, Ord, Show, ToField, FromHttpApiData, ToHttpApiData, IsString)
-newtype Email = Email Text deriving (Eq, Ord, Show, ToField, FromField)
+newtype DexMail = DexMail Text deriving (Eq, Ord, Show, ToField, FromField, FromHttpApiData, ToHttpApiData, IsString)
+
+newtype Email = Email Text deriving (Eq, Ord, Show, ToField, FromField, ToHttpApiData)
 newtype Password = Password ByteString deriving (ToField)
 
 
 -- TODO: Validate username
 newUsername :: Text -> Username
 newUsername = Username
+
+
+newDexMail :: Text -> DexMail
+newDexMail = DexMail
 
 
 -- TODO: validate email (at least has an @ in it)
@@ -36,7 +44,9 @@ newEmail = Just . Email
 instance FromHttpApiData Email where
     parseUrlPiece piece = case newEmail piece of
       Just x -> pure x
-      _ -> Left "invalid gap-auth header: must contain email"
+      -- TODO this looks out of date
+      _ -> Left "invalid x-dex-email header: must contain email"
+
 
 -- | Creates a new bcrypt-encrypted password to store in the
 -- database. Needs to live in IO for randomness.

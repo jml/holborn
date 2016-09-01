@@ -6,8 +6,13 @@ module Standalone.Router.Dispatch where
 import Prelude
 import Text.Parsing.Simple (unparser, Parser)
 import Control.Monad.Eff (Eff)
+import Control.Monad.Aff (Aff)
+import Control.Monad.Eff.Class (class MonadEff, liftEff)
 import Data.Either (Either(..))
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
+
+
+foreign import data Navigate :: !
 
 
 -- | Takes callback  `oldroute -> newroute -> Eff e Unit`
@@ -22,9 +27,17 @@ foreign import pushState :: forall e. String -> Eff e Unit
 
 
 -- | Push new path to history.
-navigate :: forall e. String -> Eff e Unit
+navigate :: forall e. String -> Eff (navigate :: Navigate | e) Unit
 navigate = pushState
 
+
+
+-- | Needed to make the type checker happy
+navigateA :: forall e. String -> Aff (navigate :: Navigate | e) Unit
+navigateA s = liftEff2 (pushState s)
+  where
+    -- purescript/purescript#2061
+    liftEff2 = liftEff :: forall eff a. Eff eff a -> Aff eff a
 
 -- | TODO do we want leave / enter events instead of Maybe a?
 matches :: forall a e. Parser String a -> (a -> Eff e Unit) -> Eff e Unit

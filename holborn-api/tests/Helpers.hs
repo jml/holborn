@@ -79,13 +79,17 @@ post path body = request methodPost (encodeUtf8 path) [jsonContent] (encode body
 
 -- | Post JSON to 'path' as the given user.
 postAs :: ToJSON a => User -> Text -> a -> WaiSession SResponse
-postAs user path body = request methodPost (encodeUtf8 path) [authHeader user, jsonContent] (encode body)
+postAs user path body = request methodPost (encodeUtf8 path) (jsonContent:(dexHeaders user)) (encode body)
 
 jsonContent :: (HeaderName, ByteString)
 jsonContent = ("content-type", "application/json")
 
-authHeader :: User -> (HeaderName, ByteString)
-authHeader user = ("GAP-Auth", (toHeader (userName user)))
+dexHeaders :: User -> [(HeaderName, ByteString)]
+dexHeaders user =
+  [ ("x-dex-name", (toHeader (userName user)))
+  , ("x-dex-email", (toHeader (_userEmail user)))
+  , ("x-dex-email-verified", (toHeader True))
+  ]
 
 getJSONBody :: (FromJSON a) => SResponse -> a
 getJSONBody = fromJust . decode . simpleBody

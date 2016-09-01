@@ -9,7 +9,6 @@ import Network.HTTP.Affjax as AJ
 import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, word, anyOf)
 import Text.Parsing.Combinators (many1)
 
-import Web.Cookies as C
 import React.DOM as R
 import React.DOM.Props as RP
 import React as React
@@ -149,7 +148,7 @@ browseRoutes =
       <|> HomeLoaded <$> parseOwner <* string "/" <*> parseRepo
     )
 
-spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, cookie :: C.COOKIE | eff) State props Action
+spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) State props Action
 spec = T.simpleSpec T.defaultPerformAction render
   where
     render dispatch _ (State { route: Home org repo}) _ =
