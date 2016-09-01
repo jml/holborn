@@ -32,7 +32,7 @@ import Holborn.CreateAccount as CreateAccount
 
 import Holborn.Config (makeUrl)
 import Holborn.Auth as Auth
-import Debug.Trace (spy)
+import Debug.Trace (spy, traceAnyM)
 import Holborn.ManualEncoding.Profile as ManualCodingProfile
 import Holborn.DomHelpers (scroll)
 import Network.HTTP.StatusCode (StatusCode(..))
@@ -108,6 +108,11 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
           fetch route state
         Right (ManualCodingProfile.Profile json) ->
           fetch route (set userMeta (SignedIn {username: json.username, about: json.about}) state)
+
+  -- Catch the redirect from account creation to dashboard route. TODO
+  -- Route404 is just a placeholder for the dashboard route.
+  fetch Route404 state@(RouterState { currentRoute: (CreateAccountRoute _)}) = do
+    fetch EmptyRoute (set userMeta NotLoaded state)
 
   fetch (SettingsRoute s) state = do
       sr <- fetch (view Settings.routeLens s) s -- of type SettingsRoute

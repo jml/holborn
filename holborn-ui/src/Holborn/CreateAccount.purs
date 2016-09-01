@@ -1,6 +1,6 @@
 module Holborn.CreateAccount where
 
-import Prelude (Unit, void, bind, id, ($), (<<<))
+import Prelude
 
 import Thermite as T
 import Control.Monad.Eff.Exception as E
@@ -34,13 +34,20 @@ type State =
     { formErrors :: CreateAccountDataError
     , formData :: CreateAccountData
     , loading :: Boolean
+    , errors :: Array String
     }
+
+
+flashError :: forall a. String -> ({ errors :: Array String | a } -> { errors :: Array String | a })
+flashError msg = \s -> s { errors = (s.errors <> [msg]) }
+
 
 initialState :: State
 initialState =
   { formErrors: CreateAccountDataError {username: Nothing}
   , formData: CreateAccountData {username: ""}
   , loading: false
+  , errors: []
   }
 
 data Action = CreateAccount | UpdateFormData CreateAccountData
@@ -50,12 +57,13 @@ spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate 
 spec = T.simpleSpec performAction render
   where
     render :: T.Render State props Action
-    render dispatch props ({ formData, formErrors: CreateAccountDataError err, loading }) _ =
+    render dispatch props ({ formData, formErrors: CreateAccountDataError err, loading, errors }) _ =
       [ R.h1 [] [R.text "Last step! Pick a username for code.space"]
       , R.form [RP.onSubmit onSubmit]
         [ HF.text "Username" err.username username (dispatch <<< UpdateFormData) formData
         , R.button [RP.disabled loading, RP.className "btn btn-default"] [R.text if loading then "Finishing ..." else "Finish setup"]
         ]
+      , R.ul [] (map (\x -> R.li [] [R.text x]) errors)
       ]
       where
         onSubmit ev = do
@@ -64,17 +72,25 @@ spec = T.simpleSpec performAction render
 
     performAction :: forall eff'. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff') State props Action
     performAction CreateAccount props state = do
+
       T.cotransform (\state -> spy (state { loading = true }))
       r <- lift $ attempt (Auth.post (makeUrl "/v1/create-account") (encodeJson state.formData))
+
       case r of
          Right {status: StatusCode 201, headers, response } -> do
            traceAnyM (response :: Unit)
            -- TODO redirect to home?
            void $ T.cotransform id
-
+         Right {status: StatusCode 400, headers, response } -> do
+           T.cotransform (flashError "400")
+           traceAnyM (response :: Unit)
+           -- TODO redirect to home?
+           void $ T.cotransform id
+         Left err -> do
+           void $ T.cotransform id
          _ -> void $ T.cotransform id
 
-      lift $ navigateA "/settings/ssh-keys"
+      lift $ navigateA "/"
       void $ T.cotransform (\state -> spy (state { loading = false }))
 
     performAction (UpdateFormData x) _ state = void $ T.cotransform $ \state -> state { formData = x }
