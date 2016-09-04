@@ -8,7 +8,7 @@ import HolbornPrelude
 
 import Database.PostgreSQL.Simple (ConnectInfo(..), defaultConnectInfo)
 import qualified Network.Wai.Handler.Warp as Warp
-import Network.Wai.Middleware.Cors (cors, CorsResourcePolicy(..), simpleCorsResourcePolicy, simpleHeaders)
+import Network.Wai.Middleware.Cors (cors, CorsResourcePolicy(..), simpleCorsResourcePolicy, simpleHeaders, simpleMethods)
 import qualified Network.Wai.Middleware.RequestLogger as RL
 import Options.Applicative
   ( ParserInfo
@@ -85,7 +85,14 @@ warpSettings port =
 
 
 devCors :: a -> Maybe CorsResourcePolicy
-devCors _ = Just (simpleCorsResourcePolicy { corsRequestHeaders = simpleHeaders ++ ["Authorization"] })
+devCors _ =
+  Just (simpleCorsResourcePolicy
+        {corsMethods = simpleMethods ++ ["DELETE"]
+        , corsRequestHeaders = simpleHeaders ++ [ "x-dex-email"
+                                                , "x-dex-email-verified"
+                                                , "x-dex-name"
+                                                ]
+        })
 
 
 main :: IO ()
