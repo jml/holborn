@@ -63,10 +63,12 @@ settingsRoutes =
 
 instance fetchSettingsRoutes :: Fetchable SettingsRoutes State where
   fetch SSHKeySettings s = do
-    r <- AJ.get (makeUrl "/v1/users/alice/keys")
-    pure $ case decodeJson r.response of
-      Left err -> set routeLens SSHKeySettings s
-      Right keys -> set routeLens (SSHKeySettingsOK (SSHKeys.initialState { keys = keys })) s
+    r <- AJ.get (makeUrl "/v1/user/keys")
+    case decodeJson r.response of
+      Left err -> do
+        traceAnyM err -- TODO error handling
+        pure (set routeLens SSHKeySettings s)
+      Right keys -> pure (set routeLens (SSHKeySettingsOK (SSHKeys.initialState { keys = keys })) s)
   fetch a s = pure s
 
 
