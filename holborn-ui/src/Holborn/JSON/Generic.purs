@@ -28,6 +28,18 @@ import Type.Proxy (Proxy(..))
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 
 
+-- | Special case: when we need to pass reserved keywords like `type`
+-- via JSON we can't call them `type` in code, so we suffic them with
+-- an underscore and strip that.
+parseLabel :: String -> String
+parseLabel "type_" = "type"
+parseLabel l = l
+
+encodeLabel :: String -> String
+encodeLabel "type" = "type_"
+encodeLabel l = l
+
+
 gDecode' :: GenericSignature -> Json -> Either String GenericSpine
 gDecode' sig json = case sig of
     SigUnit -> pure SUnit
@@ -42,17 +54,18 @@ gDecode' sig json = case sig of
 
     SigRecord props -> do
       jObj <- mFail ("Expected an object, got: " <> (maybe "Nothing" _.recLabel (head props))) $ toObject json
-      SRecord <$> for props \({recLabel: lbl, recValue: val}) -> do
-        case val unit of
-          constr@(SigProd "Data.Maybe.Maybe" sigValues) -> case M.lookup lbl jObj of
-            Nothing -> pure { recLabel: lbl, recValue: \_ -> toSpine (Nothing :: Maybe Int) }
+      SRecord <$> for props \({recLabel: label, recValue: value}) -> do
+        case value unit of
+          constr@(SigProd "Data.Maybe.Maybe" sigValues) -> case M.lookup (parseLabel label) jObj of
+            Nothing -> pure { recLabel: label, recValue: \_ -> toSpine (Nothing :: Maybe Int) }
             Just pf -> do
               sp <- gDecode' constr pf
-              pure { recLabel: lbl, recValue: const sp }
+              pure { recLabel: label, recValue: const sp }
           _ -> do
-            pf <- mFail ("'" <> lbl <> "' property missing. Expected: " <> (show (map _.recLabel props))) (M.lookup lbl jObj)
-            sp <- gDecode' (val unit) pf
-            pure { recLabel: lbl, recValue: const sp }
+            pf <- mFail ("'" <> (parseLabel label) <> "' property missing. Expected: " <> (show (map _.recLabel props)))
+                  (M.lookup (parseLabel label) jObj)
+            sp <- gDecode' (value unit) pf
+            pure { recLabel: label, recValue: const sp }
 
     SigProd "Data.Maybe.Maybe" alts -> do
       justDC <- case head alts of
@@ -111,5 +124,5 @@ gEncodeJson' spine = case spine of
     Just x -> gEncodeJson' (x unit)
     Nothing -> fromArray []
   SRecord fields    -> fromObject $ foldr addField M.empty fields
-    where addField field = M.insert field.recLabel
+    where addField field = M.insert (encodeLabel field.recLabel)
                                      (gEncodeJson' $ field.recValue unit)
