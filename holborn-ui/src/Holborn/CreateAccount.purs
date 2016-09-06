@@ -73,27 +73,24 @@ spec = T.simpleSpec performAction render
     performAction :: forall eff'. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff') State props Action
     performAction CreateAccount props state = do
 
-      T.cotransform (\state -> spy (state { loading = true }))
+      T.cotransform (\state -> state { loading = true })
       r <- lift $ attempt (Auth.post (makeUrl "/v1/create-account") (encodeJson state.formData))
 
       case r of
-         Right {status: StatusCode 201, headers, response } -> do
-           traceAnyM (response :: Unit)
-           -- TODO redirect to home?
-           void $ T.cotransform id
+         Right {status: StatusCode 201, headers } -> do
+           lift $ navigateA "/"
          Right {status: StatusCode 400, headers, response } -> do
            T.cotransform (flashError "400")
-           traceAnyM (response :: Unit)
-           -- TODO redirect to home?
-           void $ T.cotransform id
+           case decodeJson response of
+             Left err -> void (traceAnyM err)
+             Right x -> void (T.cotransform (\state -> state { formErrors = x }))
 
          -- Left means a general Aff error, could be network, could be
          -- an exception throw in JS.
          Left err -> do
-           void $ T.cotransform id
-         _ -> void $ T.cotransform id
+           void (T.cotransform (flashError "broken"))
+         _ -> void (T.cotransform (flashError "broken"))
 
-      lift $ navigateA "/"
       void $ T.cotransform (\state -> spy (state { loading = false }))
 
     performAction (UpdateFormData x) _ state = void $ T.cotransform $ \state -> state { formData = x }
