@@ -40,7 +40,8 @@ import Holborn.API.Types (Username, DexMail)
 
 
 type API =
-         "users" :> Capture "username" Username :> "keys" :> Get '[JSON] [ListKeysRow]
+         "users" :> Capture "username" Username :> "keys" :> Get '[JSON] [ListKeysRow] -- list other user keys
+    :<|> Header "x-dex-email" DexMail :> "user" :> "keys" :> Get '[JSON] [ListKeysRow] -- list own keys
     :<|> Header "x-dex-email" DexMail :> "user" :> "keys" :> Capture "id" Int :> Delete '[JSON] ()
     :<|> Header "x-dex-email" DexMail :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> PostCreated '[JSON] ListKeysRow
 
@@ -58,6 +59,7 @@ instance JSONCodeableError KeyError where
 server :: Config -> Server API
 server conf = enter (toServantHandler conf) $
     listKeys
+    :<|> listMyKeys
     :<|> deleteKey
     :<|> addKey
 
@@ -68,6 +70,14 @@ listKeys username =
               select id, "type", "key", comment, fingerprint, verified, readonly, created
               from "ssh_key" where owner_id = (select id from "user" where username = ?)
           |] (Only username)
+
+listMyKeys :: Maybe DexMail -> APIHandler KeyError [ListKeysRow]
+listMyKeys dexMail = do
+    userId <- getUserId dexMail
+    queryWith parseListKeys [sql|
+              select id, "type", "key", comment, fingerprint, verified, readonly, created
+              from "ssh_key" where owner_id = ?
+          |] (Only userId)
 
 
 deleteKey :: Maybe DexMail -> Int -> APIHandler KeyError ()

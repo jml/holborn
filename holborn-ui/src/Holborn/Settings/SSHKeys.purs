@@ -103,7 +103,7 @@ spec = T.simpleSpec performAction render
         renderKeyArray = toUnfoldable (map renderOneKey keys)
         renderOneKey (Key key) =
           R.div []
-          [ R.text key.title
+          [ R.text key.key.comment
           , R.text key.key.fingerprint
           , if key.readonly
             then R.span [RP.className "readonly"] [R.text "readonly"]
