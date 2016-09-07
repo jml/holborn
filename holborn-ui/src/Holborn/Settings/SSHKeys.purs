@@ -105,16 +105,17 @@ spec = T.simpleSpec performAction render
           R.div []
           [ R.text key.key.comment
           , R.text key.key.fingerprint
+          , R.span [RP.className "key"] [R.text key.key.type_]
           , if key.readonly
-            then R.span [RP.className "readonly"] [R.text "readonly"]
-            else R.span [RP.className "write"] [R.text "write"]
+            then R.span [RP.className "readonly"] [R.text "readonly | "]
+            else R.span [RP.className "write"] [R.text "write | "]
           , if key.verified
             then R.span [RP.className "verified"] [R.text "verified"]
             else R.span [RP.className "notverified"] [R.text "not verified"]
           , R.a [RP.onClick \ev -> do
                     (unsafeCoerce ev).preventDefault
                     dispatch (RemoveKey key.id)
-                ] [R.text "Remove this key"]
+                ] [R.text "| Remove this key"]
           ]
 
     -- performAction is a purescript-thermite callback. It takes an

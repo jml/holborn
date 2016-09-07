@@ -15,7 +15,7 @@ import Holborn.JSON.Generic (gDecode, gEncode)
 type DateTime = String -- TODO implement parser
 
 -- The following three feel like they ought to be parametrized ...
-data Key = Key { id :: Int, key :: { key :: String, comment :: String, fingerprint :: String }
+data Key = Key { id :: Int, key :: { key :: String, comment :: String, fingerprint :: String, type_ :: String }
                , verified :: Boolean, readonly :: Boolean, created_at :: DateTime }
 data AddKeyData = AddKeyData { key :: String, title :: String }
 data AddKeyDataError = AddKeyDataError { global :: Maybe String, key :: Maybe String, title :: Maybe String }
