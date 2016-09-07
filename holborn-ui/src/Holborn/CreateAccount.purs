@@ -7,7 +7,7 @@ import Control.Monad.Eff.Exception as E
 import Control.Apply ((<*))
 import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
-import Control.Monad.Aff (attempt)
+import Control.Monad.Aff (attempt, Aff)
 import Standalone.Router.Dispatch (navigateA)
 
 import React.DOM as R
@@ -21,12 +21,15 @@ import Holborn.ManualEncoding.CreateAccount (CreateAccountData(..), CreateAccoun
 import Holborn.Auth as Auth
 import Holborn.Forms as HF
 
-import Data.Argonaut.Encode (encodeJson)
-import Data.Argonaut.Decode (decodeJson)
+import Data.Argonaut.Encode (encodeJson, class EncodeJson)
+import Data.Argonaut.Decode (decodeJson, class DecodeJson)
+import Data.Argonaut.Core (Json)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Data.Either (Either(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Standalone.Router.Dispatch (Navigate)
+import Control.Coroutine (CoTransformer)
+import Control.Monad.Eff.Exception (Error)
 
 import Debug.Trace
 
@@ -40,6 +43,24 @@ type State =
 
 flashError :: forall a. String -> ({ errors :: Array String | a } -> { errors :: Array String | a })
 flashError msg = \s -> s { errors = (s.errors <> [msg]) }
+
+data HandledResult a b c = OK a | FormError b | OtherError c
+
+handleResult :: forall a b. (DecodeJson a, DecodeJson b) => Either Error (AJ.AffjaxResponse Json) -> HandledResult a b String
+handleResult r = case r of
+  Right {status: StatusCode 201, headers, response } ->
+    case decodeJson response of
+      Left err -> OtherError (show err)
+      Right x -> OK x
+  Right {status: StatusCode 400, headers, response } ->
+    case decodeJson response of
+      Left err -> OtherError (show err)
+      Right x -> FormError x
+  Left err -> OtherError (show err)
+  _ -> OtherError "totally unexpected thing happened"
+
+
+
 
 
 initialState :: State
@@ -72,25 +93,12 @@ spec = T.simpleSpec performAction render
 
     performAction :: forall eff'. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff') State props Action
     performAction CreateAccount props state = do
-
       T.cotransform (\state -> state { loading = true })
       r <- lift $ attempt (Auth.post (makeUrl "/v1/create-account") (encodeJson state.formData))
-
-      case r of
-         Right {status: StatusCode 201, headers } -> do
-           lift $ navigateA "/"
-         Right {status: StatusCode 400, headers, response } -> do
-           T.cotransform (flashError "400")
-           case decodeJson response of
-             Left err -> void (traceAnyM err)
-             Right x -> void (T.cotransform (\state -> state { formErrors = x }))
-
-         -- Left means a general Aff error, could be network, could be
-         -- an exception throw in JS.
-         Left err -> do
-           void (T.cotransform (flashError "broken"))
-         _ -> void (T.cotransform (flashError "broken"))
-
-      void $ T.cotransform (\state -> spy (state { loading = false }))
+      case handleResult r of
+        OK (_ :: Unit) -> lift (navigateA "/")
+        FormError errs -> void $ T.cotransform $ \state -> state { formErrors = errs }
+        OtherError _ -> void $ T.cotransform $ id
+      void $ T.cotransform (\state -> state { loading = false })
 
     performAction (UpdateFormData x) _ state = void $ T.cotransform $ \state -> state { formData = x }
