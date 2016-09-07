@@ -31,9 +31,9 @@ import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
 -- | Special case: when we need to pass reserved keywords like `type`
 -- via JSON we can't call them `type` in code, so we suffic them with
 -- an underscore and strip that.
-parseLabel :: String -> String
-parseLabel "type_" = "type"
-parseLabel l = l
+decodeLabel :: String -> String
+decodeLabel "type_" = "type"
+decodeLabel l = l
 
 encodeLabel :: String -> String
 encodeLabel "type" = "type_"
@@ -56,14 +56,14 @@ gDecode' sig json = case sig of
       jObj <- mFail ("Expected an object, got: " <> (maybe "Nothing" _.recLabel (head props))) $ toObject json
       SRecord <$> for props \({recLabel: label, recValue: value}) -> do
         case value unit of
-          constr@(SigProd "Data.Maybe.Maybe" sigValues) -> case M.lookup (parseLabel label) jObj of
+          constr@(SigProd "Data.Maybe.Maybe" sigValues) -> case M.lookup (decodeLabel label) jObj of
             Nothing -> pure { recLabel: label, recValue: \_ -> toSpine (Nothing :: Maybe Int) }
             Just pf -> do
               sp <- gDecode' constr pf
               pure { recLabel: label, recValue: const sp }
           _ -> do
-            pf <- mFail ("'" <> (parseLabel label) <> "' property missing. Expected: " <> (show (map _.recLabel props)))
-                  (M.lookup (parseLabel label) jObj)
+            pf <- mFail ("'" <> (decodeLabel label) <> "' property missing. Expected: " <> (show (map _.recLabel props)))
+                  (M.lookup (decodeLabel label) jObj)
             sp <- gDecode' (value unit) pf
             pure { recLabel: label, recValue: const sp }
 
