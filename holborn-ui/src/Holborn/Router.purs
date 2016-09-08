@@ -58,6 +58,7 @@ data State = RouterState
 data RootRoutes =
     EmptyRoute
   | Route404
+  | LandingPageRoute
   | SettingsRoute Settings.State
   | BrowseRoute Browse.State
   | CreateAccountRoute CreateAccount.State
@@ -71,6 +72,7 @@ rootRoutes =
     ( string "settings/" *> (map SettingsRoute Settings.settingsRoutes)
       <|> string "create-account" *> pure (CreateAccountRoute CreateAccount.initialState)
       <|> map BrowseRoute Browse.browseRoutes
+      <|> pure LandingPageRoute
       <|> pure Route404
     )
 
@@ -161,6 +163,12 @@ _404State = prism (const Route404) \route ->
     Route404 -> Right unit
     _ -> Left route
 
+_LandingPageState :: PrismP RootRoutes Unit
+_LandingPageState = prism (const LandingPageRoute) \route ->
+  case route of
+    LandingPageRoute -> Right unit
+    _ -> Left route
+
 _BrowseState :: PrismP RootRoutes Browse.State
 _BrowseState = prism BrowseRoute \route ->
   case route of
@@ -193,6 +201,16 @@ spec404 = T.simpleSpec T.defaultPerformAction render
     render _ _ _ _ = [R.text "404"]
 
 
+landingPage :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) state props action
+landingPage = T.simpleSpec T.defaultPerformAction render
+  where
+    render _ _ _ _ =
+      [R.ul []
+       [ R.li [] [R.a [RP.href "/new-repository"] [R.text "Create a new repository"]]
+       ]
+      ]
+
+
 -- | spec is a Thermite-ism. It controls the flow of actions and
 -- dispatches rendering code. Based on the state of the route
 -- component we both focus and split into subcomponents (and the
@@ -203,6 +221,7 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
        , T.split _BrowseState (T.match _BrowseAction Browse.spec)
        , T.split _CreateAccountState (T.match _CreateAccountAction CreateAccount.spec)
        , T.split _404State spec404
+       , T.split _LandingPageState landingPage
        ]
   where
     container = over T._render \render d p s c -> case view userMeta s of
@@ -267,6 +286,7 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
       SettingsRoute _ -> "Settings"
       BrowseRoute _ -> "Browse"
       CreateAccountRoute _ -> "Last step!"
+      LandingPageRoute -> "Home"
 
     burgerMenuToggle dispatch ev = dispatch BurgerMenuToggle
 
