@@ -21,7 +21,7 @@ import Standalone.Router.Dispatch (Navigate)
 import DOM (DOM)
 
 
-import Text.Parsing.Simple (Parser, string)
+import Text.Parsing.Simple (Parser, string, eof, tail)
 import Standalone.Router.Dispatch (matches, navigate, navigateA)
 import Thermite as T
 
@@ -72,8 +72,8 @@ rootRoutes =
     ( string "settings/" *> (map SettingsRoute Settings.settingsRoutes)
       <|> string "create-account" *> pure (CreateAccountRoute CreateAccount.initialState)
       <|> map BrowseRoute Browse.browseRoutes
-      <|> pure LandingPageRoute
-      <|> pure Route404
+      <|> pure LandingPageRoute <* eof
+      <|> pure Route404 <* tail
     )
 
 
