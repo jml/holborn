@@ -56,7 +56,7 @@ data State = RouterState
 
 
 data RootRoutes =
-    EmptyRoute
+    NotLoadedRoute
   | Route404
   | LandingPageRoute
   | SettingsRoute Settings.State
@@ -114,7 +114,7 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
   -- Catch the redirect from account creation to dashboard route. TODO
   -- Route404 is just a placeholder for the dashboard route.
   fetch Route404 state@(RouterState { currentRoute: (CreateAccountRoute _)}) = do
-    fetch EmptyRoute (set userMeta NotLoaded state)
+    fetch NotLoadedRoute (set userMeta NotLoaded state)
 
   fetch (SettingsRoute s) state = do
       sr <- fetch (view Settings.routeLens s) s -- of type SettingsRoute
@@ -133,7 +133,7 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
 
 
 initialState :: State
-initialState = RouterState { currentRoute: EmptyRoute, _userMeta: NotLoaded, _burgerOpen: false }
+initialState = RouterState { currentRoute: NotLoadedRoute, _userMeta: NotLoaded, _burgerOpen: false }
 
 routeLens :: LensP State RootRoutes
 routeLens = lens (\(RouterState s) -> s.currentRoute) (\(RouterState s) x -> RouterState (s { currentRoute = x }))
@@ -281,7 +281,7 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
     -- telling us where we are. Not sure whether we want to keep this
     -- or not but useful for development ATM.
     contextLabel s = case view routeLens s of
-      EmptyRoute -> "loading.."
+      NotLoadedRoute -> "loading.."
       Route404 -> "404"
       SettingsRoute _ -> "Settings"
       BrowseRoute _ -> "Browse"

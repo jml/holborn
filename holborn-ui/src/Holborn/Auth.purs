@@ -71,4 +71,5 @@ handleResult r = case r of
       Left err -> OtherError (show err)
       Right x -> FormError x
   Left err -> OtherError (show err)
+  Right {status: status, headers, response } -> OtherError ("unexpected response: " <> show status)
   _ -> OtherError "totally unexpected thing happened"
