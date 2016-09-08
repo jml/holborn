@@ -58,7 +58,7 @@ delete u = do
 
 -- | Easier to process error that summarises what the end-user cares
 -- about (invalid input, other problem, success).
-data HandledResult a b c = OK a | FormError b | OtherError c
+data HandledResult a b c = FormError b | OtherError c | OK a
 
 handleResult :: forall a b. (DecodeJson a, DecodeJson b) => Either Error (AJ.AffjaxResponse Json) -> HandledResult a b String
 handleResult r = case r of
