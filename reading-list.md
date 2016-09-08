@@ -31,3 +31,5 @@
 * [https://react-server.io/](someone did what I wanted to do: render react stuff on the server to send down as html for initial load)
 
 * [https://www.reddit.com/r/programming/comments/4z1ou1/gitlab_has_added_a_kanban_issue_management_board/d6sqith](more github grieving)
+
+* [https://accessibility.blog.gov.uk/2016/09/02/dos-and-donts-on-designing-for-accessibility/?platform=hootsuite](govuk accessibility guidelines - I find that accessible websites are also often best for abled people (personal opinion Tom))

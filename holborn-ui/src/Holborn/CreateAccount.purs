@@ -7,7 +7,7 @@ import Control.Monad.Eff.Exception as E
 import Control.Apply ((<*))
 import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
-import Control.Monad.Aff (attempt)
+import Control.Monad.Aff (attempt, Aff)
 import Standalone.Router.Dispatch (navigateA)
 
 import React.DOM as R
@@ -22,11 +22,12 @@ import Holborn.Auth as Auth
 import Holborn.Forms as HF
 
 import Data.Argonaut.Encode (encodeJson)
-import Data.Argonaut.Decode (decodeJson)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Data.Either (Either(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Standalone.Router.Dispatch (Navigate)
+import Control.Coroutine (CoTransformer)
+
 
 import Debug.Trace
 
@@ -72,28 +73,18 @@ spec = T.simpleSpec performAction render
 
     performAction :: forall eff'. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff') State props Action
     performAction CreateAccount props state = do
-
-      T.cotransform (\state -> spy (state { loading = true }))
+      T.cotransform (\state -> state { loading = true })
+      -- TODO instead of callig makeURL we should be constructing a
+      -- data-type like
+      -- APIUrl "/v1/create-account"`
+      -- or maybe even with some kind of typeclass magic that checks
+      -- for the correct form data:
+      -- APIUrl CreateAccount
       r <- lift $ attempt (Auth.post (makeUrl "/v1/create-account") (encodeJson state.formData))
-
-      case r of
-         Right {status: StatusCode 201, headers, response } -> do
-           traceAnyM (response :: Unit)
-           -- TODO redirect to home?
-           void $ T.cotransform id
-         Right {status: StatusCode 400, headers, response } -> do
-           T.cotransform (flashError "400")
-           traceAnyM (response :: Unit)
-           -- TODO redirect to home?
-           void $ T.cotransform id
-
-         -- Left means a general Aff error, could be network, could be
-         -- an exception throw in JS.
-         Left err -> do
-           void $ T.cotransform id
-         _ -> void $ T.cotransform id
-
-      lift $ navigateA "/"
-      void $ T.cotransform (\state -> spy (state { loading = false }))
+      case Auth.handleResult r of
+        Auth.OK (_ :: Unit) -> lift (navigateA "/")
+        Auth.FormError errs -> void $ T.cotransform $ \state -> state { formErrors = errs }
+        Auth.OtherError _ -> void $ T.cotransform $ id
+      void $ T.cotransform (\state -> state { loading = false })
 
     performAction (UpdateFormData x) _ state = void $ T.cotransform $ \state -> state { formData = x }

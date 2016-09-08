@@ -11,7 +11,7 @@ import Thermite as T
 import Network.HTTP.Affjax as AJ
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff (Eff)
-import Control.Monad.Aff (runAff, Aff)
+import Control.Monad.Aff (runAff, Aff, attempt)
 import Control.Monad.Trans (lift)
 import Network.HTTP.Affjax (AJAX)
 import Data.Either (Either(..))
@@ -129,18 +129,15 @@ spec = T.simpleSpec performAction render
       void $ T.cotransform (\state -> state { loading = false })
 
     performAction AddKey _ state  = do
-      r <- lift $ HA.post (makeUrl "/v1/user/keys") (encodeJson state.formData)
-      void $ case r.status of
-         StatusCode 201 -> case decodeJson r.response of
-            Left err -> T.cotransform (\state -> state { loading = false, formErrors = networkAddKeyDataError "Something unexpected broke." })
-            Right key -> T.cotransform
-                (\state -> state { loading = false
-                                 , keys = key : state.keys
-                                 , formData = emptyAddKeyData
-                                 , formErrors = emptyAddKeyDataError
-                                 })
-         _ -> T.cotransform id
-
+      r <- lift $ attempt $ HA.post (makeUrl "/v1/user/keys") (encodeJson state.formData)
+      case HA.handleResult r of
+        HA.OK key -> void $ T.cotransform $ \state -> state { keys = key : state.keys
+                                                            , formErrors = emptyAddKeyDataError
+                                                            , formData = emptyAddKeyData
+                                                            }
+        HA.FormError errs -> void $ T.cotransform $ \state -> state { formErrors = errs }
+        HA.OtherError _ -> void $ T.cotransform (\state -> state { formErrors = networkAddKeyDataError "Something unexpected broke." })
+      void $ T.cotransform (\state -> state { loading = false })
 
     removeKey :: forall eff. Int -> Aff (ajax :: AJAX | eff) (State -> State)
     removeKey keyId = do

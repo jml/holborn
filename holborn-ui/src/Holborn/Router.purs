@@ -21,7 +21,7 @@ import Standalone.Router.Dispatch (Navigate)
 import DOM (DOM)
 
 
-import Text.Parsing.Simple (Parser, string)
+import Text.Parsing.Simple (Parser, string, eof, tail)
 import Standalone.Router.Dispatch (matches, navigate, navigateA)
 import Thermite as T
 
@@ -56,8 +56,9 @@ data State = RouterState
 
 
 data RootRoutes =
-    EmptyRoute
+    NotLoadedRoute
   | Route404
+  | LandingPageRoute
   | SettingsRoute Settings.State
   | BrowseRoute Browse.State
   | CreateAccountRoute CreateAccount.State
@@ -71,7 +72,8 @@ rootRoutes =
     ( string "settings/" *> (map SettingsRoute Settings.settingsRoutes)
       <|> string "create-account" *> pure (CreateAccountRoute CreateAccount.initialState)
       <|> map BrowseRoute Browse.browseRoutes
-      <|> pure Route404
+      <|> pure LandingPageRoute <* eof
+      <|> pure Route404 <* tail
     )
 
 
@@ -112,7 +114,7 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
   -- Catch the redirect from account creation to dashboard route. TODO
   -- Route404 is just a placeholder for the dashboard route.
   fetch Route404 state@(RouterState { currentRoute: (CreateAccountRoute _)}) = do
-    fetch EmptyRoute (set userMeta NotLoaded state)
+    fetch NotLoadedRoute (set userMeta NotLoaded state)
 
   fetch (SettingsRoute s) state = do
       sr <- fetch (view Settings.routeLens s) s -- of type SettingsRoute
@@ -131,7 +133,7 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
 
 
 initialState :: State
-initialState = RouterState { currentRoute: EmptyRoute, _userMeta: NotLoaded, _burgerOpen: false }
+initialState = RouterState { currentRoute: NotLoadedRoute, _userMeta: NotLoaded, _burgerOpen: false }
 
 routeLens :: LensP State RootRoutes
 routeLens = lens (\(RouterState s) -> s.currentRoute) (\(RouterState s) x -> RouterState (s { currentRoute = x }))
@@ -159,6 +161,12 @@ _404State :: PrismP RootRoutes Unit
 _404State = prism (const Route404) \route ->
   case route of
     Route404 -> Right unit
+    _ -> Left route
+
+_LandingPageState :: PrismP RootRoutes Unit
+_LandingPageState = prism (const LandingPageRoute) \route ->
+  case route of
+    LandingPageRoute -> Right unit
     _ -> Left route
 
 _BrowseState :: PrismP RootRoutes Browse.State
@@ -193,6 +201,16 @@ spec404 = T.simpleSpec T.defaultPerformAction render
     render _ _ _ _ = [R.text "404"]
 
 
+landingPage :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) state props action
+landingPage = T.simpleSpec T.defaultPerformAction render
+  where
+    render _ _ _ _ =
+      [R.ul []
+       [ R.li [] [R.a [RP.href "/new-repository"] [R.text "Create a new repository"]]
+       ]
+      ]
+
+
 -- | spec is a Thermite-ism. It controls the flow of actions and
 -- dispatches rendering code. Based on the state of the route
 -- component we both focus and split into subcomponents (and the
@@ -203,6 +221,7 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
        , T.split _BrowseState (T.match _BrowseAction Browse.spec)
        , T.split _CreateAccountState (T.match _CreateAccountAction CreateAccount.spec)
        , T.split _404State spec404
+       , T.split _LandingPageState landingPage
        ]
   where
     container = over T._render \render d p s c -> case view userMeta s of
@@ -262,11 +281,12 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
     -- telling us where we are. Not sure whether we want to keep this
     -- or not but useful for development ATM.
     contextLabel s = case view routeLens s of
-      EmptyRoute -> "loading.."
+      NotLoadedRoute -> "loading.."
       Route404 -> "404"
       SettingsRoute _ -> "Settings"
       BrowseRoute _ -> "Browse"
       CreateAccountRoute _ -> "Last step!"
+      LandingPageRoute -> "Home"
 
     burgerMenuToggle dispatch ev = dispatch BurgerMenuToggle
 
