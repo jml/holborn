@@ -1,5 +1,6 @@
 -- | Custom network functions that send the correct headers (and other
 -- modififications as necessary).
+-- TODO rename to RPC.purs (auth is done by browser cookie now)
 module Holborn.Auth where
 
 import Prelude
@@ -15,7 +16,12 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Eff.Exception (error)
 import Network.HTTP.StatusCode (StatusCode(..))
-import Data.Either (Either(Left))
+import Data.Either (Either(..))
+import Control.Monad.Eff.Exception (Error)
+import Network.HTTP.Affjax as AJ
+import Data.Argonaut.Core (Json)
+import Data.Argonaut.Encode (class EncodeJson)
+import Data.Argonaut.Decode (decodeJson, class DecodeJson)
 
 
 post :: forall e a b. (Requestable a, Respondable b) => URL -> a -> Affjax e b
@@ -48,3 +54,21 @@ delete u = do
     , url = u
     , headers = [RequestHeader "Accept" "application/json"]
     }
+
+
+-- | Easier to process error that summarises what the end-user cares
+-- about (invalid input, other problem, success).
+data HandledResult a b c = OK a | FormError b | OtherError c
+
+handleResult :: forall a b. (DecodeJson a, DecodeJson b) => Either Error (AJ.AffjaxResponse Json) -> HandledResult a b String
+handleResult r = case r of
+  Right {status: StatusCode 201, headers, response } ->
+    case decodeJson response of
+      Left err -> OtherError (show err)
+      Right x -> OK x
+  Right {status: StatusCode 400, headers, response } ->
+    case decodeJson response of
+      Left err -> OtherError (show err)
+      Right x -> FormError x
+  Left err -> OtherError (show err)
+  _ -> OtherError "totally unexpected thing happened"
