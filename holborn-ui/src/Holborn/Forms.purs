@@ -9,12 +9,16 @@ import Data.Lens (LensP, view, set)
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Maybe (Maybe(..), maybe)
 
+import Data.Lens.Prism (review)
+import Data.Lens.Prism.Maybe (_Just)
+
+import Debug.Trace
 
 inp :: forall eff p s r formData.
-       String -- type
-       -> String -- label
+       String -- input type
+       -> String -- input label
        -> Maybe String -- error
-       -> LensP formData String
+       -> LensP formData (Maybe String)
        -> (formData -> React.EventHandlerContext eff p s r)
        -> formData
        -> React.ReactElement
@@ -23,9 +27,9 @@ inp _type label error lens dp state =
   [ R.label [ RP.htmlFor label] [R.text (maybe label id error)]
   , R.input [ RP._type _type
             , RP._id label
-            , RP.value (view lens state)
+            , RP.value (spy (view (lens <<< _Just) state))
             , RP.className "form-control"
-            , RP.onChange \ev -> dp (set lens (unsafeCoerce ev).target.value state)
+            , RP.onChange \ev -> dp (set lens (Just (unsafeCoerce ev).target.value) state)
             ] []
   ]
 
@@ -36,7 +40,7 @@ password = inp "password"
 textarea :: forall eff p s r formData.
        String -- label
        -> Maybe String -- error
-       -> LensP formData String
+       -> LensP formData (Maybe String)
        -> (formData -> React.EventHandlerContext eff p s r)
        -> formData
        -> React.ReactElement
@@ -44,8 +48,8 @@ textarea label error lens dp state =
   R.div [RP.className ("form-group" <> maybe "" (const " has-error") error) ]
   [ R.label [ RP.htmlFor label] [R.text (maybe label id error)]
   , R.textarea [ RP._id label
-               , RP.value (view lens state)
+               , RP.value (view (lens <<< _Just) state)
                , RP.className "form-control"
-               , RP.onChange \ev -> dp (set lens (unsafeCoerce ev).target.value state)
+               , RP.onChange \ev -> dp (set lens (Just (unsafeCoerce ev).target.value) state)
                ] []
   ]

@@ -19,26 +19,22 @@ import Unsafe.Coerce (unsafeCoerce)
 import Holborn.Auth as Auth
 import Holborn.Config (makeUrl)
 import Holborn.Forms as HF
-import Holborn.ManualEncoding.CreateAccount (CreateAccountData(..), CreateAccountDataError(..), username)
+import Holborn.ManualEncoding.CreateAccount (CreateAccountData(..), username)
 
 import Debug.Trace
 
+
 type State =
-    { formErrors :: CreateAccountDataError
+    { formErrors :: CreateAccountData
     , formData :: CreateAccountData
     , loading :: Boolean
     , errors :: Array String
     }
 
-
-flashError :: forall a. String -> ({ errors :: Array String | a } -> { errors :: Array String | a })
-flashError msg = \s -> s { errors = (s.errors <> [msg]) }
-
-
 initialState :: State
 initialState =
-  { formErrors: CreateAccountDataError {username: Nothing}
-  , formData: CreateAccountData {username: ""}
+  { formErrors: CreateAccountData {username: Nothing}
+  , formData: CreateAccountData {username: Nothing}
   , loading: false
   , errors: []
   }
@@ -50,7 +46,7 @@ spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate 
 spec = T.simpleSpec performAction render
   where
     render :: T.Render State props Action
-    render dispatch props ({ formData, formErrors: CreateAccountDataError err, loading, errors }) _ =
+    render dispatch props ({ formData, formErrors: CreateAccountData err, loading, errors }) _ =
       [ R.h1 [] [R.text "Create a new repository"]
       , R.form [RP.onSubmit onSubmit]
         [ HF.text "http://code.space/me/" err.username username (dispatch <<< UpdateFormData) formData

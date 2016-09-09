@@ -17,7 +17,7 @@ import Control.Monad.Trans (lift)
 import Control.Monad.Eff (Eff)
 
 import Holborn.Config (makeUrl)
-import Holborn.ManualEncoding.CreateAccount (CreateAccountData(..), CreateAccountDataError(..), username)
+import Holborn.ManualEncoding.CreateAccount (CreateAccountData(..), username)
 import Holborn.Auth as Auth
 import Holborn.Forms as HF
 
@@ -32,7 +32,7 @@ import Control.Coroutine (CoTransformer)
 import Debug.Trace
 
 type State =
-    { formErrors :: CreateAccountDataError
+    { formErrors :: CreateAccountData
     , formData :: CreateAccountData
     , loading :: Boolean
     , errors :: Array String
@@ -45,8 +45,8 @@ flashError msg = \s -> s { errors = (s.errors <> [msg]) }
 
 initialState :: State
 initialState =
-  { formErrors: CreateAccountDataError {username: Nothing}
-  , formData: CreateAccountData {username: ""}
+  { formErrors: CreateAccountData {username: Nothing}
+  , formData: CreateAccountData {username: Nothing}
   , loading: false
   , errors: []
   }
@@ -58,7 +58,7 @@ spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate 
 spec = T.simpleSpec performAction render
   where
     render :: T.Render State props Action
-    render dispatch props ({ formData, formErrors: CreateAccountDataError err, loading, errors }) _ =
+    render dispatch props ({ formData, formErrors: CreateAccountData err, loading, errors }) _ =
       [ R.h1 [] [R.text "Last step! Pick a username for code.space"]
       , R.form [RP.onSubmit onSubmit]
         [ HF.text "Username" err.username username (dispatch <<< UpdateFormData) formData

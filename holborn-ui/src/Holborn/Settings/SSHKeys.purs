@@ -9,35 +9,28 @@ import React.DOM as R
 import React.DOM.Props as RP
 import Thermite as T
 import Network.HTTP.Affjax as AJ
-import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff (Eff)
-import Control.Monad.Aff (runAff, Aff, attempt)
+import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Trans (lift)
 import Network.HTTP.Affjax (AJAX)
-import Data.Either (Either(..))
-import Data.Argonaut.Decode (decodeJson)
 import Data.Argonaut.Encode (encodeJson)
-import Data.List (List(..), (:), toUnfoldable)
-import Data.Lens (view, set)
+import Data.List (List(..), (:), toUnfoldable, filter)
 import Data.Maybe (Maybe(..))
 
-import Holborn.ManualEncoding.SSHKeys (Key(..), AddKeyData(..), AddKeyDataError(..), title, key)
+import Holborn.ManualEncoding.SSHKeys (Key(..), AddKeyData(..), title, key)
 import Holborn.Auth as HA
 import Holborn.Forms as HF
 import Unsafe.Coerce (unsafeCoerce)
 import Network.HTTP.StatusCode (StatusCode(..))
-import Data.Lens (LensP)
-import Data.List (filter)
+import Data.Lens (set, LensP)
 import Holborn.Config (makeUrl)
 
-import Debug.Trace (traceAnyM, traceAny)
 
 
 -- The full internal state of this component. Components have state
 -- and props. State is internal (e.g. component was loaded) and props
 -- are external (e.g. colour of the button).
 type State =
-  { formErrors :: AddKeyDataError
+  { formErrors :: AddKeyData
   , loading :: Boolean
   , keys :: List Key
   , formData :: AddKeyData
@@ -46,14 +39,13 @@ type State =
 -- All possible state-modifying actions for this component.
 data Action = AddKey | UpdateFormData AddKeyData | RemoveKey Int
 
-emptyAddKeyData = AddKeyData { key: "", title: "" }
-emptyAddKeyDataError = AddKeyDataError { global: Nothing, key: Nothing, title: Nothing }
-networkAddKeyDataError msg =  AddKeyDataError { global: Just msg, key: Nothing, title: Nothing }
+emptyAddKeyData = AddKeyData { key: Nothing, title: Nothing }
+networkAddKeyDataError _ =  AddKeyData { key: Nothing, title: Nothing } -- TODO global errors need to go somewhere
 
 -- Initial State each time this component is inserted in the DOM.
 initialState :: State
 initialState =
-  { formErrors: emptyAddKeyDataError
+  { formErrors: emptyAddKeyData
   , loading: false
   , keys: Nil
   , formData: emptyAddKeyData
@@ -62,7 +54,7 @@ initialState =
 
 -- We need unsafeCoerce because purescript-react bindings arent
 -- exposing target.value yet.
-fieldUpdater :: forall a s x. LensP s x -> React.Event -> s -> s
+fieldUpdater :: forall s x. LensP s x -> React.Event -> s -> s
 fieldUpdater setter ev state = set setter (unsafeCoerce ev).target.value state
 
 
@@ -73,10 +65,6 @@ labeled label err formEl = case err of
   Nothing -> R.div [ RP.className "form-group" ] [ R.label [] [R.text label],  formEl ]
   Just msg -> R.div [ RP.className "form-group has-error" ] [ R.label [] [R.text (label <> " - " <> msg)],  formEl ]
 
-renderGlobalError err = case err of
-  Nothing -> R.text ""
-  Just msg -> R.div [] [R.text msg]
-
 
 spec :: forall eff props. T.Spec (ajax :: AJAX | eff) State props Action
 spec = T.simpleSpec performAction render
@@ -85,12 +73,11 @@ spec = T.simpleSpec performAction render
     -- insert it efficiently by diffing the document-DOM with the
     -- fragment.
     render :: forall props. T.Render State props Action
-    render dispatch props ({ formData, formErrors: AddKeyDataError err, loading, keys }) _ =
+    render dispatch props ({ formData, formErrors: AddKeyData err, loading, keys }) _ =
       [ R.h1 [] [R.text "Manage SSH keys"]
       , R.div [] renderKeyArray
       , R.h2 [] [R.text "Add new key"]
-      , renderGlobalError err.global
-       , R.form [RP.onSubmit onSubmit]
+      , R.form [RP.onSubmit onSubmit]
         [ HF.text "Key name" err.title title (dispatch <<< UpdateFormData) formData
         , HF.textarea "Key" err.key key (dispatch <<< UpdateFormData) formData
         , R.button [RP.disabled loading, RP.className "btn btn-default"] [R.text if loading then "Adding key ..." else "Add new key"]
@@ -132,7 +119,7 @@ spec = T.simpleSpec performAction render
       r <- lift $ attempt $ HA.post (makeUrl "/v1/user/keys") (encodeJson state.formData)
       case HA.handleResult r of
         HA.OK key -> void $ T.cotransform $ \state -> state { keys = key : state.keys
-                                                            , formErrors = emptyAddKeyDataError
+                                                            , formErrors = emptyAddKeyData
                                                             , formData = emptyAddKeyData
                                                             }
         HA.FormError errs -> void $ T.cotransform $ \state -> state { formErrors = errs }
