@@ -19,37 +19,37 @@ import Unsafe.Coerce (unsafeCoerce)
 import Holborn.Auth as Auth
 import Holborn.Config (makeUrl)
 import Holborn.Forms as HF
-import Holborn.ManualEncoding.CreateAccount (CreateAccountData(..), username)
+import Holborn.ManualEncoding.CreateRepository (CreateRepositoryData(..), repoName, visibility, description, empty)
 
 import Debug.Trace
 
 
 type State =
-    { formErrors :: CreateAccountData
-    , formData :: CreateAccountData
+    { formErrors :: CreateRepositoryData
+    , formData :: CreateRepositoryData
     , loading :: Boolean
     , errors :: Array String
     }
 
 initialState :: State
 initialState =
-  { formErrors: CreateAccountData {username: Nothing}
-  , formData: CreateAccountData {username: Nothing}
+  { formErrors: empty
+  , formData: empty
   , loading: false
   , errors: []
   }
 
-data Action = CreateRepo | UpdateFormData CreateAccountData
+data Action = CreateRepo | UpdateFormData CreateRepositoryData
 
 
 spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
 spec = T.simpleSpec performAction render
   where
     render :: T.Render State props Action
-    render dispatch props ({ formData, formErrors: CreateAccountData err, loading, errors }) _ =
+    render dispatch props ({ formData, formErrors: CreateRepositoryData err, loading, errors }) _ =
       [ R.h1 [] [R.text "Create a new repository"]
       , R.form [RP.onSubmit onSubmit]
-        [ HF.text "http://code.space/me/" err.username username (dispatch <<< UpdateFormData) formData
+        [ HF.text "http://code.space/me/" err.repoName repoName (dispatch <<< UpdateFormData) formData
         , R.button [RP.disabled loading, RP.className "btn btn-default"] [R.text if loading then "Finishing ..." else "Finish setup"]
         ]
       , R.ul [] (map (\x -> R.li [] [R.text x]) errors)
