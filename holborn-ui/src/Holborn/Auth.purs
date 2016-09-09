@@ -60,16 +60,25 @@ delete u = do
 -- about (invalid input, other problem, success).
 data HandledResult a b c = FormError b | OtherError c | OK a
 
-handleResult :: forall a b. (DecodeJson a, DecodeJson b) => Either Error (AJ.AffjaxResponse Json) -> HandledResult a b String
-handleResult r = case r of
-  Right {status: StatusCode 201, headers, response } ->
+handleStatus :: forall a b. (DecodeJson a, DecodeJson b) => AJ.AffjaxResponse Json -> HandledResult a b String
+handleStatus r = case r of
+  {status: StatusCode 201, headers, response } ->
     case decodeJson response of
       Left err -> OtherError (show err)
       Right x -> OK x
-  Right {status: StatusCode 400, headers, response } ->
+  {status: StatusCode 200, headers, response } ->
+    case decodeJson response of
+      Left err -> OtherError (show err)
+      Right x -> OK x
+  {status: StatusCode 400, headers, response } ->
     case decodeJson response of
       Left err -> OtherError (show err)
       Right x -> FormError x
+  x -> OtherError ("Unexpected status code: "  <> show x.response)
+
+handleResult :: forall a b. (DecodeJson a, DecodeJson b) => Either Error (AJ.AffjaxResponse Json) -> HandledResult a b String
+handleResult r = case r of
+  Right r' -> handleStatus r'
   Left err -> OtherError (show err)
   Right {status: status, headers, response } -> OtherError ("unexpected response: " <> show status)
-  _ -> OtherError "totally unexpected thing happened"
+  _ -> OtherError "JS exception happened"

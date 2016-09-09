@@ -35,6 +35,7 @@ import Holborn.ManualEncoding.Profile as ManualCodingProfile
 import Holborn.DomHelpers (scroll)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Control.Monad.Trans (lift)
+import Debug.Trace
 
 -- | UserMeta records the state of the visiting user from the
 -- database.
@@ -118,8 +119,16 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
     fetch NotLoadedRoute (set userMeta NotLoaded state)
 
   fetch (SettingsRoute s) state = do
-      sr <- fetch (view Settings.routeLens s) s -- of type SettingsRoute
-      pure (set routeLens (SettingsRoute sr) state)
+    sr <- fetch (view Settings.routeLens s) s -- of type SettingsRoute
+    pure (set routeLens (SettingsRoute sr) state)
+
+  fetch (CreateRepositoryRoute s) state = do
+    -- TODO this fetch branch should probably go into CreateRepository.purs
+    r <- Auth.get (makeUrl "/v1/user/repository-owner-candidates")
+    case Auth.handleStatus r of
+        Auth.OK r' -> pure $ set routeLens (CreateRepositoryRoute (s { validRepositoryOwners = (spy r') })) state
+        Auth.FormError (_ :: Unit) -> pure state
+        x -> traceAnyM x *> pure state
 
   -- Slightly different to settings: If we are already in a browse
   -- route then recycle existing state (browseState).

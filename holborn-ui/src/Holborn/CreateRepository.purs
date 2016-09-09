@@ -29,6 +29,7 @@ type State =
     , formData :: CreateRepositoryData
     , loading :: Boolean
     , errors :: Array String
+    , validRepositoryOwners :: Array String
     }
 
 initialState :: State
@@ -37,6 +38,7 @@ initialState =
   , formData: empty
   , loading: false
   , errors: []
+  , validRepositoryOwners: []
   }
 
 data Action = CreateRepo | UpdateFormData CreateRepositoryData
@@ -46,11 +48,13 @@ spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate 
 spec = T.simpleSpec performAction render
   where
     render :: T.Render State props Action
-    render dispatch props ({ formData, formErrors: CreateRepositoryData err, loading, errors }) _ =
+    render dispatch props ({ formData, formErrors: CreateRepositoryData err, loading, errors, validRepositoryOwners }) _ =
       [ R.h1 [] [R.text "Create a new repository"]
       , R.form [RP.onSubmit onSubmit]
-        [ HF.text "http://code.space/me/" err.repoName repoName (dispatch <<< UpdateFormData) formData
-        , R.button [RP.disabled loading, RP.className "btn btn-default"] [R.text if loading then "Finishing ..." else "Finish setup"]
+        [ R.text "http://code.space/"
+        , ownerCandidateDropdown
+        , HF.text "name" err.repoName repoName (dispatch <<< UpdateFormData) formData
+        , R.button [RP.disabled loading, RP.className "btn btn-default"] [R.text if loading then "Creating ..." else "Create"]
         ]
       , R.ul [] (map (\x -> R.li [] [R.text x]) errors)
       ]
@@ -59,14 +63,16 @@ spec = T.simpleSpec performAction render
           (unsafeCoerce ev).preventDefault
           dispatch CreateRepo
 
+        ownerCandidateDropdown = R.select [] (map (\x -> R.option [] [R.text x]) validRepositoryOwners)
+
     performAction :: forall eff'. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff') State props Action
     performAction CreateRepo props state = do
       T.cotransform (\state -> state { loading = true })
       r <- lift $ attempt (Auth.post (makeUrl "/v1/create-repository") (encodeJson state.formData))
       case Auth.handleResult r of
         Auth.OK (_ :: Unit) -> lift (navigateA "/")
-        Auth.FormError errs -> void $ T.cotransform $ \state -> state { formErrors = errs }
-        Auth.OtherError _ -> void $ T.cotransform $ id
+        Auth.FormError errs -> void $ T.cotransform $ \state -> state { formErrors = (spy errs) }
+        Auth.OtherError err -> traceAnyM err *> void $ T.cotransform id
       void $ T.cotransform (\state -> state { loading = false })
 
     performAction (UpdateFormData x) _ state = void $ T.cotransform $ \state -> state { formData = x }

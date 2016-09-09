@@ -27,7 +27,7 @@ inp _type label error lens dp state =
   [ R.label [ RP.htmlFor label] [R.text (maybe label id error)]
   , R.input [ RP._type _type
             , RP._id label
-            , RP.value (spy (view (lens <<< _Just) state))
+            , RP.value (view (lens <<< _Just) state)
             , RP.className "form-control"
             , RP.onChange \ev -> dp (set lens (Just (unsafeCoerce ev).target.value) state)
             ] []
