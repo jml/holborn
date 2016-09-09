@@ -10,6 +10,7 @@ import Control.Monad.Trans (lift)
 import Data.Argonaut.Encode (encodeJson)
 import Data.Maybe (Maybe(..))
 import Network.HTTP.Affjax as AJ
+import React as React
 import React.DOM as R
 import React.DOM.Props as RP
 import Standalone.Router.Dispatch (Navigate, navigateA)
@@ -43,8 +44,9 @@ initialState =
 
 data Action = CreateRepo | UpdateFormData CreateRepositoryData
 
+type Row eff = (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) -- TODO move to some common place
 
-spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
+spec :: forall eff props. T.Spec (Row eff) State props Action
 spec = T.simpleSpec performAction render
   where
     render :: T.Render State props Action
@@ -59,13 +61,16 @@ spec = T.simpleSpec performAction render
       , R.ul [] (map (\x -> R.li [] [R.text x]) errors)
       ]
       where
+        onSubmit :: React.Event -> T.EventHandler
         onSubmit ev = do
           (unsafeCoerce ev).preventDefault
           dispatch CreateRepo
 
+        -- | Map candidates for ownership to a nice drop-down
+        ownerCandidateDropdown :: React.ReactElement
         ownerCandidateDropdown = R.select [] (map (\x -> R.option [] [R.text x]) validRepositoryOwners)
 
-    performAction :: forall eff'. T.PerformAction (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff') State props Action
+    performAction :: forall eff'. T.PerformAction (Row eff') State props Action
     performAction CreateRepo props state = do
       T.cotransform (\state -> state { loading = true })
       r <- lift $ attempt (Auth.post (makeUrl "/v1/create-repository") (encodeJson state.formData))
