@@ -109,7 +109,7 @@ addKey dexMail (AddKeyData key) = do
               , readonly
               , created
               )
-            values (default, ?, ?, ?, ?, ?, ?, false, true, default)
+            values (default, ?, ?, ?, ?, ?, false, true, default)
               returning id, "type", "key", comment, verified, readonly, created
             |] (key, keyType, keyData, comment, userId)
 

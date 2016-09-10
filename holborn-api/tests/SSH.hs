@@ -42,7 +42,7 @@ spec = do
 
     it "returns empty if there are no matching keys" $ \config -> do
       withApplication (makeTestApp config) $ do
-        let (Just (SSHKey keyType key _ _)) = parseSSHKey exampleKey
+        let (Just (SSHKey keyType key _)) = parseSSHKey exampleKey
         let req = object [ "keyType" .= toJSON keyType
                          , "key" .= decodeUtf8 key
                          ]
@@ -160,7 +160,7 @@ makeVerifiedKeyForUser config user = do
   let (Just (SSHKey keyType keyData comment)) = parseSSHKey exampleKey
   mutateDB config [sql|
                       insert into "ssh_key" (id, submitted_key, "type", "key", comment, owner_id, verified, readonly, created)
-                      values (default, ?, ?, ?, ?, ?, ?, true, false, default)
+                      values (default, ?, ?, ?, ?, ?, true, false, default)
                       |] (exampleKey, keyType, keyData, comment, (userId user))
 
 
