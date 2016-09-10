@@ -228,7 +228,7 @@ instance ToField SSHKey where
 
 -- | Decode an SSH from the decomposed columns in the database.
 instance FromRow SSHKey where
-    fromRow = SSHKey <$> field <*> field <*> field <*> field
+    fromRow = SSHKey <$> field <*> field <*> field
 
 
 -- | Generate an SSH fingerprint.
@@ -253,7 +253,7 @@ parseSSHKey keyData = do
   -- action but we 're using ssh-keygen for now.
   -- TODO: Check that type & comment returned by sshFingerprint match type &
   -- comment in key.
-  fingerprint <- unsafePerformIO $ sshFingerprint keyData
+  void $ unsafePerformIO $ sshFingerprint keyData
   pure $ SSHKey keyType key comment
 
 -- | Parser for a single SSH key
@@ -274,5 +274,5 @@ sshKeyParser = do
 
 -- | Serialize the parsed key (the one we usually use for comparisons etc.)
 unparseSSHKey :: SSHKey -> ByteString
-unparseSSHKey (SSHKey keyType key comment _) =
+unparseSSHKey (SSHKey keyType key comment) =
   unparseKeyType keyType <> " " <> key <> maybe mempty (" " <>) comment
