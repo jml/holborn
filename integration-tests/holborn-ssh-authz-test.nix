@@ -71,17 +71,6 @@ let
       key = lib.removeSuffix " ${comment}" (lib.removePrefix "ssh-rsa " fullKey);
     };
 
-  getFingerprint = key: builtins.readFile (
-    runCommand "${key.name}-fingerprint"
-      { publicKey = key.public;
-        preferLocalBuild = true;
-        buildInputs = [ openssh ];
-      }
-      ''
-      ssh-keygen -l -f "$publicKey" > $out
-      ''
-  );
-
   # ssh tries to create an ~/.ssh directory if it's not given a config file,
   # and it uses the home directory found in getpwent (see
   # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=706194)
@@ -109,12 +98,11 @@ let
          ( 'alice'
          , 'alice@example.com'
          );
-    insert into ssh_key (submitted_key, "type", "key", comment, fingerprint, owner_id, verified, readonly) values
+    insert into ssh_key (submitted_key, "type", "key", comment, owner_id, verified, readonly) values
          ( '${testKey.fullKey}'
          , '${testKey.dbType}'
          , '${testKey.key}'
          , '${testKey.comment}'
-         , '${getFingerprint testKey}'
          , 1
          , true
          , false

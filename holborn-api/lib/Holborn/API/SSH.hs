@@ -116,7 +116,7 @@ authorizedKeys CheckKeyRequest{..} = do
   -- which is a potential security escalation vector.
   rows <- queryWith
     parser
-    [sql|select id, "type", "key", comment, fingerprint
+    [sql|select id, "type", "key", comment
          from "ssh_key"
          where "key" = ?
          |] (Only key)

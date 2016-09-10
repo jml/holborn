@@ -143,7 +143,7 @@ getKeyRequest Config{key, keyType} = CheckKeyRequest { key, keyType }
 
 
 formatKey :: BaseUrl -> ByteString -> KeyId -> SSHKey -> ByteString
-formatKey baseUrl command keyId (SSHKey keyType keyData comment _fingerprint) =
+formatKey baseUrl command keyId (SSHKey keyType keyData comment) =
   sshOptions <> " " <> unparseKeyType keyType <> " " <> keyData <> (maybe "" (" " <>) comment)
   where
     sshOptions = intercalate "," [ "restrict", "command=\"" <> command' <> "\"" ]
