@@ -70,7 +70,7 @@ spec = do
         response <- postAs user "/v1/user/keys" req
         pure response `shouldRespondWith` 201
         let observed = getJSONBody response
-        let (Just (SSHKey keyType keyData comment fingerprint)) = parseSSHKey validKey
+        let (Just (SSHKey keyType keyData comment)) = parseSSHKey validKey
         liftIO $ (observed `getKey` "verified") `shouldBe` False
         liftIO $ (observed `getKey` "readonly") `shouldBe` True
         liftIO $ (observed `getKey` "id") `shouldBe` (1 :: Int)
@@ -78,7 +78,6 @@ spec = do
           object [ "type" .= keyType
                  , "key" .= decodeUtf8 keyData
                  , "comment" .= (decodeUtf8 <$> comment)
-                 , "fingerprint" .= decodeUtf8 fingerprint
                  ]
 
     it "Lets you add duplicate keys" $ \config -> do

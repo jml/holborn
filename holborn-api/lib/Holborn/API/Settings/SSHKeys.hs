@@ -67,7 +67,7 @@ server conf = enter (toServantHandler conf) $
 listKeys :: Username -> APIHandler KeyError [ListKeysRow]
 listKeys username =
     queryWith parseListKeys [sql|
-              select id, "type", "key", comment, fingerprint, verified, readonly, created
+              select id, "type", "key", comment, verified, readonly, created
               from "ssh_key" where owner_id = (select id from "user" where username = ?)
           |] (Only username)
 
@@ -75,7 +75,7 @@ listMyKeys :: Maybe DexMail -> APIHandler KeyError [ListKeysRow]
 listMyKeys dexMail = do
     userId <- getUserId dexMail
     queryWith parseListKeys [sql|
-              select id, "type", "key", comment, fingerprint, verified, readonly, created
+              select id, "type", "key", comment, verified, readonly, created
               from "ssh_key" where owner_id = ?
           |] (Only userId)
 
@@ -95,7 +95,7 @@ addKey :: Maybe DexMail -> AddKeyData -> APIHandler KeyError ListKeysRow
 addKey dexMail (AddKeyData key) = do
     userId <- getUserId dexMail
     sshKey <- maybe (throwHandlerError InvalidSSHKey) pure $ parseSSHKey (encodeUtf8 key)
-    let SSHKey keyType keyData comment fingerprint = sshKey
+    let SSHKey keyType keyData comment = sshKey
 
     result <- executeWith parseListKeys [sql|
             insert into "ssh_key"
@@ -104,15 +104,14 @@ addKey dexMail (AddKeyData key) = do
               , "type"
               , "key"
               , comment
-              , fingerprint
               , owner_id
               , verified
               , readonly
               , created
               )
-            values (default, ?, ?, ?, ?, ?, ?, false, true, default)
-              returning id, "type", "key", comment, fingerprint, verified, readonly, created
-            |] (key, keyType, keyData, comment, fingerprint, userId)
+            values (default, ?, ?, ?, ?, ?, false, true, default)
+              returning id, "type", "key", comment, verified, readonly, created
+            |] (key, keyType, keyData, comment, userId)
 
     case result of
       Left DuplicateValue -> throwHandlerError KeyAlreadyExists

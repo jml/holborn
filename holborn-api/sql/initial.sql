@@ -100,7 +100,6 @@ create table "ssh_key"
     , type ssh_key_type not null
     , key varchar(1024) unique not null
     , comment varchar(1024)
-    , fingerprint varchar(1024)
     , owner_id int references "user" (id) not null
     , verified boolean not null
     , readonly boolean not null

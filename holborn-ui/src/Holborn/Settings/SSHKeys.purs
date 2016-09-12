@@ -104,7 +104,6 @@ spec = T.simpleSpec performAction render
         renderOneKey (Key key) =
           R.div []
           [ R.text key.key.comment
-          , R.text key.key.fingerprint
           , R.span [RP.className "key"] [R.text key.key.type_]
           , if key.readonly
             then R.span [RP.className "readonly"] [R.text "readonly | "]

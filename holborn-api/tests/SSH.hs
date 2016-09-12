@@ -42,7 +42,7 @@ spec = do
 
     it "returns empty if there are no matching keys" $ \config -> do
       withApplication (makeTestApp config) $ do
-        let (Just (SSHKey keyType key _ _)) = parseSSHKey exampleKey
+        let (Just (SSHKey keyType key _)) = parseSSHKey exampleKey
         let req = object [ "keyType" .= toJSON keyType
                          , "key" .= decodeUtf8 key
                          ]
@@ -157,11 +157,11 @@ spec = do
 -- Duplicates quite a lot from Holborn.API.Settings.SSHKeys.addKey.
 makeVerifiedKeyForUser :: MonadIO m => Config -> User -> m Int64
 makeVerifiedKeyForUser config user = do
-  let (Just (SSHKey keyType keyData comment fingerprint)) = parseSSHKey exampleKey
+  let (Just (SSHKey keyType keyData comment)) = parseSSHKey exampleKey
   mutateDB config [sql|
-                      insert into "ssh_key" (id, submitted_key, "type", "key", comment, fingerprint, owner_id, verified, readonly, created)
-                      values (default, ?, ?, ?, ?, ?, ?, true, false, default)
-                      |] (exampleKey, keyType, keyData, comment, fingerprint, (userId user))
+                      insert into "ssh_key" (id, submitted_key, "type", "key", comment, owner_id, verified, readonly, created)
+                      values (default, ?, ?, ?, ?, ?, true, false, default)
+                      |] (exampleKey, keyType, keyData, comment, (userId user))
 
 
 rsaKey, dsaKey, keyWithoutComment, keyWithComplexComment, exampleKey :: ByteString
@@ -182,7 +182,7 @@ exampleKey = rsaKey  -- For when we don't care about the particular properties o
 submitAndFetchKey :: User -> ByteString -> WaiSession ()
 submitAndFetchKey user fullKey = do
   let (Just parsedKey) = parseSSHKey fullKey
-  let (SSHKey keyType key comment fingerprint) = parsedKey
+  let (SSHKey keyType key comment) = parsedKey
   resp <- postAs user "/v1/user/keys" (object [ "key" .= decodeUtf8 fullKey ])
   pure resp `shouldRespondWith` 201
   let (Just keyId) = parseMaybe (\obj -> obj .: "id") (getJSONBody resp) :: Maybe Int
@@ -191,8 +191,7 @@ submitAndFetchKey user fullKey = do
   let req = object [ "keyType" .= toJSON keyType
                    , "key" .= (decodeUtf8 key)
                    ]
-  let expectedKey = object [ "fingerprint" .= decodeUtf8 fingerprint
-                           , "key" .= decodeUtf8 key
+  let expectedKey = object [ "key" .= decodeUtf8 key
                            , "type" .= toJSON keyType
                            , "comment" .= (decodeUtf8 <$> comment)
                            ]

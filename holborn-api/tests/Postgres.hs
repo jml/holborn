@@ -42,7 +42,6 @@ makeDatabase :: FilePath -> IO Postgres
 makeDatabase schema = do
   -- TODO: Try to re-use existing database directory, somehow
   pgDir <- initDb
-  -- TODO: Try to re-use the running instance?
   port <- launchPostgres pgDir
   user <- onException (createPostgresUser port) (stopPostgres' pgDir)
   -- Set the template database to be whatever is in the provided schema. Then,

@@ -10,7 +10,6 @@ module Holborn.JSON.SSHRepoCommunication
        , KeyType(..)
        , parseSSHCommand
        , unparseSSHCommand
-       , sshFingerprint
        , parseSSHKey
        , unparseSSHKey
        , parseKeyType
@@ -195,13 +194,11 @@ unparseKeyType DSA = "ssh-dss"
 data SSHKey = SSHKey { _sshKeyType :: KeyType
                      , _sshKeyData :: ByteString
                      , _sshKeyComment :: Maybe ByteString
-                     , _sshKeyFingerPrint :: ByteString
                      } deriving (Show, Eq)
 
 instance ToJSON SSHKey where
     toJSON key = object
       [ "key"         .= (decodeUtf8 $ _sshKeyData key)
-      , "fingerprint" .= (decodeUtf8 $ _sshKeyFingerPrint key)
       , "comment"     .= (decodeUtf8 <$> _sshKeyComment key)
       , "type"        .= toJSON (_sshKeyType key)
       ]
@@ -210,7 +207,6 @@ instance FromJSON SSHKey where
     parseJSON (Object v) = SSHKey <$> v .: "type"
                                   <*> (encodeUtf8 <$> v .: "key")
                                   <*> (map encodeUtf8 <$> v .:? "comment")
-                                  <*> (encodeUtf8 <$> v .: "fingerprint")
     parseJSON wat = typeMismatch "SSHKey" wat
 
 -- TODO: We might want to lock down SSHKey so we don't expose the construct
@@ -232,7 +228,7 @@ instance ToField SSHKey where
 
 -- | Decode an SSH from the decomposed columns in the database.
 instance FromRow SSHKey where
-    fromRow = SSHKey <$> field <*> field <*> field <*> field
+    fromRow = SSHKey <$> field <*> field <*> field
 
 
 -- | Generate an SSH fingerprint.
@@ -257,8 +253,8 @@ parseSSHKey keyData = do
   -- action but we 're using ssh-keygen for now.
   -- TODO: Check that type & comment returned by sshFingerprint match type &
   -- comment in key.
-  fingerprint <- unsafePerformIO $ sshFingerprint keyData
-  pure $ SSHKey keyType key comment fingerprint
+  void $ unsafePerformIO $ sshFingerprint keyData
+  pure $ SSHKey keyType key comment
 
 -- | Parser for a single SSH key
 --
@@ -278,5 +274,5 @@ sshKeyParser = do
 
 -- | Serialize the parsed key (the one we usually use for comparisons etc.)
 unparseSSHKey :: SSHKey -> ByteString
-unparseSSHKey (SSHKey keyType key comment _) =
+unparseSSHKey (SSHKey keyType key comment) =
   unparseKeyType keyType <> " " <> key <> maybe mempty (" " <>) comment
