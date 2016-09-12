@@ -1,13 +1,13 @@
-{ mkDerivation, base, basic-prelude, mtl, safe, stdenv, tasty
+{ mkDerivation, base, mtl, protolude, safe, stdenv, tasty
 , tasty-hspec, tasty-hunit, tasty-quickcheck, text
 }:
 mkDerivation {
   pname = "holborn-prelude";
   version = "0.1.0.0";
   src = ./.;
-  libraryHaskellDepends = [ base basic-prelude mtl safe text ];
+  libraryHaskellDepends = [ base mtl protolude safe text ];
   testHaskellDepends = [
-    base basic-prelude mtl safe tasty tasty-hspec tasty-hunit
+    base mtl protolude safe tasty tasty-hspec tasty-hunit
     tasty-quickcheck text
   ];
   description = "Standard prelude for Holborn";

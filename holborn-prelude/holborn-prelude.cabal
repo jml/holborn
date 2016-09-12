@@ -16,8 +16,8 @@ library
   ghc-options: -Wall -Werror
   build-depends:
       base >=4.9 && <5
-    , basic-prelude >= 0.5.2
     , mtl
+    , protolude >= 0.1.6
     , safe >= 0.3.9
     , text >= 1.2.2
   exposed-modules:
@@ -35,8 +35,8 @@ test-suite holborn-prelude-tests
   ghc-options: -Wall -Werror -eventlog
   build-depends:
       base >=4.9 && <5
-    , basic-prelude >= 0.5.2
     , mtl
+    , protolude >= 0.1.6
     , safe >= 0.3.9
     , text >= 1.2.2
     , holborn-prelude

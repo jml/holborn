@@ -15,8 +15,8 @@ default-extensions:
 
 dependencies:
   - base >=4.9 && <5
-  - basic-prelude >= 0.5.2
   - mtl
+  - protolude >= 0.1.6
   - safe >= 0.3.9
   - text >= 1.2.2
 
