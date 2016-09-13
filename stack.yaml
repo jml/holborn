@@ -4,8 +4,14 @@ resolver: nightly-2016-08-27
 
 packages:
   - holborn-prelude
+  - holborn-syntax
 
 extra-deps:
+  - highlighter2-0.2.5
+  - language-python-0.5.4
+  - pretty-error-0.1.0.0
 
 nix:
   enable: true
+  packages:
+    - pcre
