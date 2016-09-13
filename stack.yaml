@@ -3,6 +3,7 @@ resolver: nightly-2016-09-13
 
 packages:
   - hcl
+  - holborn-api
   - holborn-common-types
   - holborn-prelude
   - holborn-proxy
