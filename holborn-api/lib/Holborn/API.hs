@@ -13,7 +13,6 @@ import Data.Proxy (Proxy(..))
 import Network.Wai (Application)
 import Servant (Server, (:<|>)(..), (:>), serve)
 
-import qualified Holborn.Docs
 import qualified Holborn.API.SSH
 import qualified Holborn.API.Browse
 import qualified Holborn.API.NewRepo
@@ -25,7 +24,6 @@ import qualified Holborn.API.Settings.Profile
 
 type FullAPI =
          "internal" :> Holborn.API.SSH.API
-    :<|> "docs" :> Holborn.Docs.API
     :<|> "v1" :> ( Holborn.API.Settings.SSHKeys.API
                    :<|> Holborn.API.Settings.Profile.API
                    :<|> Holborn.API.NewRepo.API
@@ -40,7 +38,6 @@ api = Proxy
 
 server :: Config -> Server FullAPI
 server conf = Holborn.API.SSH.server conf
-              :<|> Holborn.Docs.server
               :<|> (Holborn.API.Settings.SSHKeys.server conf
                     :<|> Holborn.API.Settings.Profile.server conf
                     :<|> Holborn.API.NewRepo.server conf
