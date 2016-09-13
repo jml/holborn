@@ -1,0 +1,11 @@
+# We're only supporting GHC 8.0+, and we're not offering any library suppoort,
+# so OK to use nightly for now.
+resolver: nightly-2016-08-27
+
+packages:
+  - holborn-prelude
+
+extra-deps:
+
+nix:
+  enable: true
