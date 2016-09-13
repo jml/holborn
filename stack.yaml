@@ -4,7 +4,13 @@ resolver: nightly-2016-08-27
 
 packages:
   - holborn-prelude
+  - holborn-proxy
   - holborn-syntax
+  - location:
+      # double-conversion doesn't build on Darwin.
+      # See https://github.com/bos/double-conversion/pull/14
+      git: https://github.com/bradediger/double-conversion.git
+      commit: fb8666ecccc303a4a48ced16a5fbd8d2e6e83e3e
 
 extra-deps:
   - highlighter2-0.2.5
@@ -15,3 +21,4 @@ nix:
   enable: true
   packages:
     - pcre
+    - zlib
