@@ -4,6 +4,7 @@ resolver: nightly-2016-08-27
 
 packages:
   - hcl
+  - holborn-common-types
   - holborn-prelude
   - holborn-proxy
   - holborn-syntax
