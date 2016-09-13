@@ -26,7 +26,7 @@ import Holborn.API.Internal
   , query
   )
 import Holborn.JSON.NewRepo (NewRepoRequest(..))
-import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName, newOwnerName)
+import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName)
 import Holborn.API.Types (DexMail)
 import Holborn.API.Auth (getUserId)
 
@@ -88,5 +88,8 @@ newRepo _dexMail NewRepoRequest{..} = do
 repoOwnerCandidates :: Maybe DexMail -> APIHandler NewRepoError [OwnerName]
 repoOwnerCandidates dexMail = do
   userId <- getUserId dexMail
-  let Just name = newOwnerName (show userId)
-  pure [name]
+  [Only (ownerName :: OwnerName) ] <- query [sql|
+            select username from "user" where id = ?
+            |] (Only userId)
+  -- TODO link in potential owners when we have an org structure
+  pure [ownerName]

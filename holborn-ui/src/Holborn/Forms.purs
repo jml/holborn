@@ -5,21 +5,23 @@ import Prelude
 import React as React
 import React.DOM as R
 import React.DOM.Props as RP
-import Data.Lens (LensP, view, set)
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Maybe (Maybe(..), maybe)
 
-import Data.Lens.Prism (review)
-import Data.Lens.Prism.Maybe (_Just)
-
+import Data.Lens (review, _Just, Optic, Forget, IsoP, SetterP, TraversalP, preview, GetterP, LensP, view, set, matching)
+import Data.Profunctor.Choice (class Choice)
+import Data.Profunctor.Strong (class Strong)
+import Data.Either (Either(..))
 import Debug.Trace
 
-inp :: forall eff p s r formData.
+
+
+inp :: forall eff props state r formData s t b p.
        String -- input type
        -> String -- input label
        -> Maybe String -- error
-       -> LensP formData (Maybe String)
-       -> (formData -> React.EventHandlerContext eff p s r)
+       -> TraversalP formData (Maybe String)
+       -> (formData -> React.EventHandlerContext eff props state r)
        -> formData
        -> React.ReactElement
 inp _type label error lens dp state =
@@ -29,11 +31,14 @@ inp _type label error lens dp state =
             , RP._id label
             , RP.value (view (lens <<< _Just) state)
             , RP.className "form-control"
-            , RP.onChange \ev -> dp (set lens (Just (unsafeCoerce ev).target.value) state)
+            , RP.onChange \ev -> dp (set lens (Just (spy (unsafeCoerce ev).target.value)) state)
             ] []
   ]
 
+text :: _
 text = inp "text"
+
+password :: _
 password = inp "password"
 
 

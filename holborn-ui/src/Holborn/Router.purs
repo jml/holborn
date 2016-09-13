@@ -126,7 +126,7 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
     -- TODO this fetch branch should probably go into CreateRepository.purs
     r <- Auth.get (makeUrl "/v1/user/repository-owner-candidates")
     case Auth.handleStatus r of
-        Auth.OK r' -> pure $ set routeLens (CreateRepositoryRoute (s { validRepositoryOwners = (spy r') })) state
+        Auth.OK r' -> pure $ set routeLens (CreateRepositoryRoute (CreateRepository.fetchUpdate r' s)) state
         Auth.FormError (_ :: Unit) -> pure state
         x -> traceAnyM x *> pure state
 

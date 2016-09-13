@@ -11,7 +11,7 @@
     "css-loader": "^0.23.1",
     "jshint": "^2.9",
     "node-sass": "^3.4.2",
-    "pulp": "^8",
+    "pulp": "^9",
     "purs-loader": "^2.0.0-rc.1",
     "react": "^0.14.7",
     "react-dom": "^0.14.7",

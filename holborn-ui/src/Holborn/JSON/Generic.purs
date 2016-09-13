@@ -14,7 +14,8 @@ import Data.Generic (class Generic, GenericSignature(..), GenericSpine(..), toSi
 
 import Data.Argonaut.Core (Json)
 import Data.Either (Either(..))
-import Data.Argonaut.Core (Json, toObject, toArray, toBoolean, toNumber, toString, fromString, fromBoolean, fromArray, fromObject, fromNumber)
+import Data.Argonaut.Core (Json, toObject, toArray, toBoolean, toNumber, toString, fromString, fromBoolean, fromArray, fromObject, fromNumber, jsonNull)
+import Data.Argonaut.Encode (encodeJson)
 
 import Control.Bind ((=<<))
 import Data.Int as Int
@@ -26,7 +27,7 @@ import Data.Array (zipWithA, length, head)
 import Data.Maybe (Maybe(..), maybe)
 import Type.Proxy (Proxy(..))
 import Control.Monad.Eff.Exception.Unsafe (unsafeThrow)
-
+import Debug.Trace (spy)
 
 -- | Special case: when we need to pass reserved keywords like `type`
 -- via JSON we can't call them `type` in code, so we suffic them with
@@ -120,9 +121,10 @@ gEncodeJson' spine = case spine of
   SNumber x         -> fromNumber x
   SBoolean x        -> fromBoolean x
   SArray thunks     -> fromArray (gEncodeJson' <<< (unit # _) <$> thunks)
-  SProd constr args -> case head args of
-    Just x -> gEncodeJson' (x unit)
-    Nothing -> fromArray []
+  SProd constr args -> case spy constr of
+    c -> case head (spy args) of
+      Just x' -> gEncodeJson' (spy (x' unit))
+      Nothing -> jsonNull
   SRecord fields    -> fromObject $ foldr addField M.empty fields
     where addField field = M.insert (encodeLabel field.recLabel)
                                      (gEncodeJson' $ field.recValue unit)

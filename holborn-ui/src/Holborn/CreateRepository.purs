@@ -16,14 +16,15 @@ import React.DOM.Props as RP
 import Standalone.Router.Dispatch (Navigate, navigateA)
 import Thermite as T
 import Unsafe.Coerce (unsafeCoerce)
+import Data.Lens (set)
+import Data.Array (head)
 
 import Holborn.Auth as Auth
 import Holborn.Config (makeUrl)
 import Holborn.Forms as HF
-import Holborn.ManualEncoding.CreateRepository (CreateRepositoryData(..), repoName, visibility, description, empty)
+import Holborn.ManualEncoding.CreateRepository (CreateRepositoryData(..), name, visibility, description, owner, empty, _Public)
 
 import Debug.Trace
-
 
 type State =
     { formErrors :: CreateRepositoryData
@@ -42,9 +43,21 @@ initialState =
   , validRepositoryOwners: []
   }
 
+-- | After fetching server data has succeeded we want to set some default values, e.g. valid owners
+fetchUpdate :: Array String -> State -> State
+fetchUpdate validRepositoryOwners state@{ formData } =
+  state { validRepositoryOwners = validRepositoryOwners, formData = (set owner (head validRepositoryOwners) formData) }
+
 data Action = CreateRepo | UpdateFormData CreateRepositoryData
 
+
+
+
 type Row eff = (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) -- TODO move to some common place
+
+readB :: Maybe String -> Boolean
+readB (Just "true") = true
+readB _ = false
 
 spec :: forall eff props. T.Spec (Row eff) State props Action
 spec = T.simpleSpec performAction render
@@ -55,29 +68,35 @@ spec = T.simpleSpec performAction render
       , R.form [RP.onSubmit onSubmit]
         [ R.text "http://code.space/"
         , ownerCandidateDropdown
-        , HF.text "name" err.repoName repoName (dispatch <<< UpdateFormData) formData
+        , HF.text "name" err.name name (dispatch <<< UpdateFormData) formData
         , R.button [RP.disabled loading, RP.className "btn btn-default"] [R.text if loading then "Creating ..." else "Create"]
         ]
       , R.ul [] (map (\x -> R.li [] [R.text x]) errors)
+      , R.h2 [] [R.text "Visibility"]
       ]
       where
         onSubmit :: React.Event -> T.EventHandler
         onSubmit ev = do
+          -- TODO remove unsafeCoerce when
+          -- https://github.com/purescript-contrib/purescript-react/pull/84
+          -- has been released.
           (unsafeCoerce ev).preventDefault
           dispatch CreateRepo
 
         -- | Map candidates for ownership to a nice drop-down
         ownerCandidateDropdown :: React.ReactElement
-        ownerCandidateDropdown = R.select [] (map (\x -> R.option [] [R.text x]) validRepositoryOwners)
+        ownerCandidateDropdown =
+          R.select [RP.onChange (\ev -> dispatch (UpdateFormData (set owner (unsafeCoerce ev).target.value formData)))]
+          (map (\x -> R.option [] [R.text x]) validRepositoryOwners)
 
     performAction :: forall eff'. T.PerformAction (Row eff') State props Action
     performAction CreateRepo props state = do
-      T.cotransform (\state -> state { loading = true })
-      r <- lift $ attempt (Auth.post (makeUrl "/v1/create-repository") (encodeJson state.formData))
+      T.cotransform (_ { loading = true })
+      r <- lift $ attempt (Auth.post (makeUrl "/v1/create-repository") (spy (encodeJson state.formData)))
       case Auth.handleResult r of
         Auth.OK (_ :: Unit) -> lift (navigateA "/")
-        Auth.FormError errs -> void $ T.cotransform $ \state -> state { formErrors = (spy errs) }
+        Auth.FormError errs -> void $ T.cotransform $ _ { formErrors = (spy errs) }
         Auth.OtherError err -> traceAnyM err *> void $ T.cotransform id
-      void $ T.cotransform (\state -> state { loading = false })
+      void $ T.cotransform (_ { loading = false })
 
-    performAction (UpdateFormData x) _ state = void $ T.cotransform $ \state -> state { formData = x }
+    performAction (UpdateFormData x) _ state = void $ T.cotransform $ _ { formData = (spy x) }

@@ -5,13 +5,17 @@ import Data.Generic (class Generic, gShow)
 import Data.Argonaut.Parser as P
 import Data.Argonaut.Core (Json)
 import Data.Either (Either(..))
-import Test.Unit (test, runTest)
+import Test.Unit (test)
+import Test.Unit.Main (runTest)
 import Test.Unit.Assert as Assert
-import Data.Either.Unsafe (fromRight)
+import Data.Either (fromRight)
+import Partial.Unsafe (unsafePartial)
 import Data.Maybe (Maybe(..))
 import Data.Argonaut.Printer (printJson)
 
 import Holborn.JSON.Generic (gDecode, gEncode)
+import Holborn.ManualEncoding.CreateRepository (Visibility(..))
+
 
 -- Need eq instance for test
 newtype A = A { name :: String }
@@ -34,10 +38,18 @@ instance eqMA :: Eq MA where
 derive instance genericMA :: Generic MA
 instance showMA :: Show MA where show = gShow
 
+-- Handle maybe with subtype:
+data MAV = MAV { visibility :: Maybe Visibility }
+instance eqMAV :: Eq MAV where
+  eq (MAV a) (MAV b) = eq a.visibility b.visibility
+derive instance genericMAV :: Generic MAV
+instance showMAV :: Show MAV where show = gShow
+
+
 testJson :: Json
-testJson = fromRight (P.jsonParser "{\"name\": \"name\"}")
+testJson = unsafePartial (fromRight (P.jsonParser "{\"name\": \"name\"}"))
 emptyJson :: Json
-emptyJson = fromRight (P.jsonParser "{}")
+emptyJson = unsafePartial (fromRight (P.jsonParser "{}"))
 
 
 main = runTest do
@@ -51,3 +63,5 @@ main = runTest do
     Assert.equal (Right (MA {name: Just "name"})) (gDecode testJson)
   test "gEncode doesn't encode tag" $
     Assert.equal "{\"name\":\"name\"}" (printJson (gEncode (A {name: "name"})))
+  test "gEncode maybe valid Visibility must not be null" $
+    Assert.equal "{\"visibility\":\"public\"}" (printJson (gEncode (MAV {visibility: Just Public})))
