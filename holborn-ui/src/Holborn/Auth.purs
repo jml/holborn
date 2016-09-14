@@ -60,6 +60,8 @@ delete u = do
 -- about (invalid input, other problem, success).
 data HandledResult a b c = FormError b | OtherError c | OK a
 
+-- TODO(jml): If possible rewrite nicer (but without losing
+-- readability of current structure).
 handleStatus :: forall a b. (DecodeJson a, DecodeJson b) => AJ.AffjaxResponse Json -> HandledResult a b String
 handleStatus r = case r of
   {status: StatusCode 201, headers, response } ->
