@@ -28,13 +28,19 @@ import Holborn.API.Internal
 import Holborn.JSON.NewRepo (NewRepoRequest(..))
 import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName)
 import Holborn.API.Types (DexMail)
-
+import Holborn.API.Auth (getUserId)
 
 type API =
-    "new-repo"
+    "create-repository"
     :> Header "x-dex-email" DexMail
     :> ReqBody '[JSON] NewRepoRequest
     :> Post '[JSON] RepoMeta
+  -- When creating a repository we need an owners. The following API
+  -- call returns a list of valid owner names for a logged in user.
+  -- TODO: this might be better off in a different file.
+  :<|> "user" :> "repository-owner-candidates"
+    :> Header "x-dex-email" DexMail
+    :> Get '[JSON] [OwnerName]
 
 
 data NewRepoError = AlreadyExists | PermissionDenied | OwnerNotFound
@@ -47,7 +53,7 @@ instance JSONCodeableError NewRepoError where
 
 server :: Config -> Server API
 server conf =
-  enter (toServantHandler conf) newRepo
+  enter (toServantHandler conf) (newRepo :<|> repoOwnerCandidates)
 
 
 newRepo :: Maybe DexMail -> NewRepoRequest -> APIHandler NewRepoError RepoMeta
@@ -80,3 +86,13 @@ newRepo _dexMail NewRepoRequest{..} = do
             insert into "user_repo" (name, description, user_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (name, description, userId, repoServer)
        pure (RepoMeta repoId 0 0 0 owner')
+
+
+repoOwnerCandidates :: Maybe DexMail -> APIHandler NewRepoError [OwnerName]
+repoOwnerCandidates dexMail = do
+  userId <- getUserId dexMail
+  [Only (ownerName :: OwnerName) ] <- query [sql|
+            select username from "user" where id = ?
+            |] (Only userId)
+  -- TODO link in potential owners when we have an org structure
+  pure [ownerName]

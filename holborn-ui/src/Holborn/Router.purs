@@ -4,7 +4,6 @@ import Prelude
 import Control.Alt ((<|>))
 import Control.Apply ((*>))
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE())
 import Control.Monad.Eff.Exception as E
 import Data.Either (Either(..))
@@ -16,27 +15,27 @@ import React.DOM as R
 import React.DOM.Props as RP
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Argonaut.Decode (decodeJson)
-import Standalone.Router.Dispatch (Navigate)
+import Standalone.Router.Dispatch (Navigate, matches, navigate, navigateA)
 
 import DOM (DOM)
 
 
 import Text.Parsing.Simple (Parser, string, eof, tail)
-import Standalone.Router.Dispatch (matches, navigate, navigateA)
 import Thermite as T
 
 import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
 import Holborn.SettingsRoute as Settings
 import Holborn.CreateAccount as CreateAccount
+import Holborn.CreateRepository as CreateRepository
 
 import Holborn.Config (makeUrl)
 import Holborn.Auth as Auth
-import Debug.Trace (spy, traceAnyM)
 import Holborn.ManualEncoding.Profile as ManualCodingProfile
 import Holborn.DomHelpers (scroll)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Control.Monad.Trans (lift)
+import Debug.Trace
 
 -- | UserMeta records the state of the visiting user from the
 -- database.
@@ -62,6 +61,7 @@ data RootRoutes =
   | SettingsRoute Settings.State
   | BrowseRoute Browse.State
   | CreateAccountRoute CreateAccount.State
+  | CreateRepositoryRoute CreateRepository.State
 
 
 -- TODO tom: Routes should really be "invertible" so I can create a
@@ -71,6 +71,7 @@ rootRoutes =
   string "/" *>
     ( string "settings/" *> (map SettingsRoute Settings.settingsRoutes)
       <|> string "create-account" *> pure (CreateAccountRoute CreateAccount.initialState)
+      <|> string "create-repository" *> pure (CreateRepositoryRoute CreateRepository.initialState)
       <|> map BrowseRoute Browse.browseRoutes
       <|> pure LandingPageRoute <* eof
       <|> pure Route404 <* tail
@@ -82,6 +83,7 @@ data Action =
   | SettingsAction Settings.Action
   | BrowseAction Browse.Action
   | CreateAccountAction CreateAccount.Action
+  | CreateRepositoryAction CreateRepository.Action
   | BurgerMenuToggle
 
 
@@ -117,8 +119,16 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
     fetch NotLoadedRoute (set userMeta NotLoaded state)
 
   fetch (SettingsRoute s) state = do
-      sr <- fetch (view Settings.routeLens s) s -- of type SettingsRoute
-      pure (set routeLens (SettingsRoute sr) state)
+    sr <- fetch (view Settings.routeLens s) s -- of type SettingsRoute
+    pure (set routeLens (SettingsRoute sr) state)
+
+  fetch (CreateRepositoryRoute s) state = do
+    -- TODO this fetch branch should probably go into CreateRepository.purs
+    r <- Auth.get (makeUrl "/v1/user/repository-owner-candidates")
+    case Auth.handleStatus r of
+        Auth.OK r' -> pure $ set routeLens (CreateRepositoryRoute (CreateRepository.fetchUpdate r' s)) state
+        Auth.FormError (_ :: Unit) -> pure state
+        x -> traceAnyM x *> pure state
 
   -- Slightly different to settings: If we are already in a browse
   -- route then recycle existing state (browseState).
@@ -194,6 +204,18 @@ _CreateAccountAction = prism CreateAccountAction \action ->
     CreateAccountAction x -> Right x
     _ -> Left action
 
+_CreateRepositoryState :: PrismP RootRoutes CreateRepository.State
+_CreateRepositoryState = prism CreateRepositoryRoute \route ->
+  case route of
+    CreateRepositoryRoute x -> Right x
+    _ -> Left route
+
+_CreateRepositoryAction :: PrismP Action CreateRepository.Action
+_CreateRepositoryAction = prism CreateRepositoryAction \action ->
+  case action of
+    CreateRepositoryAction x -> Right x
+    _ -> Left action
+
 
 spec404 :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) state props action
 spec404 = T.simpleSpec T.defaultPerformAction render
@@ -206,7 +228,7 @@ landingPage = T.simpleSpec T.defaultPerformAction render
   where
     render _ _ _ _ =
       [R.ul []
-       [ R.li [] [R.a [RP.href "/new-repository"] [R.text "Create a new repository"]]
+       [ R.li [] [R.a [RP.href "/create-repository"] [R.text "Create a new repository"]]
        ]
       ]
 
@@ -220,6 +242,7 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
        [ T.split _SettingsState (T.match _SettingsAction Settings.spec)
        , T.split _BrowseState (T.match _BrowseAction Browse.spec)
        , T.split _CreateAccountState (T.match _CreateAccountAction CreateAccount.spec)
+       , T.split _CreateRepositoryState (T.match _CreateRepositoryAction CreateRepository.spec)
        , T.split _404State spec404
        , T.split _LandingPageState landingPage
        ]
@@ -287,6 +310,7 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
       BrowseRoute _ -> "Browse"
       CreateAccountRoute _ -> "Last step!"
       LandingPageRoute -> "Home"
+      _ -> "" -- don't show a label for all other cases
 
     burgerMenuToggle dispatch ev = dispatch BurgerMenuToggle
 

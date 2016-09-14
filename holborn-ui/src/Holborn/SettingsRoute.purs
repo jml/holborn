@@ -2,8 +2,7 @@
 -- settings content on the right (cf Twitter settings)
 module Holborn.SettingsRoute where
 
-import Prelude
-import Data.Functor (($>))
+import Prelude (pure, bind, ($), ($>))
 import Control.Alt ((<|>))
 import Thermite as T
 import React.DOM as R
@@ -71,12 +70,13 @@ instance fetchSettingsRoutes :: Fetchable SettingsRoutes State where
       Right keys -> pure (set routeLens (SSHKeySettingsOK (SSHKeys.initialState { keys = keys })) s)
   fetch a s = pure s
 
-
+initialState :: State
 initialState = State
   { route: SSHKeySettings
   , error: "no error"
   }
 
+startWithRoute :: SettingsRoutes -> State
 startWithRoute r = State
   { route: r
   , error: "no error"

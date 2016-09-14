@@ -17,21 +17,20 @@ type DateTime = String -- TODO implement parser
 -- The following three feel like they ought to be parametrized ...
 data Key = Key { id :: Int, key :: { key :: String, comment :: String, type_ :: String }
                , verified :: Boolean, readonly :: Boolean, created_at :: DateTime }
-data AddKeyData = AddKeyData { key :: String, title :: String }
-data AddKeyDataError = AddKeyDataError { global :: Maybe String, key :: Maybe String, title :: Maybe String }
+
+data AddKeyData = AddKeyData { key :: Maybe String, title :: Maybe String }
 
 
 derive instance genericKey :: Generic Key
-derive instance genericAddKeyDataError :: Generic AddKeyDataError
 derive instance genericAddKeyData :: Generic AddKeyData
 
 
-title :: LensP AddKeyData String
+title :: LensP AddKeyData (Maybe String)
 title = lens
         (\(AddKeyData { title }) -> title)
         (\(AddKeyData { key }) t -> AddKeyData { key, title: t})
 
-key :: LensP AddKeyData String
+key :: LensP AddKeyData (Maybe String)
 key = lens
         (\(AddKeyData { key }) -> key)
         (\(AddKeyData { title }) k -> AddKeyData { key: k, title: title})
@@ -40,7 +39,7 @@ key = lens
 instance decodeKey :: DecodeJson Key where
   decodeJson = gDecode
 
-instance decodeAddKeyDataError :: DecodeJson AddKeyDataError where
+instance decodeAddKeyData :: DecodeJson AddKeyData where
   decodeJson = gDecode
 
 instance encodeAddKeyData :: EncodeJson AddKeyData where
