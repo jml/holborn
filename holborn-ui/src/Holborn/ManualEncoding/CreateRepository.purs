@@ -35,7 +35,6 @@ instance decodeVisibility :: DecodeJson Visibility where
     _ -> Left ("Could not decode: " <> show s)
 
 
--- The following three feel like they ought to be parametrized ...
 data CreateRepositoryData =
   CreateRepositoryData { name :: Maybe String
                        , description :: Maybe String
@@ -99,4 +98,4 @@ instance encodeCreateRepositoryData :: EncodeJson CreateRepositoryData where
     ~> "description" := x.description
     ~> "name" := x.name
     ~> "visibility" := (spy x.visibility)
-    ~> unit -- TODO not sure why I need to finish of with unit here?
+    ~> unit -- TODO not sure why I need to finish with unit here?

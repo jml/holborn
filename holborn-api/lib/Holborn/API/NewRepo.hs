@@ -35,7 +35,10 @@ type API =
     :> Header "x-dex-email" DexMail
     :> ReqBody '[JSON] NewRepoRequest
     :> Post '[JSON] RepoMeta
-  :<|> "user" :> "repository-owner-candidates" -- TODO should this be here
+  -- When creating a repository we need an owners. The following API
+  -- call returns a list of valid owner names for a logged in user.
+  -- TODO: this might be better off in a different file.
+  :<|> "user" :> "repository-owner-candidates"
     :> Header "x-dex-email" DexMail
     :> Get '[JSON] [OwnerName]
 
