@@ -96,12 +96,11 @@ spec = do
       withApplication (makeTestApp config) $ do
         -- Create a repo for user
         let repoName = "name" :: Text
-        resp <- postAs user "/v1/new-repo" $ object
+        resp <- postAs user "/v1/create-repository" $ object
           [ "owner" .= userName user
           , "name" .= repoName
           , "description" .= ("repo description" :: Text)
-          , "private" .= False
-          , "initialize" .= False
+          , "visibility" .= ("public" :: Text)
           ]
         let (Just repoId) = parseMaybe (\obj -> obj .: "id") (getJSONBody resp) :: Maybe Int
 
@@ -132,12 +131,11 @@ spec = do
 
         -- Create a repo for user
         let repoName = "name" :: Text
-        void $ postAs user "/v1/new-repo" $ object
+        void $ postAs user "/v1/create-repository" $ object
           [ "owner" .= userName user
           , "name" .= repoName
           , "description" .= ("repo description" :: Text)
-          , "private" .= False
-          , "initialize" .= False
+          , "visibility" .= ("public" :: Text)
           ]
 
         -- Try to get the repo
