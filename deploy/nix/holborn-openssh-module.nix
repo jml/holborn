@@ -9,8 +9,9 @@ let
     UsePrivilegeSeparation=no
     PasswordAuthentication=no
 
-    AuthorizedKeysCommand=/holborn-authorized-keys --api-url=${cfg.holbornApiEndpoint} --key=%k --type=%t
+    AuthorizedKeysCommand=/holborn-authorized-keys --api-url=${cfg.holbornApiEndpoint} --key=%k --type=%t --command=${cfg.holbornSshPackage}/bin/holborn-connect-repo
     AuthorizedKeysCommandUser=holborn
+
 
     # Host keys provided via nixops `deployment.keys` option:
     HostKey=/run/keys/ssh_host_rsa_key
