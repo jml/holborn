@@ -12,9 +12,9 @@
 -- and forward the following headers (values after : are examples).
 --
 --   X-Real-IP: 127.0.0.1
---   x-holborn-name:
---   x-holborn-email: t4@x.com
---   x-holborn-email-verified: True
+--   x-dex-name:
+--   x-dex-email: t4@x.com
+--   x-dex-email-verified: True
 --   x-forwarded-for: 127.0.0.1:45690
 --
 -- Additional user info goes into specific apps (e.g. admin app could

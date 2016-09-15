@@ -87,7 +87,7 @@ emailAndNameClaims claimsSet = do
 
 trustedCredsHeaders :: TrustedCreds -> [Header]
 trustedCredsHeaders TrustedCreds{..} =
-  [ ("x-holborn-name", encodeUtf8 name)
-  , ("x-holborn-email", encodeUtf8 email)
-  , ("x-holborn-email-verified", encodeUtf8  (show emailVerified))
+  [ ("x-dex-name", encodeUtf8 name)
+  , ("x-dex-email", encodeUtf8 email)
+  , ("x-dex-email-verified", encodeUtf8  (show emailVerified))
   ]
