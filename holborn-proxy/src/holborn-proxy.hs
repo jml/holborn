@@ -30,8 +30,9 @@ module Main (main) where
 
 import HolbornPrelude
 import Holborn.Proxy.Config (Config(..))
-import Holborn.Proxy.HttpTermination (proxyApp, redirectApp)
-import Network.HTTP.Client (newManager, defaultManagerSettings)
+import Holborn.Proxy.HttpTermination (proxyApp)
+import Network.HTTP.Client (newManager)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 import qualified Network.Wai.Middleware.RequestLogger as RL
 import Options.Applicative
   ( ParserInfo
@@ -46,15 +47,12 @@ import Options.Applicative
   , metavar
   , option
   , progDesc
-  , str
   , value
   , ReadM
   , eitherReader
   )
 import Holborn.Proxy.AuthJar (newMemoryJar)
-import Control.Concurrent (forkIO, threadDelay)
-import Network.Wai.Handler.Warp (run, setPort, defaultSettings)
-import Network.Wai.Handler.WarpTLS (runTLS, tlsSettings)
+import Network.Wai.Handler.Warp (run)
 import Network.URI (URI, parseURI)
 
 
@@ -86,24 +84,11 @@ options =
             <> metavar "PORT"
             <> help "http port to listen on"
             <> value 8080 )
-      <*> option auto
-          ( long "ssl-port"
-            <> metavar "SSL_PORT"
-            <> help "SSL Port to listen on"
-            <> value 443 )
-      <*> option str
-          ( long "ssl-full-chain"
-            <> metavar "HOLBORN_SSL_FULL_CHAIN"
-            <> help "Absolute path to fullchain.pem (from acme)" )
-      <*> option str
-          ( long "ssl-key"
-            <> metavar "HOLBORN_SSL_KEY"
-            <> help "Absolute path to key.pem  (from acme)" )
       <*> option uri
           ( long "public-host"
             <> metavar "HOLBORN_PUBLIC_HOST"
-            <> help "Public base url including https://"
-            <> let Just defURI = parseURI "https://127.0.0.1:8443" in value defURI )
+            <> help "Public base url including http://"
+            <> let Just defURI = parseURI "http://127.0.0.1:8080" in value defURI )
       <*> option bs
           ( long "upstream-host"
             <> metavar "HOLBORN_UPSTREAM_HOST"
@@ -118,7 +103,7 @@ options =
           ( long "dex-host"
             <> metavar "HOLBORN_DEX_HOST"
             <> help "Where dex lives (including port)"
-            <> value "norf.co:5556" )
+            <> value "login.norf.co" )
       <*> option bs
           ( long "oauth-client-id"
             <> metavar "HOLBORN_OAUTH_CLIENT_ID"
@@ -130,7 +115,7 @@ options =
 
     description = concat
       [ fullDesc
-      , progDesc "http/https terminator that also redirects to https and handles ACME requests."
+      , progDesc "http terminator that does authentication"
       , header "holborn-proxy - our all-in-one http terminator"
       ]
 
@@ -138,19 +123,9 @@ options =
 main :: IO ()
 main = do
     config@Config{..} <- loadConfig
+
     -- TOOD we might want an on-disk jar to survive restarts. Not sure
     -- what the security trade-offs are here.
     jar <- newMemoryJar
-    manager <- newManager defaultManagerSettings
-
-    void $ forkIO $ run configPort (RL.logStdoutDev (redirectApp configPublicHost))
-
-    let settings = setPort configSslPort defaultSettings
-    forever $ do
-        runTLS (tlsSettings configSslFullChain configSslKey) settings (RL.logStdoutDev (proxyApp config manager jar)) `catch` degradedModeMessage
-        threadDelay (1000 * 5000) -- 5 seconds
-  where
-    degradedModeMessage (err :: IOException) = do
-        printErr "Error when running TLS server:"
-        printErr (show err)
-        printErr "Running in degraded mode."
+    manager <- newManager tlsManagerSettings
+    run configPort (RL.logStdoutDev (proxyApp config manager jar))

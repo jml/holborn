@@ -83,7 +83,7 @@ in
       };
 
       listen = mkOption {
-        default = "http://0.0.0.0:5556";
+        default = "http://127.0.0.1:5556";
         type = types.str;
         description = ''
           Address/port to listen on. Includes http or https.
@@ -91,7 +91,7 @@ in
       };
 
       issuer = mkOption {
-        default = "http://norf.co:5556";
+        default = "https://login.norf.co";
         type = types.str;
         description = ''
            Public facing uRL including http / https.
@@ -116,7 +116,7 @@ in
   config = mkIf cfg.enable {
 
     # Make pkg dexctl command available on machine.
-    environment.systemPackages = [ cfg.package.bin ];
+    environment.systemPackages = [ cfg.package ];
 
     users.extraUsers = singleton {
       name = "dex";
@@ -143,7 +143,7 @@ in
       };
 
       serviceConfig = {
-        ExecStart = "${cfg.package.bin}/bin/dex-overlord";
+        ExecStart = "${cfg.package}/bin/dex-overlord";
         Restart = "on-failure";
         RestartSec = "10s";
         StartLimitInterval = "1min";
@@ -162,17 +162,17 @@ in
         DEX_WORKER_ENABLE_REGISTRATION = "true";
         DEX_WORKER_LOG_DEBUG = builtins.toString cfg.logDebug;
         DEX_WORKER_EMAIL_CFG = "${emailConfigFile}";
-        DEX_WORKER_HTML_ASSETS = "${cfg.package}/share/go/src/github.com/coreos/dex/static/html/";
+        DEX_WORKER_HTML_ASSETS = "${cfg.package}/static/html/";
         DEX_WORKER_CLIENTS = "${clientConfigFile}";
         DEX_WORKER_CONNECTORS = "${connectorConfigFile}";
         DEX_WORKER_LISTEN = cfg.listen;
         DEX_WORKER_ISSUER = cfg.issuer;
-        DEX_WORKER_EMAIL_TEMPLATES = "${cfg.package}/share/go/src/github.com/coreos/dex/static/email/";
+        DEX_WORKER_EMAIL_TEMPLATES = "${cfg.package}/static/email/";
       };
 
       serviceConfig = {
-        ExecStart = "${cfg.package.bin}/bin/dex-worker";
-        ExecStartPost = "${cfg.package.bin}/bin/dexctl --db-url ${cfg.overlordDBURL} set-connector-configs ${connectorConfigFile}";
+        ExecStart = "${cfg.package}/bin/dex-worker";
+        ExecStartPost = "${cfg.package}/bin/dexctl --db-url ${cfg.overlordDBURL} set-connector-configs ${connectorConfigFile}";
         Restart = "on-failure";
         RestartSec = "10s";
         StartLimitInterval = "1min";

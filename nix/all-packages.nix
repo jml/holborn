@@ -18,7 +18,7 @@ let
       ${drv.postInstall or ""}
 
       for exe in "$out/bin/"* ; do
-        wrapProgram "$exe" --prefix PATH ":" \
+      wrapProgram "$exe" --prefix PATH ":" \
           ${lib.makeBinPath xs}
       done
     '';
@@ -26,11 +26,12 @@ let
 
   addTestDependency = drv: x: addTestDependencies drv [x];
   addTestDependencies = drv: xs: haskell.lib.overrideCabal drv (drv: {
-    preCheck = ''
-      export PATH=${lib.makeBinPath xs}:$PATH
+    testToolDepends = xs;
+  });
 
-      ${drv.preCheck or ""}
-    '';
+  addLibrarySystemDependency = drv: x: addLibrarySystemDependencies drv [x];
+  addLibrarySystemDependencies = drv: xs: haskell.lib.overrideCabal drv (drv: {
+    librarySystemDepends = xs ;
   });
 
 in
@@ -60,7 +61,11 @@ haskellPackages.override {
       hcl = self.callPackage ../hcl {};
       # holborn-api tests have a runtime dependency on postgresql.
       # holborn-api calls 'ssh-keygen' during normal operation and during tests.
-      holborn-api = addTestDependencies (addRuntimeDependency (self.callPackage ../holborn-api {}) pkgs.openssh) [pkgs.postgresql pkgs.openssh];
+      holborn-api = addLibrarySystemDependency (
+          addTestDependencies (
+            addRuntimeDependency (self.callPackage ../holborn-api {}) pkgs.openssh)
+          [pkgs.postgresql pkgs.openssh])
+        pkgs.postgresql.lib;
       # holborn-common-types calls 'ssh-keygen' in its tests
       holborn-common-types = addTestDependency (self.callPackage ../holborn-common-types {}) pkgs.openssh;
       holborn-prelude = self.callPackage ../holborn-prelude {};

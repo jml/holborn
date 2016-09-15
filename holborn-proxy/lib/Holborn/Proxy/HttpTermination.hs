@@ -5,9 +5,7 @@
 
 module Holborn.Proxy.HttpTermination
   ( ProxyAPI
-  , RedirectAndAcmeAPI
   , proxyApp
-  , redirectApp
   ) where
 
 import HolbornPrelude
@@ -20,7 +18,7 @@ import Network.HTTP.Client (Manager)
 import Network.HTTP.ReverseProxy (defaultOnExc, waiProxyTo, WaiProxyResponse(..), ProxyDest(..))
 import Network.HTTP.Types (status302, status200)
 import Network.OAuth.OAuth2 (authorizationUrl, OAuth2(..), appendQueryParam, fetchAccessToken)
-import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application, rawPathInfo, rawQueryString, responseFile)
+import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application, responseFile)
 import Web.Cookie (parseCookies, renderSetCookie, def, setCookieName, setCookieValue, setCookiePath, setCookieSecure)
 import Servant (serve, (:<|>)(..), (:>), Raw, Server, QueryParam, Header, Get, NoContent(..), JSON)
 import Servant.Server (ServantErr(..), err302, err401)
@@ -28,7 +26,7 @@ import Data.Proxy (Proxy(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Servant.Utils.StaticFiles (serveDirectory)
 
-import Holborn.Proxy.Config (Config(..), oauth2FromConfig, ServiceBaseUrl)
+import Holborn.Proxy.Config (Config(..), oauth2FromConfig)
 import Holborn.Proxy.AuthJar (AuthJar(..), UserCookie, TrustedCreds, unpackClaims, trustedCredsHeaders)
 
 
@@ -40,17 +38,8 @@ type ProxyAPI =
     :<|> Raw
 
 
-type RedirectAndAcmeAPI =
-    ".well-known" :> "acme-challenge" :> Raw
-    :<|> Raw
-
-
 proxyApi :: Proxy ProxyAPI
 proxyApi = Proxy
-
-
-redirectAndAcmeAPI :: Proxy RedirectAndAcmeAPI
-redirectAndAcmeAPI = Proxy
 
 
 proxyServer :: (AuthJar jar) => Config -> Manager -> jar -> Server ProxyAPI
@@ -61,17 +50,6 @@ proxyServer config manager jar =
   -- TODO: we need to set headers in such a way that index.html is always reloaded
   -- nginx uses sth like `expired no-cache no-store private auth;`
   :<|> \_ respond -> respond (responseFile status200 [] "/run/current-system/sw/ui/index.html" Nothing)
-
-
-redirectAndAcmeServer :: ServiceBaseUrl -> Server RedirectAndAcmeAPI
-redirectAndAcmeServer baseUrl =
-    serveDirectory "/var/www/challenges"
-    :<|> redirectToHTTPS
-    where
-      -- We're appending the full request path and query string on
-      -- redirect for a nicer user experience.
-      redirectToHTTPS request respond = respond (
-          responseLBS status302 [("location", (encodeUtf8 (show baseUrl)) <> (rawPathInfo request) <> (rawQueryString request))] BSL.empty)
 
 
 -- | Redirect to dex (or whatever oauth2 provider we have configured)
@@ -157,8 +135,3 @@ handleProxying config@Config{..} manager jar cookie = waiProxyTo doProxy default
 
 proxyApp :: (AuthJar jar) => Config -> Manager -> jar -> Application
 proxyApp config manager jar = serve proxyApi (proxyServer config manager jar)
-
-
-redirectApp :: ServiceBaseUrl -> Application
-redirectApp configPublicHost =
-  serve redirectAndAcmeAPI (redirectAndAcmeServer configPublicHost)
