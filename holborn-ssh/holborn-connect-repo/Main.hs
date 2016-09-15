@@ -122,5 +122,7 @@ main = do
     Just sshCommand -> do
       repoCall <- checkPermissions baseUrl manager keyId sshCommand
       case repoCall of
-        Left e -> print e
+        -- TODO make (show err) a nice error message because it will
+        -- be seen by the end-user:
+        Left e -> printErr (show e)
         Right call -> execRepoCall call
