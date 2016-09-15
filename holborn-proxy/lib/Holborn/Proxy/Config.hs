@@ -14,9 +14,6 @@ import Network.URI (URI)
 type ServiceBaseUrl = URI
 
 data Config = Config { configPort :: Warp.Port
-                     , configSslPort :: Warp.Port
-                     , configSslFullChain :: FilePath
-                     , configSslKey :: FilePath
                      , configPublicHost :: URI
                      , configUpstreamHost :: ByteString
                      , configUpstreamPort :: Warp.Port

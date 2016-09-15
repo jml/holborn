@@ -16,7 +16,7 @@ mkDerivation {
     owner = "jml";
     repo = "pipes-shell";
     rev = "ghc-8";
-    sha256 = "148rmqvp2s085krfnww24jl9r9dfjvvg1wgy8yvwfkbjjjcxpzpk";
+    sha256 = "1w2w5ccbfq4l1vp4drh52sv3x5168qmp5k4rb01j1s9n6slzdqr3";
   };
 
   libraryHaskellDepends = [
@@ -32,4 +32,3 @@ mkDerivation {
   license = stdenv.lib.licenses.bsd3;
   hydraPlatforms = [ "x86_64-darwin" ];
 }
-

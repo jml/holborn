@@ -51,6 +51,7 @@ executables:
     dependencies:
       - holborn-proxy
       - http-client
+      - http-client-tls
       - network-uri
       - optparse-applicative
       - wai-extra

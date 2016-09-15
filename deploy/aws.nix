@@ -29,7 +29,6 @@ rec {
         rules = [
             { fromPort = ports.ssh; toPort = ports.ssh; sourceIp = "0.0.0.0/0"; }
             { fromPort = ports.loginSSH; toPort = ports.loginSSH; sourceIp = "0.0.0.0/0"; }
-            { fromPort = ports.dex; toPort = ports.dex; sourceIp = "0.0.0.0/0"; }
             { fromPort = ports.http; toPort = ports.http; sourceIp = "0.0.0.0/0"; }
             { fromPort = ports.https; toPort = ports.https; sourceIp = "0.0.0.0/0"; }
         ];
@@ -38,10 +37,6 @@ rec {
     web = { resources, pkgs, lib, config, ... }:
     let
         hp = pkgs.callPackage ../nix/all-packages.nix {};
-        holborn-api = hp.callPackage ../holborn-api {};
-        holborn-repo = hp.callPackage ../holborn-repo {};
-        holborn-ssh = hp.callPackage ../holborn-ssh {};
-        holborn-proxy = hp.callPackage ../holborn-proxy {};
 
         # TODO - the following three should live holborn-ui:
         node_modules = pkgs.callPackage ../nix/node_modules.nix {};
@@ -82,13 +77,13 @@ rec {
         services.openssh.ports = [ ports.loginSSH ];
 
         services.holborn-openssh = {
-          package = pkgs.openssh;
-          holbornSshPackage = holborn-ssh;
+        package = pkgs.openssh;
+          holbornSshPackage = hp.holborn-ssh;
           holbornApiEndpoint = "http://127.0.01:${toString ports.API}";
         };
 
         services.holborn-api = {
-          package = holborn-api;
+          package = hp.holborn-api;
           port = ports.API;
           repoServer = "127.0.0.1";
           repoPort = ports.REPO;
@@ -96,13 +91,13 @@ rec {
         };
 
         services.holborn-repo = {
-          package = holborn-repo;
+          package = hp.holborn-repo;
           port = ports.REPO;
           rawPort = ports.RAW;
         };
 
         services.holborn-proxy = {
-          package = holborn-proxy;
+          package = hp.holborn-proxy;
         };
 
         services.dex = {
@@ -146,9 +141,16 @@ rec {
           host all all 127.0.0.1/32 trust
         '';
 
-        security.acme.certs."norf.co" = {
-          webroot = "/var/www/challenges";
-          email = "tehunger@gmail.com";
+        services.nginx = {
+          enable = true;
+          recommendedOptimisation = true;
+          recommendedTlsSettings = true;
+          recommendedGzipSettings = true;
+          recommendedProxySettings = true;
+          virtualHosts = {
+             "norf.co" = import ./nginx/norf.co.nix;
+             "login.norf.co" = import ./nginx/login.norf.co.nix;
+          };
         };
     });
 }
