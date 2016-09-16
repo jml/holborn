@@ -48,6 +48,7 @@ server conf =
 createAccount :: Maybe DexMail -> CreateAccountRequest -> APIHandler CreateAccountError ()
 createAccount dexMail CreateAccountRequest{..} = do
     [Only (_ :: Int)] <- query [sql|
-        insert into "user" (username, email) values (?, ?) returning id
+        insert into "auth_user" (password, is_superuser, username, first_name, last_name, email, is_staff, is_active, date_joined)
+        values ('', false, ?, '', '', ?, false, true, now() at time zone 'utc') returning id
         |] (username, dexMail)
     return ()

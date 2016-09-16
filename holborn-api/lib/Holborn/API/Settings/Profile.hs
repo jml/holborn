@@ -48,13 +48,13 @@ server conf = enter (toServantHandler conf) $
 getUser :: Username -> APIHandler Error ProfileData
 getUser username = do
     r <- query [sql|
-                   select id, username, created
-                   from "user" where username = ?
+                   select id, username, date_joined
+                   from auth_user where username = ?
                |] (Only username)
 
     case r of
         [] -> throwHandlerError (UserNotFound (show username))
-        [(id_, un, created)] -> return (ProfileData id_ un "about this user TODO fetch from DB" created)
+        [(id_, un, date_joined)] -> return (ProfileData id_ un "about this user TODO fetch from DB" date_joined)
         _ -> terror $ "Multiple users found in the database for " ++ show username ++ ". Found: " ++ show r
 
 
@@ -64,11 +64,11 @@ getAuthorizedUser :: Maybe DexMail -> APIHandler Error ProfileData
 getAuthorizedUser dexMail = do
     userId <- getUserId dexMail
     r <- query [sql|
-                   select username, created
-                   from "user" where id = ?
+                   select username, date_joined
+                   from auth_user where id = ?
                |] (Only userId)
     case r of
-        [(uname, created)] -> pure (ProfileData userId uname "about this user TODO fetch from DB" created)
+        [(uname, date_joined)] -> pure (ProfileData userId uname "about this user TODO fetch from DB" date_joined)
         _ -> throwHandlerError UserNotInDb
 
 

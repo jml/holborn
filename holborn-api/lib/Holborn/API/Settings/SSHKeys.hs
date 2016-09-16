@@ -67,16 +67,16 @@ server conf = enter (toServantHandler conf) $
 listKeys :: Username -> APIHandler KeyError [ListKeysRow]
 listKeys username =
     queryWith parseListKeys [sql|
-              select id, "type", "key", comment, verified, readonly, created
-              from "ssh_key" where owner_id = (select id from "user" where username = ?)
+              select id, "type", "key", comment, verified, readonly, created_at
+              from core_sshkey where owner_id = (select id from auth_user where username = ?)
           |] (Only username)
 
 listMyKeys :: Maybe DexMail -> APIHandler KeyError [ListKeysRow]
 listMyKeys dexMail = do
     userId <- getUserId dexMail
     queryWith parseListKeys [sql|
-              select id, "type", "key", comment, verified, readonly, created
-              from "ssh_key" where owner_id = ?
+              select id, "type", "key", comment, verified, readonly, created_at
+              from core_sshkey where owner_id = ?
           |] (Only userId)
 
 
@@ -85,7 +85,7 @@ deleteKey dexMail keyId = do
     userId <- getUserId dexMail
 
     count <- execute [sql|
-            delete from "ssh_key" where id = ? and owner_id = ?
+            delete from core_sshkey where id = ? and owner_id = ?
             |] (keyId, userId)
     logDebug count
     return ()
@@ -98,7 +98,7 @@ addKey dexMail (AddKeyData key) = do
     let SSHKey keyType keyData comment = sshKey
 
     result <- executeWith parseListKeys [sql|
-            insert into "ssh_key"
+            insert into core_sshkey
               ( id
               , submitted_key
               , "type"
@@ -107,10 +107,10 @@ addKey dexMail (AddKeyData key) = do
               , owner_id
               , verified
               , readonly
-              , created
+              , created_at
               )
             values (default, ?, ?, ?, ?, ?, false, true, default)
-              returning id, "type", "key", comment, verified, readonly, created
+              returning id, "type", "key", comment, verified, readonly, created_at
             |] (key, keyType, keyData, comment, userId)
 
     case result of

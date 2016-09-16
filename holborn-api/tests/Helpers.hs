@@ -63,7 +63,9 @@ makeArbitraryUser :: MonadIO m => Config -> m User
 makeArbitraryUser config = do
   -- TODO: Make this actually arbitrary.
   -- TODO: Remove duplication between query & `User` construction.
-  userid <- mutateDB config [sql|insert into "user" (username, email) values (?, ?)|] ("alice" :: Text, "alice@example.com" :: Text)
+  userid <- mutateDB config [sql|
+      insert into auth_user (password, is_superuser, username, first_name, last_name, email, is_staff, is_active, date_joined)
+      values ('', false, ?, '', '', ?, false, true, now() at time zone 'utc')|] ("alice" :: Text, "alice@example.com" :: Text)
   pure $ User (fromIntegral userid) username email
   where
     username = newUsername "alice"
