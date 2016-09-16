@@ -1,5 +1,4 @@
-# ghc 8.0 is currently only in nightly.
-resolver: nightly-2016-09-13
+resolver: lts-7.0
 
 packages:
   - hcl
