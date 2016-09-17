@@ -26,11 +26,17 @@ import Holborn.Repo.HttpProtocol
 --
 -- Repositories have a repoId, and each repository has an API for browsing and
 -- one for the Git HTTP protocol.
+type SubAPIs =
+  "browse" :> BrowseAPI
+--  :<|> "search" :> SearchAPI
+  :<|> GitProtocolAPI
+
+
 type RepoAPI =
     "v1"
     :> "repos"
     :> Capture "repoId" RepoId
-    :> (BrowseAPI :<|> GitProtocolAPI)
+    :> SubAPIs
 
 repoAPI :: Proxy RepoAPI
 repoAPI = Proxy

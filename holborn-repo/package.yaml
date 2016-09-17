@@ -11,6 +11,8 @@ default-extensions:
   - NoImplicitPrelude
   - OverloadedStrings
   - RecordWildCards
+  - ScopedTypeVariables
+  - RecordWildCards
 
 dependencies:
   - base >=4.9 && <5
@@ -53,6 +55,9 @@ library:
     - tagged
     - text
     - transformers
+    - megaparsec
+    - containers
+    - QuickCheck
 
 executables:
   holborn-repo:

@@ -20,10 +20,11 @@ library
       Holborn.Repo.HttpProtocol
       Holborn.Repo.Process
       Holborn.Repo.RawProtocol
+      Holborn.Repo.Search
   hs-source-dirs:
       lib
   default-language: Haskell2010
-  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards
+  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables RecordWildCards
   ghc-options: -Wall -Werror
   build-depends:
       base >=4.9 && <5
@@ -62,6 +63,9 @@ library
     , tagged
     , text
     , transformers
+    , megaparsec
+    , containers
+    , QuickCheck
 
 executable holborn-repo
   main-is: Main.hs
@@ -69,7 +73,7 @@ executable holborn-repo
       src
   default-language: Haskell2010
   ghc-options: -Wall -Werror -threaded -rtsopts
-  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards
+  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables RecordWildCards
   build-depends:
       base >=4.9 && <5
     , holborn-prelude

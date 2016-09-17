@@ -18,6 +18,8 @@ module Holborn.Repo.GitLayer
        , makeRepository
        , notImplementedYet
        , withRepository
+       , fillRepoMeta
+       , repoPath
        ) where
 
 import HolbornPrelude hiding (id)
@@ -63,6 +65,9 @@ data Repository =
        , _repoPath :: FilePath
        } deriving (Eq, Show)
 
+
+repoPath :: Repository -> FilePath
+repoPath = _repoPath
 
 -- | The underlying Git repository.
 type GitRepo = LgRepo
