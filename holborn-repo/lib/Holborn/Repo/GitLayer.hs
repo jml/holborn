@@ -154,12 +154,11 @@ pathToSegments = Text.splitOn "/" . decodeUtf8
 
 
 data Blob = Blob { _gitBlobOid :: Git.BlobOid GitRepo
-                 , blobContents :: ByteString  -- XXX: gitlib goes to some lengths (via Conduit) to allow for nice loading of this. Here, we just blat everything into memory. Tom comment: might be able to use https://hackage.haskell.org/package/pipes-aeson
+                 , blobContents :: ByteString  -- XXX: gitlib goes to some lengths (via Conduit) to allow for nice loading of this. Here, we just blat everything into memory.
                  , blobRevision :: Revision
                  , blobPath :: [Text]
                  , blobRepository :: Repository
                  }
-
 
 instance ToMarkup Blob where
   toMarkup blob =
@@ -199,7 +198,6 @@ instance MimeRender RenderedJson Blob where
 getBlob :: (MonadLg io) => Revision -> [Text] -> Repository -> GitM io (Maybe Blob)
 getBlob revision segments repo = do
   oid <- resolveReference revision
-  liftIO $ print oid
   case oid of
     Nothing -> return Nothing
     Just oid' -> do
@@ -279,7 +277,7 @@ instance ToJSON EntryType where
 data TreeEntryMeta = TreeEntryMeta
     { _TreeEntryMeta_path :: Text
     , _TreeEntryMeta_mode :: TreeEntryMetaMode
-    , _TreeEntryMeta_type_ :: EntryType
+    , _TreeEntryMeta_type :: EntryType
     , _TreeEntryMeta_size :: Maybe Int -- doesn't apply to e.g. directories ATM
     , _TreeEntryMeta_sha :: Text
     } deriving (Show, Generic)
@@ -341,7 +339,7 @@ loadTree revision segments repo tree entry = do
     return (Tree tree entry (sortBy compareEntriesMeta entriesMeta) revision segments repo)
 
   where
-    compareEntriesMeta (path1, TreeEntryMeta{_TreeEntryMeta_type_=type1}) (path2, TreeEntryMeta{_TreeEntryMeta_type_=type2}) =
+    compareEntriesMeta (path1, TreeEntryMeta{_TreeEntryMeta_type=type1}) (path2, TreeEntryMeta{_TreeEntryMeta_type=type2}) =
       case (type1, type2) of
           (TreeEntry, TreeEntry) -> compare path1 path2
           (TreeEntry, _) -> LT
@@ -379,7 +377,7 @@ loadTree revision segments repo tree entry = do
         pure (path, TreeEntryMeta
           { _TreeEntryMeta_path = decodeUtf8 path
           , _TreeEntryMeta_mode = mode
-          , _TreeEntryMeta_type_ = BlobEntry
+          , _TreeEntryMeta_type = BlobEntry
           , _TreeEntryMeta_size = Just 100 -- TODO replace fake data
           , _TreeEntryMeta_sha = sha
           })
@@ -389,7 +387,7 @@ loadTree revision segments repo tree entry = do
         pure (path, TreeEntryMeta
           { _TreeEntryMeta_path = decodeUtf8 path
           , _TreeEntryMeta_mode = TreeMode
-          , _TreeEntryMeta_type_ = TreeEntry
+          , _TreeEntryMeta_type = TreeEntry
           , _TreeEntryMeta_size = Nothing
           , _TreeEntryMeta_sha = sha
           })
@@ -402,7 +400,7 @@ urlWithinTree :: Tree -> Text -> TreeEntryMeta -> Text
 urlWithinTree Tree{treeRepository = Repo{_repoId}, treeRevision} basePath TreeEntryMeta{..} =
   intercalate "/" $
     [ toUrlPiece _repoId
-    , case _TreeEntryMeta_type_ of
+    , case _TreeEntryMeta_type of
           TreeEntry -> "git/trees"
           BlobEntry -> "git/blobs"
           CommitEntry -> "git/commits"

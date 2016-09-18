@@ -21,11 +21,12 @@ library
       Holborn.Repo.Process
       Holborn.Repo.RawProtocol
       Holborn.Repo.Search
+      Holborn.Repo.SearchAPI
   hs-source-dirs:
       lib
   default-language: Haskell2010
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables RecordWildCards
-  ghc-options: -Wall -Werror
+  ghc-options: -Wall
   build-depends:
       base >=4.9 && <5
     , holborn-prelude

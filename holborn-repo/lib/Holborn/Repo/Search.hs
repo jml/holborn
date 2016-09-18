@@ -9,6 +9,7 @@ import System.Process (readProcess)
 import qualified Data.Set as Set
 import Data.Foldable (fold)
 import Data.Text (unpack)
+import Debug.Trace
 
 data IncludeExclude = Include | Exclude deriving (Show, Eq)
 
@@ -24,8 +25,7 @@ type Search = [(IncludeExclude, Term)]
 
 data Match = Match
   { path :: String
-  , line :: Integer
-  , contents :: String
+  , matches :: [(Integer, String)]
   }
   deriving (Show, Eq, Ord)
 
@@ -74,17 +74,32 @@ runOneGrep repo term =
   -- on stderr if there is an actual issue.
   case term of
     Plain text -> parseGitGrep <$> fmap fromString (gitGrep text `catch` \(_ :: SomeException) -> (pure "" :: IO String))
-    -- TODO implement remaining patterns
-    FileName name -> undefined
+      -- TODO implement remaining patterns
+    FileName _ -> undefined
     _ -> pure Nothing
   where
-    gitGrep text = readProcess "git" ["--git-dir", repoPath repo, "grep", "-n", "--cached", "--heading", unpack text] ""
+    -- TODO expose revision to search in?
+    gitGrep text = readProcess "git" ["--git-dir", repoPath repo, "grep", "-n", "--heading", unpack text, "master"] ""
 
--- output of git grep looks like this for a file (a:b) with one line "abc"
--- $ gg --heading -n a
--- a:b
+-- output of git grep looks like this for a file (a:b) with two lines "abc"
+-- $ gg --heading -n a master
+-- master:a:b
 -- 1:abc
+-- 2:abc
 parseGitGrep :: Text -> Maybe [Match]
 parseGitGrep s =
-  let p :: P.Parser [Match] = (P.many (Match <$> (P.someTill P.anyChar P.eol) <*> PL.decimal <*> ((P.string ":") >> P.someTill P.anyChar P.eol)))
-  in P.parseMaybe p s
+  P.parseMaybe (P.many parseMatch) s
+
+parseMatch :: P.Parser Match
+parseMatch = do
+  void (P.string "master:")
+  path <- P.someTill P.anyChar P.eol
+  matches <- many (P.try oneLine)
+  pure (Match path matches)
+
+  where
+    oneLine = do
+      lineNo <- PL.decimal
+      void (P.string ":")
+      content <- P.someTill P.anyChar P.eol
+      pure (lineNo, content)

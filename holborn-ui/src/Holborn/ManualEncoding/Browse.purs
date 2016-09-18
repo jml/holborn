@@ -73,7 +73,6 @@ derive instance genericGitTree :: Generic GitTree
 data GitBlobRendered = GitBlobRendered
   { sha :: String
   , path :: Array String
-  , num_lines :: Int
   , contents :: String
   }
 

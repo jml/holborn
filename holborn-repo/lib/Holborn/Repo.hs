@@ -12,6 +12,7 @@ import Servant ((:>), (:<|>)(..), Capture, Proxy(..), Server)
 
 import Holborn.JSON.RepoMeta (RepoId)
 import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
+import Holborn.Repo.SearchAPI (SearchAPI, searchServer)
 import Holborn.Repo.Config (Config)
 import Holborn.Repo.Filesystem (diskLocationToPath, getLocation)
 
@@ -28,7 +29,7 @@ import Holborn.Repo.HttpProtocol
 -- one for the Git HTTP protocol.
 type SubAPIs =
   "browse" :> BrowseAPI
---  :<|> "search" :> SearchAPI
+  :<|> "search" :> SearchAPI
   :<|> GitProtocolAPI
 
 
@@ -43,7 +44,7 @@ repoAPI = Proxy
 
 repoServer :: Config -> Server RepoAPI
 repoServer config repoId =
-    codeBrowser repo :<|> gitProtocolAPI diskLocation
+    codeBrowser repo :<|> searchServer repo :<|> gitProtocolAPI diskLocation
     where
       diskLocation = getLocation config repoId
       repo = makeRepository repoId (diskLocationToPath diskLocation)

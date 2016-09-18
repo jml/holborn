@@ -72,7 +72,7 @@ rootRoutes =
     ( string "settings/" *> (map SettingsRoute Settings.settingsRoutes)
       <|> string "create-account" *> pure (CreateAccountRoute CreateAccount.initialState)
       <|> string "create-repository" *> pure (CreateRepositoryRoute CreateRepository.initialState)
-      <|> map BrowseRoute Browse.browseRoutes
+      <|> string "code/" *> map BrowseRoute Browse.browseRoutes
       <|> pure LandingPageRoute <* eof
       <|> pure Route404 <* tail
     )

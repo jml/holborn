@@ -166,7 +166,7 @@ spec = T.simpleSpec T.defaultPerformAction render
     render dispatch _ (State { route: BlobLoaded org repo ref path, _meta: Just meta, _blob: Just (GitBlobRendered blob) }) _ =
       [ R.h2 [] [R.text (view MB.description meta)]
         -- TODO count number of lines
-      , R.pre [RP.className "line-numbers"] (renderLines (spy blob.num_lines))
+      , R.pre [RP.className "line-numbers"] (renderLines 100) -- TODO correct number of lines
       , R.div [RP.dangerouslySetInnerHTML {__html: blob.contents}] []
       ]
     render dispatch _ _ _ =
@@ -193,6 +193,6 @@ spec = T.simpleSpec T.defaultPerformAction render
       ]
 
     makeLink org repo treePath (GitTreeEntry entry) = case entry.type_ of
-      "blob" -> intercalate "/" (["", org, repo, "blob", "master"] <> treePath <> [entry.path])
-      "tree" -> intercalate "/" (["", org, repo, "tree", "master"] <> treePath <> [entry.path])
+      "blob" -> intercalate "/" (["", "code", org, repo, "blob", "master"] <> treePath <> [entry.path])
+      "tree" -> intercalate "/" (["", "code", org, repo, "tree", "master"] <> treePath <> [entry.path])
       _ -> "error404 TODO"
