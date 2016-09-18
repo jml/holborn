@@ -28,7 +28,7 @@ library
   build-depends:
       base >=4.9 && <5
     , holborn-prelude
-    , servant-server
+    , servant-server >= 0.8.1
     , wai
     , warp
     , aeson >=0.9
@@ -57,8 +57,8 @@ library
     , pipes-shell >= 0.2.0
     , pipes-zlib
     , process
-    , servant-blaze >= 0.5
-    , servant-server >= 0.5
+    , servant-blaze >= 0.7.1
+    , servant-server >= 0.8.1
     , tagged
     , text
     , transformers
@@ -73,7 +73,7 @@ executable holborn-repo
   build-depends:
       base >=4.9 && <5
     , holborn-prelude
-    , servant-server
+    , servant-server >= 0.8.1
     , wai
     , warp
     , holborn-repo

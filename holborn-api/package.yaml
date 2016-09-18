@@ -32,7 +32,6 @@ library:
     - http-client
     - http-types
     - postgresql-simple
-    - servant-docs >= 0.5
     - servant-server
     - text
     - time

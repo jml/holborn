@@ -1,0 +1,34 @@
+resolver: lts-7.0
+
+packages:
+  - hcl
+  - holborn-api
+  - holborn-common-types
+  - holborn-prelude
+  - holborn-proxy
+  - holborn-repo
+  - holborn-syntax
+  - location:
+      # double-conversion doesn't build on Darwin.
+      # See https://github.com/bos/double-conversion/pull/14
+      git: https://github.com/bradediger/double-conversion.git
+      commit: fb8666ecccc303a4a48ced16a5fbd8d2e6e83e3e
+  - location:
+      # pipes-shell doesn't work with ghc 8.0
+      git: https://github.com/jml/pipes-shell.git
+      commit: 89d7f1b7a121244cc2f859d151587e3430d4c079
+
+extra-deps:
+  - highlighter2-0.2.5
+  - language-python-0.5.4
+  - pipes-zlib-0.4.4
+  - pretty-error-0.1.0.0
+
+nix:
+  enable: true
+  packages:
+    - icu
+    - openssl
+    - pcre
+    - pkgconfig
+    - zlib

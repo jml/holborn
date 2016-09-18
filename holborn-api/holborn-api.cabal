@@ -24,7 +24,6 @@ library
       Holborn.API.Settings.Profile
       Holborn.API.Settings.SSHKeys
       Holborn.API.SSH
-      Holborn.Docs
   build-depends:
       base >=4.9 && <5
     , holborn-common-types
@@ -37,7 +36,6 @@ library
     , http-client
     , http-types
     , postgresql-simple
-    , servant-docs >= 0.5
     , servant-server
     , text
     , time
