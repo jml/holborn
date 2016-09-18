@@ -279,16 +279,21 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
     pageHeaderSignedIn d p s c = R.header []
             [ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
             , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
-            , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
+            , R.div [RP.className "search" ] (renderSearch s)
             , R.div [RP.className "pad" ] []
             , R.div [RP.className "me" ] [ R.text "ME" ]
             ]
 
     pageHeaderSignedOut d p s c = R.header []
             [ R.div [RP.className "context" ] [ R.text (contextLabel s) ]
-            , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
+            , R.div [RP.className "search" ] (renderSearch s)
             , R.div [RP.className "pad" ] []
             ]
+
+    renderSearch :: _
+    renderSearch s = case view routeLens s of
+      BrowseRoute _ -> [ R.input [RP.placeholder "Search in repository"] [] ] -- TODO fancy search box that allows removing "repo" search
+      _ -> [ R.input [RP.placeholder "Search"] [] ]
 
     burgerMenu s =
       R.div [RP.className if view burgerOpen s then "burger-menu open" else "burger-menu", RP.onClick handleLinks]
