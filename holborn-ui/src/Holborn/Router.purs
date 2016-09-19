@@ -288,6 +288,7 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
             [ R.div [RP.className "context" ] [ R.text (contextLabel s) ]
             , R.div [RP.className "search" ] (renderSearch s)
             , R.div [RP.className "pad" ] []
+            , R.div [RP.className "me" ] [ R.a [RP.href "/signin"] [R.text "Signin"] ]
             ]
 
     renderSearch :: _

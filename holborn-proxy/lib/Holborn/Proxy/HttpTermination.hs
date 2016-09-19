@@ -16,11 +16,12 @@ import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Network.HTTP.Client (Manager)
 import Network.HTTP.ReverseProxy (defaultOnExc, waiProxyTo, WaiProxyResponse(..), ProxyDest(..))
-import Network.HTTP.Types (status302, status200)
+import Network.HTTP.Types (status302, status200, Header)
 import Network.OAuth.OAuth2 (authorizationUrl, OAuth2(..), appendQueryParam, fetchAccessToken)
 import Network.Wai (Request, requestHeaders, responseLBS, remoteHost, Application, responseFile)
 import Web.Cookie (parseCookies, renderSetCookie, def, setCookieName, setCookieValue, setCookiePath, setCookieSecure)
-import Servant (serve, (:<|>)(..), (:>), Raw, Server, QueryParam, Header, Get, NoContent(..), JSON)
+import Servant (serve, (:<|>)(..), (:>), Raw, Server, QueryParam, Get, NoContent(..), JSON)
+import qualified Servant
 import Servant.Server (ServantErr(..), err302, err401)
 import Data.Proxy (Proxy(..))
 import Control.Monad.Trans.Except (ExceptT, throwE)
@@ -32,9 +33,10 @@ import Holborn.Proxy.AuthJar (AuthJar(..), UserCookie, TrustedCreds, unpackClaim
 
 type ProxyAPI =
     "oauth2" :> "callback" :> QueryParam "code" Text :> Get '[JSON] NoContent
-    :<|> "v1" :> Header "Cookie" Text :> Raw
+    :<|> "v1" :> Servant.Header "Cookie" Text :> Raw
     -- default handler serves /static content + index.html on any path
     :<|> "static" :> Raw
+    :<|> "signin" :> Raw
     :<|> Raw
 
 
@@ -47,6 +49,7 @@ proxyServer config manager jar =
   handleOauth2Callback config manager jar
   :<|> handleProxying config manager jar
   :<|> serveDirectory "/run/current-system/sw/ui/static"
+  :<|> redirectToToAuth (oauth2FromConfig config)
   -- TODO: we need to set headers in such a way that index.html is always reloaded
   -- nginx uses sth like `expired no-cache no-store private auth;`
   :<|> \_ respond -> respond (responseFile status200 [] "/run/current-system/sw/ui/index.html" Nothing)
@@ -93,15 +96,14 @@ handleOauth2Callback config@Config{..} manager jar (Just code) = do
 
 
 handleProxying :: (AuthJar jar) => Config -> Manager -> jar -> Maybe Text -> Application
-handleProxying config@Config{..} manager jar cookie = waiProxyTo doProxy defaultOnExc manager
+handleProxying Config{..} manager jar cookie = waiProxyTo doProxy defaultOnExc manager
   where
-    authRedirect = pure (WPRApplication (redirectToToAuth (oauth2FromConfig config)))
     doProxy :: Request -> IO WaiProxyResponse
     doProxy request = do
       userCookie <- getUserCookie
       case userCookie of
-        Just userCookie' -> pure (setCredHeaders request userCookie')
-        Nothing -> authRedirect
+        Just userCookie' -> makeResponse request ((getCredHeaders userCookie') ++ whitelistHeaders request)
+        Nothing -> makeResponse request (whitelistHeaders request)
 
     getUserCookie :: IO (Maybe TrustedCreds)
     getUserCookie = runMaybeT $ do
@@ -110,27 +112,29 @@ handleProxying config@Config{..} manager jar cookie = waiProxyTo doProxy default
       userCookie <- lift $ get jar authCookie
       hoistMaybe userCookie
 
-    setCredHeaders :: Request -> TrustedCreds -> WaiProxyResponse
-    setCredHeaders request' trustedCreds =
-        let headers = requestHeaders request'
-            forwardedHeaders  =
-              (trustedCredsHeaders trustedCreds) ++ [
-              ("x-forwarded-for", encodeUtf8  (show (remoteHost request'))) -- TODO maybe needs better encoding
-              ] ++ (whitelistHeaders headers
-              [ "Accept"
-              , "Accept-Encoding"
-              , "Content-Length"
-              , "Content-Type"
-              , "If-Modified-Since"
-              , "If-None-Match"
-              , "User-Agent"
-              ] )
-        in WPRModifiedRequest (request' {requestHeaders = forwardedHeaders}) (ProxyDest configUpstreamHost configUpstreamPort)
+    getCredHeaders :: TrustedCreds -> [Header]
+    getCredHeaders trustedCreds = trustedCredsHeaders trustedCreds
 
-    whitelistHeaders headers whitelist = catMaybes (map maybeHeader whitelist)
+    makeResponse :: Monad m => Request -> [Header] -> m WaiProxyResponse
+    makeResponse request' forwardedHeaders =
+      pure (WPRModifiedRequest (request' {requestHeaders = forwardedHeaders}) (ProxyDest configUpstreamHost configUpstreamPort))
+
+    whitelistHeaders :: Request -> [Header]
+    whitelistHeaders request' =
+      let headers = requestHeaders request'
+      in [ ("x-forwarded-for", encodeUtf8  (show (remoteHost request'))) -- TODO maybe needs better encoding?
+         ] ++ (filterWhitelistedHeaders headers
+               [ "Accept"
+               , "Accept-Encoding"
+               , "Content-Length"
+               , "Content-Type"
+               , "If-Modified-Since"
+               , "If-None-Match"
+               , "User-Agent"
+               ])
+    filterWhitelistedHeaders headers whitelist = catMaybes (map maybeHeader whitelist)
       where
         maybeHeader hdr = (,) hdr <$> lookup hdr headers
-
 
 
 proxyApp :: (AuthJar jar) => Config -> Manager -> jar -> Application
