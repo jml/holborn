@@ -166,7 +166,7 @@ spec = T.simpleSpec T.defaultPerformAction render
     render dispatch _ (State { route: BlobLoaded org repo ref path, _meta: Just meta, _blob: Just (GitBlobRendered blob) }) _ =
       [ R.h2 [] [R.text (view MB.description meta)]
         -- TODO count number of lines
-      , R.pre [RP.className "line-numbers"] (renderLines 100) -- TODO correct number of lines
+      , R.pre [RP.className "line-numbers"] (renderLines blob.num_lines)
       , R.div [RP.dangerouslySetInnerHTML {__html: blob.contents}] []
       ]
     render dispatch _ _ _ =

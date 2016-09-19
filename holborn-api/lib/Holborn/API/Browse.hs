@@ -28,7 +28,7 @@ import Holborn.API.Internal
   , JSONCodeableError(..)
   , toServantHandler
   , throwHandlerError
-  , jsonGet'
+  , rjsonGet'
   , repoApiUrl
   , logDebug
   )
@@ -67,7 +67,7 @@ server conf =
 browse :: Maybe Username -> OwnerName -> RepoName -> APIHandler BrowseError BrowseMetaResponse
 browse _maybeUsername owner repo = do
     repoUrl <- maybe (throwHandlerError NotFound) pure =<< repoApiUrl owner repo
-    r <- jsonGet' repoUrl
+    r <- rjsonGet' repoUrl
     repoMeta <- case r of
         Right x -> pure x
         Left err -> do
@@ -89,7 +89,7 @@ treeCommitBlob _maybeUsername owner repo pathspec = do
     -- secondary concern is that we're decoding, then re-encoding JSON
     -- here. Might be easier to pipe through backend responses unmodified.
     let repoUrlBrokenAndHardcoded = repoUrl <> "/" <> intercalate "/" pathspec
-    r <- jsonGet' repoUrlBrokenAndHardcoded
+    r <- rjsonGet' repoUrlBrokenAndHardcoded
     r' <- case r of
         Right x -> pure x
         Left err -> do

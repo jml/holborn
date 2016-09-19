@@ -74,6 +74,7 @@ data GitBlobRendered = GitBlobRendered
   { sha :: String
   , path :: Array String
   , contents :: String
+  , num_lines :: Int
   }
 
 derive instance genericGitBlobRendered :: Generic GitBlobRendered

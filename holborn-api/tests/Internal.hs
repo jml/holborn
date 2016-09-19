@@ -12,7 +12,7 @@ import Test.Tasty.HUnit hiding (assert)
 import Holborn.API.Internal
   ( APIError(..)
   , APIHandler
-  , jsonGet'
+  , rjsonGet'
   , runAPIHandler
   )
 
@@ -30,11 +30,11 @@ tests = testGroup "Holborn.API.Internal"
 
 jsonGetTests :: IO Postgres -> TestTree
 jsonGetTests getDB =
-  testGroup "jsonGet'"
+  testGroup "rjsonGet'"
   [ testCase "Bad URL fails in ExceptT" $ do
       config <- dbConfig <$> getDB
       let badUrl = "413213243214"
-      let apiResult = (jsonGet' (fromString badUrl) :: APIHandler Int (Either String Int))
+      let apiResult = (rjsonGet' (fromString badUrl) :: APIHandler Int (Either String Int))
       let expectedException = UnexpectedException (toException (InvalidUrlException badUrl "Invalid URL")) :: APIError Int
       result <- runExceptT (runAPIHandler config apiResult)
       case result of
