@@ -43,12 +43,12 @@ startRoute s = State { route: s, _meta: Nothing, _tree: Nothing, _blob: Nothing 
 searchLink :: State -> String -> String
 searchLink state q =  (makeLink (view routeLens state)) <> "?q=" <> q
   where
-    makeLink (Home o r) = intercalate "/" ["/code", o, r]
-    makeLink (HomeLoaded o r) = intercalate "/" ["/code", o, r]
-    makeLink (Tree o r _ _ ) = intercalate "/" ["/code", o, r]
-    makeLink (TreeLoaded o r _ _) = intercalate "/" ["/code", o, r]
-    makeLink (Blob o r _ _) = intercalate "/" ["/code", o, r]
-    makeLink (BlobLoaded o r _ _) = intercalate "/" ["/code", o, r]
+    makeLink (Home o r) = intercalate "/" ["/code", o, r, "search"]
+    makeLink (HomeLoaded o r) = intercalate "/" ["/code", o, r, "search"]
+    makeLink (Tree o r _ _ ) = intercalate "/" ["/code", o, r, "search"]
+    makeLink (TreeLoaded o r _ _) = intercalate "/" ["/code", o, r, "search"]
+    makeLink (Blob o r _ _) = intercalate "/" ["/code", o, r, "search"]
+    makeLink (BlobLoaded o r _ _) = intercalate "/" ["/code", o, r, "search"]
 
 
 data Action = NOP

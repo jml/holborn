@@ -52,6 +52,7 @@ data State = RouterState
     { currentRoute :: RootRoutes
     , _userMeta :: UserMeta
     , _burgerOpen :: Boolean
+    , _searchText :: String -- TODO context for search (e.g. repo, project)?
     }
 
 
@@ -79,10 +80,13 @@ rootRoutes =
     )
 
 
+data SearchAction =
+  UpdateSearchText String
+  | ExecuteSearch String
+
 data Action =
   UpdateRoute RootRoutes
-  | SearchRepo Browse.Owner Browse.Repo String
-  | SearchOwner Browse.Owner String
+  | SearchAction SearchAction
   | SettingsAction Settings.Action
   | BrowseAction Browse.Action
   | CreateAccountAction CreateAccount.Action
@@ -146,7 +150,12 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
 
 
 initialState :: State
-initialState = RouterState { currentRoute: NotLoadedRoute, _userMeta: NotLoaded, _burgerOpen: false }
+initialState =  RouterState
+  { currentRoute: NotLoadedRoute
+  , _userMeta: NotLoaded
+  , _burgerOpen: false
+  , _searchText: ""
+  }
 
 routeLens :: LensP State RootRoutes
 routeLens = lens (\(RouterState s) -> s.currentRoute) (\(RouterState s) x -> RouterState (s { currentRoute = x }))
@@ -157,6 +166,8 @@ burgerOpen = lens (\(RouterState s) -> s._burgerOpen) (\(RouterState s) x -> Rou
 userMeta :: LensP State UserMeta
 userMeta = lens (\(RouterState s) -> s._userMeta) (\(RouterState s) x -> RouterState (s { _userMeta = x }))
 
+searchText :: LensP State String
+searchText = lens (\(RouterState s) -> s._searchText) (\(RouterState s) x -> RouterState (s { _searchText = x }))
 
 _SettingsState :: PrismP RootRoutes Settings.State
 _SettingsState = prism SettingsRoute \route ->
@@ -219,6 +230,12 @@ _CreateRepositoryAction = prism CreateRepositoryAction \action ->
     CreateRepositoryAction x -> Right x
     _ -> Left action
 
+_SearchAction :: PrismP Action SearchAction
+_SearchAction = prism SearchAction \action ->
+  case action of
+    SearchAction x -> Right x
+    _ -> Left action
+
 
 -- | Split by user state - doesn't return a new state, only used to
 -- select spec to render based on state.
@@ -256,20 +273,29 @@ landingPageSpec = T.simpleSpec T.defaultPerformAction render
        ]
       ]
 
-searchSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
-searchSpec = T.simpleSpec T.defaultPerformAction render
+searchSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props SearchAction
+searchSpec = T.simpleSpec performAction render
   where
-    render :: T.Render State props Action
-    render dispatch _ state _ = [ R.div [RP.className "search" ] (renderSearch state) ]
+    render :: T.Render State props SearchAction
+    render dispatch _ state _ =
+      [ R.div [RP.className "search" ] (renderSearch state dispatch) ]
 
-    renderSearch :: State -> Array React.ReactElement
-    renderSearch s = case view routeLens s of
+    renderSearch s dispatch = case view routeLens s of
       -- TODO fancy search box that allows removing "repo" search
       -- TODO autocomplete
-      BrowseRoute state ->
-        [ R.input [RP.placeholder ("Search in repository " <> Browse.searchLink state "")] []
+      BrowseRoute state' ->
+        [ R.input [ RP.onChange (\ev -> dispatch (UpdateSearchText (unsafeCoerce ev).target.value))
+                  , RP.onKeyDown (onKeyDown state')
+                  , RP.placeholder ("Search in repository " <> Browse.searchLink state' "")] []
         ]
       _ -> [ R.input [RP.placeholder "Search"] [] ]
+      where
+        onKeyDown state' ev = case ev.keyCode of
+          13 -> dispatch (ExecuteSearch (Browse.searchLink state' (view searchText s)))
+          _ -> pure unit
+
+    performAction (UpdateSearchText t) _ _ = void $ T.cotransform (\state -> set searchText (spy t) state )
+    performAction (ExecuteSearch url) _ _ = lift (navigateA url)
 
 -- Override link navigation to use pushState instead of the
 -- browser following the link.
@@ -315,19 +341,23 @@ contextLabel s = case view routeLens s of
 
 
 anonymousSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
-anonymousSpec = T.simpleSpec T.defaultPerformAction render
+anonymousSpec = (T.nestSpec pageHeaderSpec (T.match _SearchAction searchSpec)) <> T.simpleSpec T.defaultPerformAction render
   where
     render d p s children =
-      [ pageHeader d p s children
-      , R.section [ RP.className "content", RP.onClick handleLinks] children
+      [ R.section [ RP.className "content", RP.onClick handleLinks] children
       ]
-    pageHeader :: (Action -> T.EventHandler) -> props -> State -> Array React.ReactElement -> React.ReactElement
-    pageHeader d _ s c = R.header []
-            ([ R.div [RP.className "context" ] [ R.text (contextLabel s) ]
-             ] <> (view T._render searchSpec d {} s []) <>
-             [ R.div [RP.className "pad" ] []
-             , R.div [RP.className "me" ] [ R.a [RP.href "/signin"] [R.text "Signin"] ]
-             ])
+
+pageHeaderSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
+pageHeaderSpec = T.simpleSpec T.defaultPerformAction render
+  where
+    render d p s children =
+      [ R.header []
+        ([ R.div [RP.className "context" ] [ R.text (contextLabel s) ]
+         ] <> children <>
+         [ R.div [RP.className "pad" ] []
+         , R.div [RP.className "me" ] [ R.a [RP.href "/signin"] [R.text "Signin"] ]
+         ])
+      ]
 
 notLoadedSpec :: forall eff props. T.Spec eff State props Action
 notLoadedSpec = T.simpleSpec T.defaultPerformAction render
@@ -355,14 +385,17 @@ signedInSpec = (T.simpleSpec performAction render) <> burgerMenuSpec
     pageHeader username d _ s c = R.header []
             ([ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
              , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
-             ] <> (view T._render searchSpec d {} s []) <>
+             ] <> (view T._render (T.match _SearchAction searchSpec) d {} s []) <>
              [ R.div [RP.className "pad" ] []
              , R.div [RP.className "me" ] [ R.text username ]
              ])
 
     burgerMenuToggle dispatch ev = dispatch BurgerMenuToggle
     performAction BurgerMenuToggle p s = void $ T.cotransform (\s -> over burgerOpen not s)
-    performAction _ _ _ = void $ T.cotransform id
+
+    -- TODO a bit ugly that we need to pass this performAction to the embedded searchSpec
+    performAction a p s = view T._performAction (T.match _SearchAction searchSpec) a p s
+
 
 containerSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
 containerSpec = fold
@@ -375,8 +408,6 @@ containerSpec = fold
     performAction action@(UpdateRoute r) p s = do
       s' <- lift (fetch r s)
       void (T.cotransform (const s'))
-    performAction (SearchRepo owner repo q) p s = do
-      lift (navigateA ("/" <> owner <> "/" <> repo <> "q=" <> q))
     performAction _ _ _ = void (T.cotransform id)
 
 
