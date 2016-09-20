@@ -21,7 +21,7 @@ import DOM (DOM)
 
 import Text.Parsing.Simple (Parser, string, eof, tail)
 import Thermite as T
-import Standalone.Thermite as T
+import Standalone.Thermite (nestSpec) as T
 
 import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
@@ -260,7 +260,7 @@ searchSpec = T.simpleSpec T.defaultPerformAction render
     render :: T.Render State props Action
     render dispatch _ state _ = [ R.div [RP.className "search" ] (renderSearch state) ]
 
-    renderSearch :: _
+    renderSearch :: State -> Array React.ReactElement
     renderSearch s = case view routeLens s of
       -- TODO fancy search box that allows removing "repo" search
       -- TODO autocomplete
@@ -275,6 +275,7 @@ searchSpec = T.simpleSpec T.defaultPerformAction render
 -- TODO: add escape-hatch, e.g. `data-external=true` attribute or
 -- where the path is non-local. This allows us to link
 -- e.g. off-site.
+handleLinks :: forall eff. React.Event -> Eff ( navigate :: Navigate | eff) Unit
 handleLinks ev = do
   case (unsafeCoerce ev).target.nodeName of
     "A" -> do
@@ -300,6 +301,7 @@ burgerMenuSpec = T.simpleSpec T.defaultPerformAction render
 -- The `contextLabel` is the little message in the top left
 -- telling us where we are. Not sure whether we want to keep this
 -- or not but useful for development ATM.
+contextLabel :: State -> String
 contextLabel s = case view routeLens s of
   NotLoadedRoute -> "loading.."
   Route404 -> "404"
