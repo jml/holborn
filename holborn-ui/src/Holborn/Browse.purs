@@ -29,6 +29,15 @@ import Holborn.Auth as Auth
 
 import Debug.Trace
 
+
+data BrowseRoutes =
+  Home Owner Repo
+  | HomeLoaded Owner Repo
+  | Tree Owner Repo Ref RepoPath
+  | TreeLoaded Owner Repo Ref  RepoPath
+  | Blob Owner Repo Ref RepoPath
+  | BlobLoaded Owner Repo Ref RepoPath
+
 data State = State
     { route :: BrowseRoutes
     , _meta :: Maybe BrowseMetaResponse -- empty when not loaded
@@ -125,14 +134,6 @@ type Owner = String
 type RepoPath = String
 type Ref = String
 
-
-data BrowseRoutes =
-  Home Owner Repo
-  | HomeLoaded Owner Repo
-  | Tree Owner Repo Ref RepoPath
-  | TreeLoaded Owner Repo Ref  RepoPath
-  | Blob Owner Repo Ref RepoPath
-  | BlobLoaded Owner Repo Ref RepoPath
 
 
 parseOwner :: Parser String Owner
