@@ -220,6 +220,8 @@ _CreateRepositoryAction = prism CreateRepositoryAction \action ->
     _ -> Left action
 
 
+-- | Split by user state - doesn't return a new state, only used to
+-- select spec to render based on state.
 _AnonymousSplit :: PrismP State State
 _AnonymousSplit = prism id \s ->
   case view userMeta s of
@@ -245,8 +247,8 @@ spec404 = T.simpleSpec T.defaultPerformAction render
     render _ _ _ _ = [R.text "404"]
 
 
-landingPage :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) state props action
-landingPage = T.simpleSpec T.defaultPerformAction render
+landingPageSpec :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) state props action
+landingPageSpec = T.simpleSpec T.defaultPerformAction render
   where
     render _ _ _ _ =
       [R.ul []
@@ -284,7 +286,7 @@ handleLinks ev = do
     _ -> pure unit
 
 
-burgerMenuSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
+burgerMenuSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
 burgerMenuSpec = T.simpleSpec T.defaultPerformAction render
   where
   render d p s c =
@@ -312,30 +314,29 @@ contextLabel s = case view routeLens s of
   _ -> "" -- don't show a label for all other cases
 
 
-anonymousSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
+anonymousSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
 anonymousSpec = T.simpleSpec T.defaultPerformAction render
   where
     render d p s children =
-      [ pageHeaderSignedOut d p s children
+      [ pageHeader d p s children
       , R.section [ RP.className "content", RP.onClick handleLinks] children
       ]
-    pageHeaderSignedOut :: (Action -> T.EventHandler) -> props -> State -> Array React.ReactElement -> React.ReactElement
-    pageHeaderSignedOut d _ s c = R.header []
+    pageHeader :: (Action -> T.EventHandler) -> props -> State -> Array React.ReactElement -> React.ReactElement
+    pageHeader d _ s c = R.header []
             ([ R.div [RP.className "context" ] [ R.text (contextLabel s) ]
              ] <> (view T._render searchSpec d {} s []) <>
              [ R.div [RP.className "pad" ] []
              , R.div [RP.className "me" ] [ R.a [RP.href "/signin"] [R.text "Signin"] ]
              ])
 
-
-notLoadedSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
+notLoadedSpec :: forall eff props. T.Spec eff State props Action
 notLoadedSpec = T.simpleSpec T.defaultPerformAction render
   where
     render d p s c = [R.text "loading UI ..."]
 
 
-signedInSpec ::forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
-signedInSpec = (T.simpleSpec T.defaultPerformAction render) <> burgerMenuSpec
+signedInSpec ::forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
+signedInSpec = (T.simpleSpec performAction render) <> burgerMenuSpec
   where
     render d p s children = case view userMeta s of
       SignedIn { username, about } ->
@@ -360,23 +361,23 @@ signedInSpec = (T.simpleSpec T.defaultPerformAction render) <> burgerMenuSpec
              ])
 
     burgerMenuToggle dispatch ev = dispatch BurgerMenuToggle
-
+    performAction BurgerMenuToggle p s = void $ T.cotransform (\s -> over burgerOpen not s)
+    performAction _ _ _ = void $ T.cotransform id
 
 containerSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
 containerSpec = fold
   [ T.split _AnonymousSplit anonymousSpec
   , T.split _NotLoadedSplit notLoadedSpec
   , T.split _SignedInSplit signedInSpec
-  , T.simpleSpec handleAction T.defaultRender
+  , T.simpleSpec performAction T.defaultRender
   ]
   where
-    handleAction BurgerMenuToggle p s = void $ T.cotransform (\s -> over burgerOpen not s)
-    handleAction action@(UpdateRoute r) p s = do
+    performAction action@(UpdateRoute r) p s = do
       s' <- lift (fetch r s)
       void (T.cotransform (const s'))
-    handleAction (SearchRepo owner repo q) p s = do
+    performAction (SearchRepo owner repo q) p s = do
       lift (navigateA ("/" <> owner <> "/" <> repo <> "q=" <> q))
-    handleAction _ _ _ = void (T.cotransform id)
+    performAction _ _ _ = void (T.cotransform id)
 
 
 -- | spec is a Thermite-ism. It controls the flow of actions and
@@ -390,7 +391,7 @@ spec = T.nestSpec containerSpec $ foldMap (T.focusState routeLens)
   , T.split _CreateAccountState (T.match _CreateAccountAction CreateAccount.spec)
   , T.split _CreateRepositoryState (T.match _CreateRepositoryAction CreateRepository.spec)
   , T.split _404State spec404
-  , T.split _LandingPageState landingPage
+  , T.split _LandingPageState landingPageSpec
   ]
 
 -- The following is a hack to listen on route changes for the "root"
