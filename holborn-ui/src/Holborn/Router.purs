@@ -19,9 +19,9 @@ import Standalone.Router.Dispatch (Navigate, matches, navigate, navigateA)
 
 import DOM (DOM)
 
-
 import Text.Parsing.Simple (Parser, string, eof, tail)
 import Thermite as T
+import Standalone.Thermite as T
 
 import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
@@ -36,6 +36,7 @@ import Holborn.DomHelpers (scroll)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Control.Monad.Trans (lift)
 import Debug.Trace
+
 
 -- | UserMeta records the state of the visiting user from the
 -- database.
@@ -80,6 +81,8 @@ rootRoutes =
 
 data Action =
   UpdateRoute RootRoutes
+  | SearchRepo Browse.Owner Browse.Repo String
+  | SearchOwner Browse.Owner String
   | SettingsAction Settings.Action
   | BrowseAction Browse.Action
   | CreateAccountAction CreateAccount.Action
@@ -233,30 +236,35 @@ landingPage = T.simpleSpec T.defaultPerformAction render
       ]
 
 
--- | spec is a Thermite-ism. It controls the flow of actions and
--- dispatches rendering code. Based on the state of the route
--- component we both focus and split into subcomponents (and the
--- subcompontents may do the same).
-spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
-spec = container $ handleActions $ foldMap (T.focusState routeLens)
-       [ T.split _SettingsState (T.match _SettingsAction Settings.spec)
-       , T.split _BrowseState (T.match _BrowseAction Browse.spec)
-       , T.split _CreateAccountState (T.match _CreateAccountAction CreateAccount.spec)
-       , T.split _CreateRepositoryState (T.match _CreateRepositoryAction CreateRepository.spec)
-       , T.split _404State spec404
-       , T.split _LandingPageState landingPage
-       ]
+searchSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
+searchSpec = T.simpleSpec T.defaultPerformAction render
   where
-    container = over T._render \render d p s c -> case view userMeta s of
+    render :: T.Render State props Action
+    render dispatch _ state _ = [ R.div [RP.className "search" ] (renderSearch state) ]
+
+    renderSearch :: _
+    renderSearch s = case view routeLens s of
+      -- TODO fancy search box that allows removing "repo" search
+      -- TODO autocomplete
+      BrowseRoute state ->
+        [ R.input [RP.placeholder ("Search in repository " <> Browse.searchLink state "")] []
+        ]
+      _ -> [ R.input [RP.placeholder "Search"] [] ]
+
+
+containerSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
+containerSpec = T.simpleSpec handleAction render
+  where
+    render d p s children = case view userMeta s of
       NotLoaded -> [R.text "loading UI ..."]
 
       Anonymous ->
-        [ pageHeaderSignedOut d p s c
+        [ pageHeaderSignedOut d p s children
           -- /signing is a *real* link that doesn't go through pushState,
           -- the frontend terminator will capture this and redirect to dex.
         , R.div [] [R.a [RP.href "/signin"] [R.text "sign in here ..."]]
         , R.section
-          [ RP.className "content", RP.onClick handleLinks] (render d p s c)
+          [ RP.className "content", RP.onClick handleLinks] children
         ]
 
       SignedIn { username, about } ->
@@ -264,7 +272,7 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
         -- the top-level div is never called so I need to add more
         -- specific onClick handlers
         [ R.div [RP.onClick handleLinks]
-          [ pageHeaderSignedIn d p s c
+          [ pageHeaderSignedIn username d p s children
           , R.div []
             [ R.text username
             , R.text about
@@ -272,29 +280,26 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
             ]
           ]
         , R.section
-          [ RP.className if view burgerOpen s then "content burger-menu-open" else "content", RP.onClick handleLinks] (render d p s c)
+          [ RP.className if view burgerOpen s then "content burger-menu-open" else "content", RP.onClick handleLinks] children
         , burgerMenu s
         ]
 
-    pageHeaderSignedIn d p s c = R.header []
-            [ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
-            , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
-            , R.div [RP.className "search" ] (renderSearch s)
-            , R.div [RP.className "pad" ] []
-            , R.div [RP.className "me" ] [ R.text "ME" ]
-            ]
+    pageHeaderSignedIn :: String -> (Action -> T.EventHandler) -> props -> State -> Array React.ReactElement -> React.ReactElement
+    pageHeaderSignedIn username d _ s c = R.header []
+            ([ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
+             , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
+             ] <> (view T._render searchSpec d {} s []) <>
+             [ R.div [RP.className "pad" ] []
+             , R.div [RP.className "me" ] [ R.text username ]
+             ])
 
-    pageHeaderSignedOut d p s c = R.header []
-            [ R.div [RP.className "context" ] [ R.text (contextLabel s) ]
-            , R.div [RP.className "search" ] (renderSearch s)
-            , R.div [RP.className "pad" ] []
-            , R.div [RP.className "me" ] [ R.a [RP.href "/signin"] [R.text "Signin"] ]
-            ]
-
-    renderSearch :: _
-    renderSearch s = case view routeLens s of
-      BrowseRoute _ -> [ R.input [RP.placeholder "Search in repository"] [] ] -- TODO fancy search box that allows removing "repo" search
-      _ -> [ R.input [RP.placeholder "Search"] [] ]
+    pageHeaderSignedOut :: (Action -> T.EventHandler) -> props -> State -> Array React.ReactElement -> React.ReactElement
+    pageHeaderSignedOut d _ s c = R.header []
+            ([ R.div [RP.className "context" ] [ R.text (contextLabel s) ]
+             ] <> (view T._render searchSpec d {} s []) <>
+             [ R.div [RP.className "pad" ] []
+             , R.div [RP.className "me" ] [ R.a [RP.href "/signin"] [R.text "Signin"] ]
+             ])
 
     burgerMenu s =
       R.div [RP.className if view burgerOpen s then "burger-menu open" else "burger-menu", RP.onClick handleLinks]
@@ -333,26 +338,38 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
           navigate ((unsafeCoerce ev).target.pathname)
         _ -> pure unit
 
-    handleActions = over T._performAction \nestedPerformAction a p s -> do
-      nestedPerformAction a p s
-      handleAction a p s
-
-    -- TODO error handling when fetch fails
     handleAction BurgerMenuToggle p s = void $ T.cotransform (\s -> over burgerOpen not s)
 
     handleAction action@(UpdateRoute r) p s = do
       s' <- lift (fetch r s)
       void (T.cotransform (const s'))
 
+    handleAction (SearchRepo owner repo q) p s = do
+      lift (navigateA ("/" <> owner <> "/" <> repo <> "q=" <> q))
+
     handleAction _ _ _ = void (T.cotransform id)
 
+
+-- | spec is a Thermite-ism. It controls the flow of actions and
+-- dispatches rendering code. Based on the state of the route
+-- component we both focus and split into subcomponents (and the
+-- subcompontents may do the same).
+spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
+spec = T.nestSpec containerSpec $ foldMap (T.focusState routeLens)
+       [ T.split _SettingsState (T.match _SettingsAction Settings.spec)
+       , T.split _BrowseState (T.match _BrowseAction Browse.spec)
+       , T.split _CreateAccountState (T.match _CreateAccountAction CreateAccount.spec)
+       , T.split _CreateRepositoryState (T.match _CreateRepositoryAction CreateRepository.spec)
+       , T.split _404State spec404
+       , T.split _LandingPageState landingPage
+       ]
 
 -- The following is a hack to listen on route changes for the "root"
 -- component that controls everything else. `dispatch` could be
 -- extracted from the spec but takes a `this` pointer which is only
 -- valid once we mounted a component.
 componentDidMount :: forall props eff. (React.ReactThis props State -> Action -> T.EventHandler)
-                     -> React.ComponentDidMount props State (console :: CONSOLE, ajax :: AJ.AJAX | eff)
+                     -> React.ComponentDidMount props State (console :: CONSOLE, ajax :: AJ.AJAX, dom :: DOM | eff)
 componentDidMount dispatch this = do
     matches rootRoutes callback
   where

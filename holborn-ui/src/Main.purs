@@ -19,7 +19,6 @@ import Data.Nullable (toMaybe)
 import React as R
 import ReactDOM as RD
 
-
 main :: forall eff. Eff (dom :: DOM.DOM, console :: CONSOLE | eff) Unit
 main = do
   let reactElement = (R.createFactory Router.component {})

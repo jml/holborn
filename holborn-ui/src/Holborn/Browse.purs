@@ -39,8 +39,19 @@ data State = State
 startRoute :: BrowseRoutes -> State
 startRoute s = State { route: s, _meta: Nothing, _tree: Nothing, _blob: Nothing }
 
-data Action = NOP
+-- | Create a search-link from the state.
+searchLink :: State -> String -> String
+searchLink state q =  (makeLink (view routeLens state)) <> "?q=" <> q
+  where
+    makeLink (Home o r) = intercalate "/" ["/code", o, r]
+    makeLink (HomeLoaded o r) = intercalate "/" ["/code", o, r]
+    makeLink (Tree o r _ _ ) = intercalate "/" ["/code", o, r]
+    makeLink (TreeLoaded o r _ _) = intercalate "/" ["/code", o, r]
+    makeLink (Blob o r _ _) = intercalate "/" ["/code", o, r]
+    makeLink (BlobLoaded o r _ _) = intercalate "/" ["/code", o, r]
 
+
+data Action = NOP
 
 -- TODO: I think toArrayOf has a bad runtime and can probably be
 -- rewritten via FFI to append to mutable Array because of the
