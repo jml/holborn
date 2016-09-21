@@ -2,13 +2,6 @@
 # binaries are part of standard hackage package set.
 { haskellPackages, haskell, lib, stdenv, fetchFromGitHub, pkgs }:
 let
-  capture-all-fork = fetchFromGitHub {
-    owner = "jml";
-    repo = "servant";
-    rev = "capture-all-fork";
-    sha256 = "05z51jjpzwav1nrsh8xc0mwbk105k9x89zq9ii2rwzbhrk0gn53z";
-  };
-
   # These helpers really ought to be in standard haskell lib:
   # https://github.com/NixOS/nixpkgs/issues/17226
   addRuntimeDependency = drv: x: addRuntimeDependencies drv [x];
@@ -87,15 +80,6 @@ haskellPackages.override {
 
       # Get pipes-shell working with ghc 8.0
       pipes-shell = self.callPackage ./pipes-shell.nix {};
-
-      # We use a fork of Servant that has CaptureAll
-      servant = self.callPackage ./servant/servant.nix { forked-servant = capture-all-fork; };
-      servant-client = self.callPackage ./servant/servant-client.nix { forked-servant = capture-all-fork; };
-      servant-docs = self.callPackage ./servant/servant-docs.nix { forked-servant = capture-all-fork; };
-      servant-foreign = self.callPackage ./servant/servant-foreign.nix { forked-servant = capture-all-fork; };
-      servant-js = self.callPackage ./servant/servant-js.nix { forked-servant = capture-all-fork; };
-      servant-mock = self.callPackage ./servant/servant-mock.nix { forked-servant = capture-all-fork; };
-      servant-server = self.callPackage ./servant/servant-server.nix { forked-servant = capture-all-fork; };
 
       # Don't check because tests need phantomjs
       wai-cors = haskell.lib.dontCheck haskellPackages.wai-cors;

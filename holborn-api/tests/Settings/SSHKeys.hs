@@ -80,6 +80,12 @@ spec = do
                  , "comment" .= (decodeUtf8 <$> comment)
                  ]
 
+    it "Lets you add duplicate keys" $ \config -> do
+      user <- makeArbitraryUser config
+      withApplication (makeTestApp config) $ do
+        let req = object [ "key" .= (decodeUtf8 validKey) ]
+        postAs user "/v1/user/keys" req `shouldRespondWith` 201
+        postAs user "/v1/user/keys" req `shouldRespondWith` 201
 
 getKey :: FromJSON b => Object -> Text -> b
 getKey obj key = fromJust (parseMaybe (\x -> x .: key) obj)
