@@ -67,6 +67,7 @@ import Holborn.JSON.SSHRepoCommunication
 
 import qualified GHC.Stack as Stack
 
+
 type HttpCode = Int
 
 
@@ -269,11 +270,11 @@ pickRepoServer = do
 getRepoId :: OwnerName -> RepoName -> APIHandler err (Maybe RepoId)
 getRepoId owner repo = do
   rows <- query [sql|
-    select "org_repo".id from "org_repo", "org"
-    where "org".id = "org_repo".org_id and "org".orgname = ? and "org_repo".name = ?
+    select core_orgrepo.id from core_orgrepo, core_org
+    where core_org.id = core_orgrepo.org_id and core_org.name = ? and core_orgrepo.name = ?
     UNION
-    select "user_repo".id from "user_repo", "user"
-    where "user".id = "user_repo".user_id and "user".username = ? and "user_repo".name = ?
+    select core_userrepo.id from core_userrepo, auth_user
+    where auth_user.id = core_userrepo.user_id and auth_user.username = ? and core_userrepo.name = ?
     |] (owner, repo, owner, repo)
   case rows of
     [[repoId :: RepoId]] -> pure (Just repoId)
@@ -300,7 +301,7 @@ repoUrlForId repoId = do
   -- single repo server. In future, we would look up the host details from the
   -- database too.
   AppConf{repoHostname, repoPort} <- getConfig
-  pure $ "http://" <> repoHostname <> ":" <> fromShow repoPort <> "/" <> toUrlPiece repoId
+  pure $ "http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> toUrlPiece repoId
 
 
 -- | Given an SSH command line, return enough data to route the git traffic to

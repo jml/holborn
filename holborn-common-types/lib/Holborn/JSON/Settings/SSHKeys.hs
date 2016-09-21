@@ -8,7 +8,7 @@ module Holborn.JSON.Settings.SSHKeys
 
 import HolbornPrelude
 import Data.Aeson (ToJSON, FromJSON)
-import Data.Time.LocalTime (LocalTime)
+import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
 
 import Holborn.JSON.SSHRepoCommunication (SSHKey)
@@ -20,7 +20,7 @@ data ListKeysRow = ListKeysRow
     , key :: SSHKey
     , verified :: Bool
     , readonly :: Bool
-    , created_at :: LocalTime
+    , created_at :: UTCTime
     } deriving (Show, Generic)
 
 instance ToJSON ListKeysRow

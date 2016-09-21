@@ -63,7 +63,7 @@ newRepo _dexMail NewRepoRequest{..} = do
 
     -- UNION query to check both user and org at the same time
     result <- query [sql|
-        select 'org', id, orgname from "org" where orgname = ? UNION select 'user', id, username from "user" where username = ?
+        select 'org', id, name from "core_org" where name = ? UNION select 'user', id, username from auth_user where username = ?
         |] (owner, owner)
 
     case result of
@@ -76,14 +76,14 @@ newRepo _dexMail NewRepoRequest{..} = do
     newOrgRepo orgId owner' = do
        repoServer <- pickRepoServer
        [Only (repoId :: Int)] <- query [sql|
-            insert into "org_repo" (name, description, org_id, hosted_on) values (?, ?, ?, ?) returning id
+            insert into core_orgrepo (name, description, org_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (name, description, orgId, repoServer)
        pure (RepoMeta repoId 0 0 0 owner')
 
     newUserRepo userId owner' = do
        repoServer <- pickRepoServer
        [Only (repoId :: Int)] <- query [sql|
-            insert into "user_repo" (name, description, user_id, hosted_on) values (?, ?, ?, ?) returning id
+            insert into core_userrepo (name, description, user_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (name, description, userId, repoServer)
        pure (RepoMeta repoId 0 0 0 owner')
 
@@ -92,7 +92,7 @@ repoOwnerCandidates :: Maybe DexMail -> APIHandler NewRepoError [OwnerName]
 repoOwnerCandidates dexMail = do
   userId <- getUserId dexMail
   [Only (ownerName :: OwnerName) ] <- query [sql|
-            select username from "user" where id = ?
+            select username from auth_user where id = ?
             |] (Only userId)
   -- TODO link in potential owners when we have an org structure
   pure [ownerName]

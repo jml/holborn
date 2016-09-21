@@ -24,7 +24,7 @@ getUserId :: Maybe DexMail -> APIHandler a UserId
 getUserId Nothing = throwAPIError MissingAuthToken
 getUserId (Just dexMail) = do
     rows <- query [sql|
-        select id from "user" where email = ?
+        select id from "auth_user" where email = ?
     |] (Only dexMail)
     case rows of
       [Only userId] -> pure userId

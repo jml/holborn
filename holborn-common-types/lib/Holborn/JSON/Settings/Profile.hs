@@ -6,7 +6,7 @@ module Holborn.JSON.Settings.Profile
 
 import HolbornPrelude
 import Data.Aeson (ToJSON, FromJSON)
-import Data.Time.LocalTime (LocalTime)
+import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
 
 -- TODO - the response profile data should be much more detailed
@@ -16,7 +16,7 @@ data ProfileData = ProfileData
     { id :: Int
     , username :: Text
     , about :: Text
-    , date_joined :: LocalTime
+    , date_joined :: UTCTime
     } deriving (Show, Generic)
 
 

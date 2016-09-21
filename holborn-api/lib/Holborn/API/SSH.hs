@@ -117,7 +117,7 @@ authorizedKeys CheckKeyRequest{..} = do
   rows <- queryWith
     parser
     [sql|select id, "type", "key", comment
-         from "ssh_key"
+         from core_sshkey
          where "key" = ?
          |] (Only key)
   return $ SSHKeys rows
@@ -135,7 +135,7 @@ accessRepo :: CheckRepoAccessRequest -> SSHHandler RepoAccess
 accessRepo CheckRepoAccessRequest{keyId, command} = do
     rows <- query [sql|
                    select id, readonly, verified
-                   from "ssh_key" where id = ?
+                   from core_sshkey where id = ?
                |] (Only keyId)
 
     let SSHCommandLine command' owner name = command
