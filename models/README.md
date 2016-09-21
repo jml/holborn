@@ -32,7 +32,7 @@ At the end apply the changes via
 ./manage.py migrate
 ```
 
-For all other use cases read the excellent django docs.
+For all other use cases read the excellent [Django docs](https://docs.djangoproject.com/en/1.10/).
 
 # Important final step:
 
