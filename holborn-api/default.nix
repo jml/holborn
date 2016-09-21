@@ -1,4 +1,4 @@
-{ mkDerivation, aeson, base, bytestring, containers, errors
+{ mkDerivation, aeson, base, bcrypt, bytestring, containers, errors
 , exceptions, holborn-common-types, holborn-prelude, hspec-wai
 , hspec-wai-json, http-api-data, http-client, http-types
 , optparse-applicative, postgresql-simple, process, QuickCheck
@@ -13,7 +13,7 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    aeson base bytestring errors exceptions holborn-common-types
+    aeson base bcrypt bytestring errors exceptions holborn-common-types
     holborn-prelude http-api-data http-client http-types
     postgresql-simple servant-server text time transformers wai warp
   ];

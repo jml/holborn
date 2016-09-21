@@ -25,6 +25,7 @@ library:
   source-dirs: lib
   dependencies:
     - aeson >= 0.10
+    - bcrypt
     - bytestring
     - errors
     - exceptions >= 0.8

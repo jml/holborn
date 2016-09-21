@@ -22,7 +22,6 @@ library:
   dependencies:
     - QuickCheck
     - attoparsec
-    - bcrypt
     - bytestring
     - containers
     - http-media

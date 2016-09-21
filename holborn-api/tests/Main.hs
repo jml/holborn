@@ -16,6 +16,7 @@ import qualified Internal
 import qualified NewRepo
 import qualified Settings.SSHKeys
 import qualified SSH
+import qualified Types
 
 
 main :: IO ()
@@ -28,6 +29,7 @@ tests = do
   apiTests <- waiTests
   pure $ testGroup "Holborn.API"
          [ Internal.tests
+         , Types.tests
          , apiTests
          ]
 
