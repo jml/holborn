@@ -18,7 +18,6 @@ module Holborn.Repo.GitLayer
        , makeRepository
        , notImplementedYet
        , withRepository
-       , fillRepoMeta
        ) where
 
 import HolbornPrelude hiding (id)
@@ -26,7 +25,6 @@ import qualified HolbornPrelude (id)
 import Control.Error (bimapExceptT, syncIO)
 import Control.Monad.Reader (ReaderT)
 import Control.Monad.Trans.Except (ExceptT)
-import Data.Maybe (fromJust)
 import Data.Tagged (Tagged(..))
 import qualified Data.Text as Text
 import qualified Git
@@ -56,7 +54,7 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Holborn.Repo.HtmlFormatTokens ()
 import Holborn.Syntax (annotateCode)
 import Holborn.ServantTypes (RenderedJson)
-import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..), newOwnerName)
+import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..))
 
 -- | A git repository
 -- | TODO: this seems to have the same function as HttpProtocol.DiskLocation?
@@ -425,20 +423,6 @@ instance ToMarkup Tree where
 notImplementedYet :: Text -> a
 notImplementedYet feature = terror $ "Not implemented yet: " ++ feature
 
-
--- | Fill in information about the repository we want to render or
--- show. E.g. languages, number of commits, public URL, ssh URL, etc.
---
--- For now it has access to the repository itself to run git commands
--- but it'll likely be more efficient to cache the metadata on push
--- (which is much rarer than reading).
-fillRepoMeta :: Repository -> GitM IO RepoMeta
-fillRepoMeta Repo{..} =
-  -- TODO: FAKE: Fake data 10 11 12
-  return $ RepoMeta _repoId 10 11 12 ownerName
-  where
-    -- TODO: FAKE: Fake data owner-filled-by-api
-    ownerName = fromJust (newOwnerName "owner-filled-by-api")
 
 instance ToMarkup RepoMeta where
   toMarkup RepoMeta{..} = do
