@@ -6,7 +6,7 @@ import Control.Monad.Eff.Exception as E
 import Control.Apply ((<*))
 import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
-import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, word, anyOf)
+import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, word, anyOf, sat, eof)
 import Text.Parsing.Combinators (many1)
 
 import React.DOM as R
@@ -37,6 +37,8 @@ data BrowseRoutes =
   | TreeLoaded Owner Repo Ref  RepoPath
   | Blob Owner Repo Ref RepoPath
   | BlobLoaded Owner Repo Ref RepoPath
+  | SearchRepo Owner Repo String
+
 
 data State = State
     { route :: BrowseRoutes
@@ -52,12 +54,14 @@ startRoute s = State { route: s, _meta: Nothing, _tree: Nothing, _blob: Nothing 
 searchLink :: State -> String -> String
 searchLink state q =  (makeLink (view routeLens state)) <> "?q=" <> q
   where
-    makeLink (Home o r) = intercalate "/" ["/code", o, r, "search"]
-    makeLink (HomeLoaded o r) = intercalate "/" ["/code", o, r, "search"]
-    makeLink (Tree o r _ _ ) = intercalate "/" ["/code", o, r, "search"]
-    makeLink (TreeLoaded o r _ _) = intercalate "/" ["/code", o, r, "search"]
-    makeLink (Blob o r _ _) = intercalate "/" ["/code", o, r, "search"]
-    makeLink (BlobLoaded o r _ _) = intercalate "/" ["/code", o, r, "search"]
+    l o r = intercalate "/" ["/code", o, r, "search"]
+    makeLink (Home o r) = l o r
+    makeLink (HomeLoaded o r) = l o r
+    makeLink (Tree o r _ _ ) = l o r
+    makeLink (TreeLoaded o r _ _) = l o r
+    makeLink (Blob o r _ _) = l o r
+    makeLink (BlobLoaded o r _ _) = l o r
+    makeLink (SearchRepo o r s) = l o r
 
 
 data Action = NOP
@@ -148,6 +152,9 @@ parsePath = word
 parseRef :: Parser String Ref
 parseRef = fromCharList <$> many1 alphanum
 
+parseSearchQuery :: Parser String String
+parseSearchQuery = fromCharList <$> many1 (sat (const true))
+
 -- NB the ordering of the parser is important, I can't make `eof` work.
 browseRoutes :: Parser String State
 browseRoutes =
@@ -156,6 +163,7 @@ browseRoutes =
       <|> TreeLoaded <$> parseOwner <* string "/" <*> parseRepo <* string "tree/" <*> parseRef <* string "/" <*> parsePath
       <|> Blob <$> parseOwner <* string "/" <*> parseRepo <* string "blob/" <*> parseRef <* string "/" <*> parsePath
       <|> BlobLoaded <$> parseOwner <* string "/" <*> parseRepo <* string "blob/" <*> parseRef <* string "/" <*> parsePath
+      <|> SearchRepo <$> parseOwner <* string "/" <*> parseRepo <* string "search?q=" <*> parseSearchQuery
       <|> Home <$> parseOwner <* string "/" <*> parseRepo
       <|> HomeLoaded <$> parseOwner <* string "/" <*> parseRepo
     )
