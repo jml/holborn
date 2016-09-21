@@ -1,5 +1,6 @@
 -- | Create new repositories for either a user or an org
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes        #-}
 
@@ -11,11 +12,13 @@ module Holborn.API.NewRepo
 
 import HolbornPrelude
 
-import Data.Aeson (object, (.=))
+import Data.Aeson (FromJSON(..), Value(String), object, (.=))
+import Data.Aeson.Types (typeMismatch)
 import Servant
 
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
+import GHC.Generics (Generic)
 import Holborn.API.Config (Config)
 import Holborn.API.Internal
   ( APIHandler
@@ -25,8 +28,7 @@ import Holborn.API.Internal
   , throwHandlerError
   , query
   )
-import Holborn.JSON.NewRepo (NewRepoRequest(..))
-import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName)
+import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName, RepoName)
 import Holborn.API.Types (DexMail)
 import Holborn.API.Auth (getUserId)
 
@@ -41,6 +43,31 @@ type API =
   :<|> "user" :> "repository-owner-candidates"
     :> Header "x-dex-email" DexMail
     :> Get '[JSON] [OwnerName]
+
+
+-- | Repos are either public or private
+-- if private then read-access is controlled via organisation features.
+data Visibility = Public | Private deriving (Show, Eq)
+
+-- TODO ToJSON instance for Visibility
+
+instance FromJSON Visibility where
+ parseJSON (String v) = case v of
+   "public" -> pure Public
+   "private" -> pure Private
+   _ -> fail ("invalid value: " <> (textToString v))
+ parseJSON invalid = typeMismatch "Visibility" invalid
+
+
+data NewRepoRequest = NewRepoRequest
+    { owner :: OwnerName
+    , name :: RepoName
+    , description :: Maybe Text -- Optional
+    , visibility :: Visibility
+    } deriving (Show, Generic)
+
+
+instance FromJSON NewRepoRequest
 
 
 data NewRepoError = AlreadyExists | PermissionDenied | OwnerNotFound

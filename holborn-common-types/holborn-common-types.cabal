@@ -12,7 +12,6 @@ cabal-version:       >= 1.10
 library
   exposed-modules:
       Holborn.JSON.Browse
-      Holborn.JSON.NewRepo
       Holborn.JSON.RepoMeta
       Holborn.JSON.Settings.Profile
       Holborn.JSON.Settings.SSHKeys
