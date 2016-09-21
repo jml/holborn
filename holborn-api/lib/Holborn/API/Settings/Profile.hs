@@ -1,8 +1,9 @@
 -- | Profile settings, e.g. full name, location, ...
 
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE TypeOperators      #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuasiQuotes        #-}
+{-# LANGUAGE TypeOperators      #-}
 
 module Holborn.API.Settings.Profile
        ( API
@@ -13,11 +14,12 @@ import HolbornPrelude
 
 import Database.PostgreSQL.Simple (Only(..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-import Data.Aeson (object, (.=))
+import Data.Aeson (ToJSON, FromJSON, object, (.=))
+import Data.Time.LocalTime (LocalTime)
+import GHC.Generics (Generic)
 import Servant
 
 import Holborn.API.Config (Config)
-import Holborn.JSON.Settings.Profile (ProfileData(..))
 import Holborn.API.Types (Username, DexMail)
 import Holborn.API.Auth (getUserId)
 import Holborn.API.Internal (APIHandler, JSONCodeableError(..), toServantHandler, throwHandlerError, query)
@@ -28,6 +30,16 @@ type API =
     :<|> Header "x-dex-email" DexMail :> "user" :> Get '[JSON] ProfileData
     :<|> Header "x-dex-email" DexMail :> "user" :> ReqBody '[JSON] ProfileData :> Post '[JSON] ()
 
+
+data ProfileData = ProfileData
+    { id :: Int
+    , username :: Text
+    , about :: Text
+    , date_joined :: LocalTime
+    } deriving (Show, Generic)
+
+instance ToJSON ProfileData
+instance FromJSON ProfileData
 
 data Error = InvalidUrl | UserNotFound Text | UserNotInDb
 
@@ -54,7 +66,7 @@ getUser username = do
 
     case r of
         [] -> throwHandlerError (UserNotFound (show username))
-        [(id_, un, date_joined)] -> return (ProfileData id_ un "about this user TODO fetch from DB" date_joined)
+        [(id_, un, date_joined)] -> pure (ProfileData { id = id_, username = un, about = "about this user TODO fetch from DB", date_joined = date_joined })
         _ -> terror $ "Multiple users found in the database for " ++ show username ++ ". Found: " ++ show r
 
 

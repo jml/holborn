@@ -13,7 +13,6 @@ library
   exposed-modules:
       Holborn.JSON.Browse
       Holborn.JSON.RepoMeta
-      Holborn.JSON.Settings.Profile
       Holborn.JSON.Settings.SSHKeys
       Holborn.JSON.SSHRepoCommunication
       Holborn.Logging
