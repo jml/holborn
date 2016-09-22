@@ -46,7 +46,7 @@ library
     , warp >= 3.1
   hs-source-dirs:
       lib
-  ghc-options: -Wall -Werror
+  ghc-options: -Wall
   default-language: Haskell2010
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
 
@@ -65,7 +65,7 @@ executable holborn-api-server
     , wai-extra
     , warp >= 3.1
     , postgresql-simple
-  ghc-options: -Wall -Werror
+  ghc-options: -Wall
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
 
 test-suite holborn-api-tests
@@ -74,7 +74,7 @@ test-suite holborn-api-tests
   hs-source-dirs:
       tests
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
-  ghc-options: -Wall -Werror -eventlog
+  ghc-options: -Wall -eventlog
   build-depends:
       base >=4.9 && <5
     , holborn-common-types
