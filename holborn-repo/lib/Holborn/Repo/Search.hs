@@ -30,7 +30,7 @@ type LineNumber = Integer
 
 data Match = Match
   { path :: String
-  , matches :: [(LineNumber, Text)] -- | (lineno, content)
+  , matches :: [(LineNumber, Text)]
   }
   deriving (Show, Eq, Ord)
 
