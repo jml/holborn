@@ -15,7 +15,7 @@ import HolbornPrelude
 import Database.PostgreSQL.Simple (Only(..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Data.Aeson (ToJSON, FromJSON, object, (.=))
-import Data.Time.LocalTime (LocalTime)
+import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
 import Servant
 
@@ -35,7 +35,7 @@ data ProfileData = ProfileData
     { id :: Int
     , username :: Text
     , about :: Text
-    , date_joined :: LocalTime
+    , date_joined :: UTCTime
     } deriving (Show, Generic)
 
 instance ToJSON ProfileData

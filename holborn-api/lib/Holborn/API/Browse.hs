@@ -77,7 +77,7 @@ browse _maybeUsername owner repo = do
     return BrowseMetaResponse
       { repo_meta = repoMeta { owner = owner }
       , description = "fake description"
-      , created_at = Time.LocalTime (Time.ModifiedJulianDay 2000) (Time.TimeOfDay 1 1 1)
+      , created_at = Time.UTCTime (Time.ModifiedJulianDay 2000) (Time.secondsToDiffTime 10)
       }
 
 -- Tree, commit & blob are passed straight through if they meet the
