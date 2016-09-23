@@ -1,15 +1,18 @@
-module Holborn.Repo.Search where
+module Holborn.Repo.Search
+  ( Match(..)
+  , parseSearch
+  , runBasicSearch
+  ) where
 
 import HolbornPrelude
-import Holborn.Repo.GitLayer (Repository, repoPath)
+import Holborn.Repo.GitLayer (Repository, repoPath, Revision, refMaster)
 import qualified Text.Megaparsec.Text as P
 import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Lexer as PL
 import System.Process (readProcess)
 import qualified Data.Set as Set
 import Data.Foldable (fold)
-import Data.Text (unpack)
-import Debug.Trace
+
 
 data IncludeExclude = Include | Exclude deriving (Show, Eq)
 
@@ -23,9 +26,11 @@ data Term =
 type Search = [(IncludeExclude, Term)]
 
 
+type LineNumber = Integer
+
 data Match = Match
   { path :: String
-  , matches :: [(Integer, String)]
+  , matches :: [(LineNumber, Text)] -- | (lineno, content)
   }
   deriving (Show, Eq, Ord)
 
@@ -42,9 +47,8 @@ parseTerm = do
   pure (ie, Plain (fromString value))
 
 
--- TODO quickcheck that inputs produce an output, and that runtime is
--- bounded by O(N). E.g.:
--- λ  quickCheck (\s -> let Just x = parseSearch (fromString s) in True)
+-- TODO check and that runtime is bounded by O(N). Requires limiting
+-- with `System.Mem.setAllocationCounter`.
 parseSearch :: Text -> Maybe Search
 parseSearch s = P.parseMaybe (P.sepBy parseTerm P.space) s
 
@@ -59,40 +63,40 @@ runBasicSearch repo search = do
   i <- include
   return (Set.toList (i `Set.difference` e))
   where
-    exclude = fmap (Set.fromList . (fromMaybe []) . fold) (mapM excludeRun search)
-    excludeRun (Exclude, x) = runOneGrep repo x
+    exclude = fmap (Set.fromList . fromMaybe [] . fold) (traverse excludeRun search)
+    excludeRun (Exclude, x) = runOneGrep repo refMaster x
     excludeRun _ = pure Nothing
 
-    include = fmap (Set.fromList . (fromMaybe []) . fold) (mapM includeRun search)
-    includeRun (Include, x) = runOneGrep repo x
+    include = fmap (Set.fromList . fromMaybe [] . fold) (traverse includeRun search)
+    includeRun (Include, x) = runOneGrep repo refMaster x
     includeRun _ = pure Nothing
 
 
-runOneGrep :: Repository -> Term -> IO (Maybe [Match])
-runOneGrep repo term =
+runOneGrep :: Repository -> Revision -> Term -> IO (Maybe [Match])
+runOneGrep repo ref term =
   -- Ignoring in readProcess a bad idea but we do get git complaining
   -- on stderr if there is an actual issue.
   case term of
-    Plain text -> parseGitGrep <$> fmap fromString (gitGrep text `catch` \(_ :: SomeException) -> (pure "" :: IO String))
+    Plain text -> (parseGitGrep ref) <$> fmap fromString (gitGrep text `catch` \(err :: SomeException) -> terror (show err))
       -- TODO implement remaining patterns
     FileName _ -> undefined
     _ -> pure Nothing
   where
     -- TODO expose revision to search in?
-    gitGrep text = readProcess "git" ["--git-dir", repoPath repo, "grep", "-n", "--heading", unpack text, "master"] ""
+    gitGrep text = readProcess "git" ["--git-dir", repoPath repo, "grep", "-n", "--heading", textToString text, textToString (show ref)] ""
 
 -- output of git grep looks like this for a file (a:b) with two lines "abc"
 -- $ gg --heading -n a master
 -- master:a:b
 -- 1:abc
 -- 2:abc
-parseGitGrep :: Text -> Maybe [Match]
-parseGitGrep s =
-  P.parseMaybe (P.many parseMatch) s
+parseGitGrep :: Revision -> Text -> Maybe [Match]
+parseGitGrep ref s =
+  P.parseMaybe (P.many (parseMatch ref)) s
 
-parseMatch :: P.Parser Match
-parseMatch = do
-  void (P.string "master:")
+parseMatch :: Revision -> P.Parser Match
+parseMatch ref = do
+  void (P.string ((textToString (show ref)) <> ":"))
   path <- P.someTill P.anyChar P.eol
   matches <- many (P.try oneLine)
   pure (Match path matches)
@@ -101,5 +105,5 @@ parseMatch = do
     oneLine = do
       lineNo <- PL.decimal
       void (P.string ":")
-      content <- P.someTill P.anyChar P.eol
+      content <- fmap fromString (P.someTill P.anyChar P.eol)
       pure (lineNo, content)

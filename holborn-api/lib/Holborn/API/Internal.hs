@@ -238,7 +238,7 @@ execute sqlQuery values = do
   APIHandler $ liftIO $ PostgreSQL.execute conn sqlQuery values
 
 
--- | Call a backend, asking for a JSON response.
+-- | Call a backend, asking for a rendered JSON response.
 --
 -- Will eagerly load the entire response into memory and convert all of the
 -- JSON values to Haskell values.

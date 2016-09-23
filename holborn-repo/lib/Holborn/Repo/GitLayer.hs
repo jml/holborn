@@ -20,6 +20,7 @@ module Holborn.Repo.GitLayer
        , withRepository
        , fillRepoMeta
        , repoPath
+       , refMaster
        ) where
 
 import HolbornPrelude hiding (id)
@@ -253,6 +254,12 @@ instance ToHttpApiData Revision where
   toUrlPiece (Revision revision) =
     fromMaybe revision (Text.stripPrefix "refs/heads/" revision)
 
+-- | Hardcoded Revision for master - used in a few places as the
+-- default if nothing specified.
+refMaster :: Revision
+refMaster = case parseUrlPiece "master" of
+  Right x -> x
+  Left err -> terror err
 
 -- XXX: Is there a thing struggling to get out which is a combination of:
 -- * repository

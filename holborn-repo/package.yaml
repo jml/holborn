@@ -69,3 +69,25 @@ executables:
       - optparse-applicative
       - time >=1.5
       - wai-extra
+
+tests:
+  holborn-repo-tests:
+    main: Main.hs
+    source-dirs: tests
+    ghc-options: -eventlog
+    dependencies:
+      - QuickCheck
+      - aeson
+      - bytestring
+      - containers
+      - errors
+      - holborn-repo
+      - http-client
+      - http-types
+      - process
+      - tasty >= 0.10
+      - tasty-hunit >= 0.9.0
+      - tasty-quickcheck >= 0.8
+      - quickcheck-text
+      - text
+      - unix
