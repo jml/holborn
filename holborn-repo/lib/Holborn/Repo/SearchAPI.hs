@@ -6,13 +6,13 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Holborn.Repo.SearchAPI (SearchAPI, searchAPI, searchServer, SearchResultRow(..)) where
+module Holborn.Repo.SearchAPI (API, server, SearchResultRow(..)) where
 
 import HolbornPrelude
 
 import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Except (ExceptT, throwE)
-import Servant ((:>), Get, Proxy(..), QueryParam, ServantErr(..), Server, JSON)
+import Servant ((:>), Get, QueryParam, ServantErr(..), Server, JSON)
 import Servant.Server (enter, (:~>)(..), err400)
 import Data.Aeson (ToJSON)
 
@@ -46,13 +46,12 @@ matchesToResults blobMap matches' = map toRow matches'
     toRow S.Match{..} = SearchResultRow (fromString path) (contents path) (map fst matches)
     contents path' = renderMarkup (toMarkup (blobMap Map.! (fromString path')))
 
-type SearchAPI =
+
+-- | This is the per-repository search API which is different from the
+-- API exposed by holborn-api.
+type API =
   -- q for query, after for pagination
   QueryParam "q" Text :> QueryParam "after" Text :> Get '[JSON] [SearchResultRow]
-
-
-searchAPI :: Proxy SearchAPI
-searchAPI = Proxy
 
 
 -- See http://haskell-servant.github.io/tutorial/server.html#using-another-monad-for-your-handlers
@@ -62,8 +61,8 @@ searchT = Nat (bimapExceptT searchExceptionToServantErr HolbornPrelude.id)
     searchExceptionToServantErr _ = err400 { errBody = "invalid query" }
 
 
-searchServer :: Repository -> Server SearchAPI
-searchServer repo = enter searchT $
+server :: Repository -> Server API
+server repo = enter searchT $
   searchHandler repo
 
 

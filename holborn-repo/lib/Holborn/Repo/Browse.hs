@@ -7,7 +7,7 @@
 
 -- | Browse Git repository
 
-module Holborn.Repo.Browse (BrowseAPI, browseAPI, codeBrowser) where
+module Holborn.Repo.Browse (API, server) where
 
 import HolbornPrelude hiding (id)
 import qualified HolbornPrelude (id)
@@ -15,7 +15,7 @@ import qualified HolbornPrelude (id)
 import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Except (ExceptT, throwE)
 import Data.ByteString.Lazy (fromStrict)
-import Servant ((:>), (:<|>)(..), Capture, CaptureAll, Get, Proxy(..), QueryParam, ServantErr(..), Server, JSON, MimeRender(mimeRender))
+import Servant ((:>), (:<|>)(..), Capture, CaptureAll, Get, QueryParam, ServantErr(..), Server, JSON, MimeRender(mimeRender))
 import Servant.HTML.Blaze (HTML)
 import Servant.Server (enter, (:~>)(..), err500, err404)
 import Data.Aeson (encode)
@@ -42,7 +42,7 @@ type Author = Text
 -- Github will accept a single segment, but will also accept, e.g.
 -- 'refs/heads/master'.
 
-type BrowseAPI =
+type API =
   -- e.g. /v1/repos/src/pulp/blob/master/setup.py
   "git" :> "blobs" :> Capture "revspec" Revision :>
     CaptureAll "pathspec" Text :> Get '[HTML, JSON, RenderedJson] Blob
@@ -53,10 +53,6 @@ type BrowseAPI =
 
   :<|> "commits" :> Capture "revspec" Revision :> QueryParam "author" Author :> Get '[HTML] [Commit]
   :<|> "git" :> "commits" :> Capture "revspec" Revision :> Get '[HTML] Commit
-
-
-browseAPI :: Proxy BrowseAPI
-browseAPI = Proxy
 
 
 type RepoBrowser = ExceptT BrowseException IO
@@ -78,8 +74,8 @@ gitBrowserT = Nat (bimapExceptT browseExceptionToServantErr HolbornPrelude.id)
     browseExceptionToServantErr RepoNotFoundException = err404 { errBody = "repo not found" }
 
 
-codeBrowser :: Repository -> Server BrowseAPI
-codeBrowser repo = enter gitBrowserT $
+server :: Repository -> Server API
+server repo = enter gitBrowserT $
   -- XXX: What should we do for repos that don't have a master?
   renderBlob repo
   :<|> renderTree repo

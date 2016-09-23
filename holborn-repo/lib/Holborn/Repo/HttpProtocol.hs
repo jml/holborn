@@ -11,8 +11,8 @@
 
 
 module Holborn.Repo.HttpProtocol
-       ( GitProtocolAPI
-       , gitProtocolAPI
+       ( API
+       , server
        ) where
 
 import           HolbornPrelude
@@ -36,7 +36,7 @@ import Holborn.Repo.Filesystem (DiskLocation, diskLocationToPath, repoInit)
 
 
 -- | The core git protocol for a single repository.
-type GitProtocolAPI =
+type API =
        "info" :> "refs" :> QueryParam "service" GitCommand :> Raw
   :<|> "git-upload-pack" :> Raw
   :<|> "git-receive-pack" :> Raw
@@ -45,8 +45,8 @@ type GitProtocolAPI =
 data GitResponse = Service | Advertisement
 
 
-gitProtocolAPI :: DiskLocation -> Server GitProtocolAPI
-gitProtocolAPI diskLocation =
+server :: DiskLocation -> Server API
+server diskLocation =
   smartHandshake diskLocation
   :<|> gitServe GitUploadPack diskLocation
   :<|> gitServe GitReceivePack diskLocation
