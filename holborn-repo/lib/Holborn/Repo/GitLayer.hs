@@ -18,7 +18,6 @@ module Holborn.Repo.GitLayer
        , makeRepository
        , notImplementedYet
        , withRepository
-       , fillRepoMeta
        , repoPath
        , refMaster
        ) where
