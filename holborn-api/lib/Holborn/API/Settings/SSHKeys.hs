@@ -2,6 +2,8 @@
 --   curl 127.0.0.1:8002/v1/users/alice/keys
 
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TypeOperators      #-}
 {-# LANGUAGE QuasiQuotes        #-}
 
@@ -16,13 +18,13 @@ import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Database.PostgreSQL.Simple.Internal (RowParser)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
-
-import Data.Aeson (object, (.=))
+import Data.Aeson (FromJSON, ToJSON, object, (.=))
+import Data.Time.Clock (UTCTime)
+import GHC.Generics (Generic)
 import Servant
 
 import Holborn.API.Config (Config)
 import Holborn.JSON.SSHRepoCommunication (SSHKey(SSHKey), parseSSHKey)
-import Holborn.JSON.Settings.SSHKeys (AddKeyData(..), ListKeysRow(..))
 import Holborn.API.Internal
   ( APIHandler
   , JSONCodeableError(..)
@@ -45,6 +47,22 @@ type API =
     :<|> Header "x-dex-email" DexMail :> "user" :> "keys" :> Capture "id" Int :> Delete '[JSON] ()
     :<|> Header "x-dex-email" DexMail :> "user" :> "keys" :> ReqBody '[JSON] AddKeyData :> PostCreated '[JSON] ListKeysRow
 
+data ListKeysRow = ListKeysRow
+    { id :: Int
+    , key :: SSHKey
+    , verified :: Bool
+    , readonly :: Bool
+    , created_at :: UTCTime
+    } deriving (Show, Generic)
+
+instance ToJSON ListKeysRow
+
+data AddKeyData = AddKeyData
+    { key :: Text
+    } deriving (Show, Generic)
+
+instance ToJSON AddKeyData
+instance FromJSON AddKeyData
 
 -- TODO Tom would really rather have an applicative validator that can
 -- check & mark several errors at the same time because that's a much

@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.13.0.
+-- This file has been generated from package.yaml by hpack version 0.14.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -24,11 +24,13 @@ library
       Holborn.API.Settings.Profile
       Holborn.API.Settings.SSHKeys
       Holborn.API.SSH
+      Holborn.API.Types
   build-depends:
       base >=4.9 && <5
     , holborn-common-types
     , holborn-prelude
     , aeson >= 0.10
+    , bcrypt
     , bytestring
     , errors
     , exceptions >= 0.8
@@ -44,7 +46,7 @@ library
     , warp >= 3.1
   hs-source-dirs:
       lib
-  ghc-options: -Wall -Werror
+  ghc-options: -Wall
   default-language: Haskell2010
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
 
@@ -63,7 +65,7 @@ executable holborn-api-server
     , wai-extra
     , warp >= 3.1
     , postgresql-simple
-  ghc-options: -Wall -Werror
+  ghc-options: -Wall
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
 
 test-suite holborn-api-tests
@@ -72,7 +74,7 @@ test-suite holborn-api-tests
   hs-source-dirs:
       tests
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
-  ghc-options: -Wall -Werror -eventlog
+  ghc-options: -Wall -eventlog
   build-depends:
       base >=4.9 && <5
     , holborn-common-types
@@ -107,4 +109,5 @@ test-suite holborn-api-tests
       Postgres
       Settings.SSHKeys
       SSH
+      Types
   default-language: Haskell2010

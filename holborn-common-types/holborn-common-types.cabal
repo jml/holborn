@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.13.0.
+-- This file has been generated from package.yaml by hpack version 0.14.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -11,14 +11,8 @@ cabal-version:       >= 1.10
 
 library
   exposed-modules:
-      Holborn.API.Types
-      Holborn.Auth
       Holborn.JSON.Browse
-      Holborn.JSON.CreateAccount
-      Holborn.JSON.NewRepo
       Holborn.JSON.RepoMeta
-      Holborn.JSON.Settings.Profile
-      Holborn.JSON.Settings.SSHKeys
       Holborn.JSON.SSHRepoCommunication
       Holborn.Logging
       Holborn.ServantTypes
@@ -29,7 +23,6 @@ library
     , http-api-data
     , QuickCheck
     , attoparsec
-    , bcrypt
     , bytestring
     , containers
     , http-media
@@ -65,4 +58,3 @@ test-suite holborn-common-types-test
       Helpers
       RepoMeta
       SSH
-      Types

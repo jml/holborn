@@ -6,7 +6,8 @@ license: AllRightsReserved
 data-files:
   - sql/initial.sql
 
-ghc-options: -Wall -Werror
+# -Werror disabled due to https://ghc.haskell.org/trac/ghc/ticket/12609
+ghc-options: -Wall
 default-extensions:
   - GeneralizedNewtypeDeriving
   - MonadFailDesugaring
@@ -25,6 +26,7 @@ library:
   source-dirs: lib
   dependencies:
     - aeson >= 0.10
+    - bcrypt
     - bytestring
     - errors
     - exceptions >= 0.8

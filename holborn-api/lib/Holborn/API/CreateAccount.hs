@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE TypeOperators      #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE QuasiQuotes        #-}
-
+{-# LANGUAGE TypeOperators      #-}
 
 module Holborn.API.CreateAccount
        ( API
@@ -10,11 +10,12 @@ module Holborn.API.CreateAccount
 
 import HolbornPrelude
 
-import Data.Aeson (object, (.=))
+import Data.Aeson (FromJSON, object, (.=))
 import Servant
 
 import Database.PostgreSQL.Simple (Only (..))
 import Database.PostgreSQL.Simple.SqlQQ (sql)
+import GHC.Generics (Generic)
 import Holborn.API.Config (Config)
 import Holborn.API.Internal
   ( APIHandler
@@ -22,8 +23,8 @@ import Holborn.API.Internal
   , toServantHandler
   , query
   )
-import Holborn.JSON.CreateAccount (CreateAccountRequest(..))
 import Holborn.API.Types (DexMail)
+import Holborn.JSON.RepoMeta (OwnerName)
 
 
 type API =
@@ -32,6 +33,12 @@ type API =
     :> ReqBody '[JSON] CreateAccountRequest
     :> Post '[JSON] ()
 
+
+data CreateAccountRequest = CreateAccountRequest
+    { username :: OwnerName
+    } deriving (Show, Generic)
+
+instance FromJSON CreateAccountRequest
 
 data CreateAccountError = AlreadyExists | PermissionDenied
 

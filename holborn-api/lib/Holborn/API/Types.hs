@@ -8,7 +8,6 @@ module Holborn.API.Types
        , Email
        , Password
        , DexMail
-       , ApiError(..)
        ) where
 
 import HolbornPrelude
@@ -70,15 +69,6 @@ instance FromField Username where
 instance FromField Password where
     fromField _ (Just bs) = return (Password bs)
     fromField _ _ = terror "FromField Password should always decode correctly"
-
--- | Sum type of all API errors that we want to handle nicely (where
--- nicely means something other than throwing a 500 with "something
--- broke").
-data ApiError =
-    UserAlreadyExists Username
-    | UnexpectedConstraintViolation Text
-    | UserNotFound Username
-    deriving Show
 
 
 instance FromJSON Username where
