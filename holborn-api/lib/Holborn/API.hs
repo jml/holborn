@@ -3,10 +3,7 @@
 {-# LANGUAGE TypeFamilies  #-}
 
 module Holborn.API
-  ( API
-  , server
-  , api
-  , app
+  ( app
   ) where
 
 import Data.Proxy (Proxy(..))

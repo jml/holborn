@@ -12,10 +12,10 @@ import HolbornPrelude
 
 import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Except (ExceptT, throwE)
-import Servant ((:>), Get, QueryParam, ServantErr(..), Server, JSON)
+import Servant ((:>), Get, QueryParam, ServantErr(..), Server, MimeRender(mimeRender))
 import Servant.Server (enter, (:~>)(..), err400)
-import Data.Aeson (ToJSON)
-
+import Data.Aeson (ToJSON, encode)
+import Holborn.ServantTypes (RenderedJson)
 import Holborn.Repo.GitLayer (Repository, Revision, withRepository, BrowseException, Blob, BrowseException(..), getBlob)
 import qualified Holborn.Repo.Search as S
 import GHC.Generics (Generic)
@@ -34,8 +34,14 @@ data SearchResultRow = SearchResultRow
   , lineNumbers :: [Integer] -- Context to show to be decided on client side
   } deriving (Show, Generic)
 
+
 instance ToJSON SearchResultRow
 
+instance MimeRender RenderedJson SearchResultRow where
+   mimeRender _ = encode
+
+instance MimeRender RenderedJson [SearchResultRow] where
+   mimeRender _ = encode
 
 -- Transform a list of matches a renderable search result. This means
 -- rendering a file with the syntax highlighter, snipping out the
@@ -51,7 +57,7 @@ matchesToResults blobMap matches' = map toRow matches'
 -- API exposed by holborn-api.
 type API =
   -- q for query, after for pagination
-  QueryParam "q" Text :> QueryParam "after" Text :> Get '[JSON] [SearchResultRow]
+  QueryParam "q" Text :> QueryParam "after" Text :> Get '[RenderedJson] [SearchResultRow]
 
 
 -- See http://haskell-servant.github.io/tutorial/server.html#using-another-monad-for-your-handlers

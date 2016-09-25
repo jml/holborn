@@ -299,7 +299,7 @@ repoUrlForId repoId = do
   -- single repo server. In future, we would look up the host details from the
   -- database too.
   AppConf{repoHostname, repoPort} <- getConfig
-  pure $ "http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> toUrlPiece repoId <> "/browse"
+  pure $ "http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> toUrlPiece repoId
 
 
 -- | Given an SSH command line, return enough data to route the git traffic to

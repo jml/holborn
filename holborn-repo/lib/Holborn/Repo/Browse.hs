@@ -31,6 +31,7 @@ import Holborn.Repo.GitLayer ( Blob
                              , getTree
                              , notImplementedYet
                              , withRepository
+                             , fillRepoMeta
                              )
 import Holborn.JSON.RepoMeta (RepoMeta(..))
 
@@ -44,7 +45,8 @@ type Author = Text
 
 type API =
   -- e.g. /v1/repos/src/pulp/blob/master/setup.py
-  "git" :> "blobs" :> Capture "revspec" Revision :>
+  Get '[HTML, JSON, RenderedJson] RepoMeta
+  :<|> "git" :> "blobs" :> Capture "revspec" Revision :>
     CaptureAll "pathspec" Text :> Get '[HTML, JSON, RenderedJson] Blob
 
   -- e.g. /v1/repos/src/pulp/tree/master/
@@ -76,8 +78,8 @@ gitBrowserT = Nat (bimapExceptT browseExceptionToServantErr HolbornPrelude.id)
 
 server :: Repository -> Server API
 server repo = enter gitBrowserT $
-  -- XXX: What should we do for repos that don't have a master?
-  renderBlob repo
+  renderMeta repo
+  :<|> renderBlob repo
   :<|> renderTree repo
   :<|> renderCommits repo
   :<|> renderCommit repo
@@ -113,3 +115,9 @@ instance MimeRender RenderedJson RepoMeta where
 
 instance MimeRender RenderedJson Tree where
    mimeRender _ = encode
+
+
+renderMeta :: Repository -> RepoBrowser RepoMeta
+renderMeta repo = do
+  x <- withRepository repo fillRepoMeta
+  pure x

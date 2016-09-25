@@ -20,6 +20,7 @@ module Holborn.Repo.GitLayer
        , withRepository
        , repoPath
        , refMaster
+       , fillRepoMeta
        ) where
 
 import HolbornPrelude hiding (id)
@@ -43,6 +44,7 @@ import Data.Conduit (runConduit, yield, awaitForever, (=$=))
 import Servant (MimeRender(mimeRender))
 import qualified Data.ByteString.Char8 as BSC8
 import System.Directory (doesDirectoryExist)
+import Data.Maybe (fromJust)
 
 -- XXX: Putting web stuff here to avoid orphan warnings. Would be nice to have
 -- it completely separate.
@@ -56,7 +58,7 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Holborn.Repo.HtmlFormatTokens ()
 import Holborn.Syntax (annotateCode)
 import Holborn.ServantTypes (RenderedJson)
-import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..))
+import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..), newOwnerName)
 
 -- | A git repository
 -- | TODO: this seems to have the same function as HttpProtocol.DiskLocation?
@@ -438,3 +440,18 @@ instance ToMarkup RepoMeta where
     H.h1 "debug rendering for root metadata"
     -- TODO: FAKE: Hardcodes master
     H.a ! A.href (H.toValue ("/v1/repos/" <> toUrlPiece id <> "/git/trees/master")) $ "tree-root"
+
+
+-- | Fill in information about the repository we want to render or
+-- show. E.g. languages, number of commits, public URL, ssh URL, etc.
+--
+-- For now it has access to the repository itself to run git commands
+-- but it'll likely be more efficient to cache the metadata on push
+-- (which is much rarer than reading).
+fillRepoMeta :: Repository -> GitM IO RepoMeta
+fillRepoMeta Repo{..} =
+  -- TODO: FAKE: Fake data 10 11 12
+  return $ RepoMeta _repoId 10 11 12 ownerName
+  where
+    -- TODO: FAKE: Fake data owner-filled-by-api
+    ownerName = fromJust (newOwnerName "owner-filled-by-api")
