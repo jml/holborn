@@ -27,7 +27,6 @@ extra-deps:
   - pretty-error-0.1.0.0
 
 nix:
-  enable: true
   packages:
     - icu
     - openssl
