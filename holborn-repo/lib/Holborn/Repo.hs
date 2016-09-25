@@ -3,24 +3,19 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Holborn.Repo
-  ( RepoAPI
-  , repoAPI
-  , repoServer
+  ( API
+  , server
   ) where
 
-import Servant ((:>), (:<|>)(..), Capture, Proxy(..), Server)
+import Servant ((:>), (:<|>)(..), Capture, Server)
 
 import Holborn.JSON.RepoMeta (RepoId)
-import Holborn.Repo.Browse (BrowseAPI, codeBrowser)
-import Holborn.Repo.SearchAPI (SearchAPI, searchServer)
+import qualified Holborn.Repo.Browse as Browse
+import qualified Holborn.Repo.SearchAPI as Search
 import Holborn.Repo.Config (Config)
 import Holborn.Repo.Filesystem (diskLocationToPath, getLocation)
-
 import Holborn.Repo.GitLayer (makeRepository)
-import Holborn.Repo.HttpProtocol
-  ( GitProtocolAPI
-  , gitProtocolAPI
-  )
+import qualified Holborn.Repo.HttpProtocol as GitProtocol
 
 
 -- | The git pull & push repository API.
@@ -28,23 +23,20 @@ import Holborn.Repo.HttpProtocol
 -- Repositories have a repoId, and each repository has an API for browsing and
 -- one for the Git HTTP protocol.
 type SubAPIs =
-  "browse" :> BrowseAPI
-  :<|> "search" :> SearchAPI
-  :<|> GitProtocolAPI
+  "browse" :> Browse.API
+  :<|> "search" :> Search.API
+  :<|> GitProtocol.API
 
 
-type RepoAPI =
+type API =
     "v1"
     :> "repos"
     :> Capture "repoId" RepoId
     :> SubAPIs
 
-repoAPI :: Proxy RepoAPI
-repoAPI = Proxy
-
-repoServer :: Config -> Server RepoAPI
-repoServer config repoId =
-    codeBrowser repo :<|> searchServer repo :<|> gitProtocolAPI diskLocation
+server :: Config -> Server API
+server config repoId =
+    Browse.server repo :<|> Search.server repo :<|> GitProtocol.server diskLocation
     where
       diskLocation = getLocation config repoId
       repo = makeRepository repoId (diskLocationToPath diskLocation)

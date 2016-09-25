@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeFamilies  #-}
 
 module Holborn.API
-  ( FullAPI
+  ( API
   , server
   , api
   , app
@@ -22,7 +22,7 @@ import qualified Holborn.API.Settings.SSHKeys
 import qualified Holborn.API.Settings.Profile
 
 
-type FullAPI =
+type API =
          "internal" :> Holborn.API.SSH.API
     :<|> "v1" :> ( Holborn.API.Settings.SSHKeys.API
                    :<|> Holborn.API.Settings.Profile.API
@@ -32,11 +32,11 @@ type FullAPI =
     :<|> "v1" :> "repos" :> Holborn.API.Browse.API
 
 
-api :: Proxy FullAPI
+api :: Proxy API
 api = Proxy
 
 
-server :: Config -> Server FullAPI
+server :: Config -> Server API
 server conf = Holborn.API.SSH.server conf
               :<|> (Holborn.API.Settings.SSHKeys.server conf
                     :<|> Holborn.API.Settings.Profile.server conf

@@ -10,7 +10,7 @@ import Control.Concurrent (forkIO)
 import Network.Wai (Application)
 import Network.Wai.Handler.Warp (runSettings)
 import qualified Network.Wai.Middleware.RequestLogger as RL
-import Servant (serve)
+import Servant (serve, Proxy(..))
 import Options.Applicative
   ( ParserInfo
   , auto
@@ -28,7 +28,7 @@ import Options.Applicative
   , value
   )
 
-import Holborn.Repo (repoServer, repoAPI)
+import qualified Holborn.Repo as Repo
 import Holborn.Repo.Config (Config(..), warpSettings)
 import Holborn.Repo.RawProtocol (serveRaw)
 
@@ -63,7 +63,7 @@ options =
 
 -- git init --bare /tmp/hello
 app :: Config -> Application
-app config = serve repoAPI (repoServer config)
+app config = serve (Proxy :: Proxy Repo.API) (Repo.server config)
 
 
 main :: IO ()
