@@ -38,6 +38,11 @@ rec {
     let
         hp = pkgs.callPackage ../nix/all-packages.nix {};
 
+        holborn-models = pkgs.callPackage ../nix/holborn-models.nix {};
+        holborn-manage = pkgs.writeScriptBin "holborn-manage" ''
+          ${holborn-models}/bin/manage.py "$@"
+        '';
+
         # TODO - the following three should live holborn-ui:
         node_modules = pkgs.callPackage ../nix/node_modules.nix {};
         bower_modules = pkgs.callPackage ../nix/bower_modules.nix { inherit node_modules; };
@@ -131,7 +136,7 @@ rec {
 
         # Some useful packages for viewing, editing, and making sure
         # UI is installed. Not stricly necessary but useful.
-        environment.systemPackages = [ pkgs.git pkgs.vim holborn-ui ];
+        environment.systemPackages = [ pkgs.git pkgs.vim holborn-ui holborn-manage ];
 
         services.postfix.enable = true;
 

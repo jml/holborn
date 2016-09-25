@@ -7,7 +7,7 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE())
 import Control.Monad.Eff.Exception as E
 import Data.Either (Either(..))
-import Data.Foldable (foldMap)
+import Data.Foldable (foldMap, fold)
 import Data.Lens(PrismP, prism, over, lens, LensP, view, set)
 import Network.HTTP.Affjax as AJ
 import React as React
@@ -19,9 +19,9 @@ import Standalone.Router.Dispatch (Navigate, matches, navigate, navigateA)
 
 import DOM (DOM)
 
-
 import Text.Parsing.Simple (Parser, string, eof, tail)
 import Thermite as T
+import Standalone.Thermite (nestSpec) as T
 
 import Holborn.Browse as Browse
 import Holborn.Fetchable (class Fetchable, fetch)
@@ -37,6 +37,7 @@ import Network.HTTP.StatusCode (StatusCode(..))
 import Control.Monad.Trans (lift)
 import Debug.Trace
 
+
 -- | UserMeta records the state of the visiting user from the
 -- database.
 data UserMeta =
@@ -51,6 +52,7 @@ data State = RouterState
     { currentRoute :: RootRoutes
     , _userMeta :: UserMeta
     , _burgerOpen :: Boolean
+    , _searchText :: String -- TODO context for search (e.g. repo, project)?
     }
 
 
@@ -72,14 +74,19 @@ rootRoutes =
     ( string "settings/" *> (map SettingsRoute Settings.settingsRoutes)
       <|> string "create-account" *> pure (CreateAccountRoute CreateAccount.initialState)
       <|> string "create-repository" *> pure (CreateRepositoryRoute CreateRepository.initialState)
-      <|> map BrowseRoute Browse.browseRoutes
+      <|> string "code/" *> map BrowseRoute Browse.browseRoutes
       <|> pure LandingPageRoute <* eof
       <|> pure Route404 <* tail
     )
 
 
+data SearchAction =
+  UpdateSearchText String
+  | ExecuteSearch String
+
 data Action =
   UpdateRoute RootRoutes
+  | SearchAction SearchAction
   | SettingsAction Settings.Action
   | BrowseAction Browse.Action
   | CreateAccountAction CreateAccount.Action
@@ -143,7 +150,12 @@ instance fetchRootRoutes :: Fetchable RootRoutes State where
 
 
 initialState :: State
-initialState = RouterState { currentRoute: NotLoadedRoute, _userMeta: NotLoaded, _burgerOpen: false }
+initialState =  RouterState
+  { currentRoute: NotLoadedRoute
+  , _userMeta: NotLoaded
+  , _burgerOpen: false
+  , _searchText: ""
+  }
 
 routeLens :: LensP State RootRoutes
 routeLens = lens (\(RouterState s) -> s.currentRoute) (\(RouterState s) x -> RouterState (s { currentRoute = x }))
@@ -154,6 +166,8 @@ burgerOpen = lens (\(RouterState s) -> s._burgerOpen) (\(RouterState s) x -> Rou
 userMeta :: LensP State UserMeta
 userMeta = lens (\(RouterState s) -> s._userMeta) (\(RouterState s) x -> RouterState (s { _userMeta = x }))
 
+searchText :: LensP State String
+searchText = lens (\(RouterState s) -> s._searchText) (\(RouterState s) x -> RouterState (s { _searchText = x }))
 
 _SettingsState :: PrismP RootRoutes Settings.State
 _SettingsState = prism SettingsRoute \route ->
@@ -216,6 +230,33 @@ _CreateRepositoryAction = prism CreateRepositoryAction \action ->
     CreateRepositoryAction x -> Right x
     _ -> Left action
 
+_SearchAction :: PrismP Action SearchAction
+_SearchAction = prism SearchAction \action ->
+  case action of
+    SearchAction x -> Right x
+    _ -> Left action
+
+
+-- | Split by user state - doesn't return a new state, only used to
+-- select spec to render based on state.
+_AnonymousSplit :: PrismP State State
+_AnonymousSplit = prism id \s ->
+  case view userMeta s of
+    Anonymous -> Right s
+    _ -> Left s
+
+_SignedInSplit :: PrismP State State
+_SignedInSplit = prism id \s ->
+  case view userMeta s of
+    SignedIn _ -> Right s
+    _ -> Left s
+
+_NotLoadedSplit :: PrismP State State
+_NotLoadedSplit = prism id \s ->
+  case view userMeta s of
+    NotLoaded -> Right s
+    _ -> Left s
+
 
 spec404 :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) state props action
 spec404 = T.simpleSpec T.defaultPerformAction render
@@ -223,8 +264,8 @@ spec404 = T.simpleSpec T.defaultPerformAction render
     render _ _ _ _ = [R.text "404"]
 
 
-landingPage :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) state props action
-landingPage = T.simpleSpec T.defaultPerformAction render
+landingPageSpec :: forall eff state props action. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX | eff) state props action
+landingPageSpec = T.simpleSpec T.defaultPerformAction render
   where
     render _ _ _ _ =
       [R.ul []
@@ -232,66 +273,50 @@ landingPage = T.simpleSpec T.defaultPerformAction render
        ]
       ]
 
-
--- | spec is a Thermite-ism. It controls the flow of actions and
--- dispatches rendering code. Based on the state of the route
--- component we both focus and split into subcomponents (and the
--- subcompontents may do the same).
-spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
-spec = container $ handleActions $ foldMap (T.focusState routeLens)
-       [ T.split _SettingsState (T.match _SettingsAction Settings.spec)
-       , T.split _BrowseState (T.match _BrowseAction Browse.spec)
-       , T.split _CreateAccountState (T.match _CreateAccountAction CreateAccount.spec)
-       , T.split _CreateRepositoryState (T.match _CreateRepositoryAction CreateRepository.spec)
-       , T.split _404State spec404
-       , T.split _LandingPageState landingPage
-       ]
+searchSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props SearchAction
+searchSpec = T.simpleSpec performAction render
   where
-    container = over T._render \render d p s c -> case view userMeta s of
-      NotLoaded -> [R.text "loading UI ..."]
+    render :: T.Render State props SearchAction
+    render dispatch _ state _ =
+      [ R.div [RP.className "search" ] (renderSearch state dispatch) ]
 
-      Anonymous ->
-        [ pageHeaderSignedOut d p s c
-          -- /signing is a *real* link that doesn't go through pushState,
-          -- the frontend terminator will capture this and redirect to dex.
-        , R.div [] [R.a [RP.href "/signin"] [R.text "sign in here ..."]]
-        , R.section
-          [ RP.className "content", RP.onClick handleLinks] (render d p s c)
+    renderSearch s dispatch = case view routeLens s of
+      -- TODO fancy search box that allows removing "repo" search
+      -- TODO autocomplete
+      BrowseRoute state' ->
+        [ R.input [ RP.onChange (\ev -> dispatch (UpdateSearchText (unsafeCoerce ev).target.value))
+                  , RP.onKeyDown (onKeyDown state')
+                  , RP.placeholder ("Search in repository " <> Browse.searchLink state' "")] []
         ]
+      _ -> [ R.input [RP.placeholder "Search"] [] ]
+      where
+        onKeyDown state' ev = case ev.keyCode of
+          13 -> dispatch (ExecuteSearch (Browse.searchLink state' (view searchText s)))
+          _ -> pure unit
 
-      SignedIn { username, about } ->
-        -- TODO: for reasons I don't understand the onClick handler on
-        -- the top-level div is never called so I need to add more
-        -- specific onClick handlers
-        [ R.div [RP.onClick handleLinks]
-          [ pageHeaderSignedIn d p s c
-          , R.div []
-            [ R.text username
-            , R.text about
-            , R.a [RP.href "/src/werkzeug"] [R.text "werkzeug"]
-            ]
-          ]
-        , R.section
-          [ RP.className if view burgerOpen s then "content burger-menu-open" else "content", RP.onClick handleLinks] (render d p s c)
-        , burgerMenu s
-        ]
+    performAction (UpdateSearchText t) _ _ = void $ T.cotransform (\state -> set searchText (spy t) state )
+    performAction (ExecuteSearch url) _ _ = lift (navigateA url)
 
-    pageHeaderSignedIn d p s c = R.header []
-            [ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
-            , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
-            , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
-            , R.div [RP.className "pad" ] []
-            , R.div [RP.className "me" ] [ R.text "ME" ]
-            ]
+-- Override link navigation to use pushState instead of the
+-- browser following the link.
+--
+-- TODO: add escape-hatch, e.g. `data-external=true` attribute or
+-- where the path is non-local. This allows us to link
+-- e.g. off-site.
+handleLinks :: forall eff. React.Event -> Eff ( navigate :: Navigate | eff) Unit
+handleLinks ev = do
+  case (unsafeCoerce ev).target.nodeName of
+    "A" -> do
+      (unsafeCoerce ev).preventDefault
+      navigate ((unsafeCoerce ev).target.pathname)
+    _ -> pure unit
 
-    pageHeaderSignedOut d p s c = R.header []
-            [ R.div [RP.className "context" ] [ R.text (contextLabel s) ]
-            , R.div [RP.className "search" ] [ R.input [RP.placeholder "Search"] [] ]
-            , R.div [RP.className "pad" ] []
-            ]
 
-    burgerMenu s =
-      R.div [RP.className if view burgerOpen s then "burger-menu open" else "burger-menu", RP.onClick handleLinks]
+burgerMenuSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
+burgerMenuSpec = T.simpleSpec T.defaultPerformAction render
+  where
+  render d p s c =
+    [ R.div [RP.className if view burgerOpen s then "burger-menu open" else "burger-menu", RP.onClick handleLinks]
       [ R.ul []
         [ R.li [] [R.text "Dashboard"]
         , R.li [] [R.text "My Projects"]
@@ -299,54 +324,113 @@ spec = container $ handleActions $ foldMap (T.focusState routeLens)
         , R.li [] [R.a [RP.href "/settings/ssh-keys" ] [R.text "Settings"]]
         ]
       ]
+    ]
 
-    -- The `contextLabel` is the little message in the top left
-    -- telling us where we are. Not sure whether we want to keep this
-    -- or not but useful for development ATM.
-    contextLabel s = case view routeLens s of
-      NotLoadedRoute -> "loading.."
-      Route404 -> "404"
-      SettingsRoute _ -> "Settings"
-      BrowseRoute _ -> "Browse"
-      CreateAccountRoute _ -> "Last step!"
-      LandingPageRoute -> "Home"
-      _ -> "" -- don't show a label for all other cases
+-- The `contextLabel` is the little message in the top left
+-- telling us where we are. Not sure whether we want to keep this
+-- or not but useful for development ATM.
+contextLabel :: State -> String
+contextLabel s = case view routeLens s of
+  NotLoadedRoute -> "loading.."
+  Route404 -> "404"
+  SettingsRoute _ -> "Settings"
+  BrowseRoute _ -> "Browse"
+  CreateAccountRoute _ -> "Last step!"
+  LandingPageRoute -> "Home"
+  _ -> "" -- don't show a label for all other cases
+
+
+anonymousSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
+anonymousSpec = (T.nestSpec pageHeaderSpec (T.match _SearchAction searchSpec)) <> T.simpleSpec T.defaultPerformAction render
+  where
+    render d p s children =
+      [ R.section [ RP.className "content", RP.onClick handleLinks] children
+      ]
+
+pageHeaderSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
+pageHeaderSpec = T.simpleSpec T.defaultPerformAction render
+  where
+    render d p s children =
+      [ R.header []
+        ([ R.div [RP.className "context" ] [ R.text (contextLabel s) ]
+         ] <> children <>
+         [ R.div [RP.className "pad" ] []
+         , R.div [RP.className "me" ] [ R.a [RP.href "/signin"] [R.text "Signin"] ]
+         ])
+      ]
+
+notLoadedSpec :: forall eff props. T.Spec eff State props Action
+notLoadedSpec = T.simpleSpec T.defaultPerformAction render
+  where
+    render d p s c = [R.text "loading UI ..."]
+
+
+signedInSpec ::forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, navigate :: Navigate | eff) State props Action
+signedInSpec = (T.simpleSpec performAction render) <> burgerMenuSpec
+  where
+    render d p s children = case view userMeta s of
+      SignedIn { username, about } ->
+        -- TODO: for reasons I don't understand the onClick handler on
+        -- the top-level div is never called so I need to add more
+        -- specific onClick handlers
+        [ R.div [RP.onClick handleLinks]
+          [ pageHeader username d p s children
+          ]
+        , R.section
+          [ RP.className if view burgerOpen s then "content burger-menu-open" else "content", RP.onClick handleLinks] children
+        ]
+      _ -> []
+
+    pageHeader :: String -> (Action -> T.EventHandler) -> props -> State -> Array React.ReactElement -> React.ReactElement
+    pageHeader username d _ s c = R.header []
+            ([ R.div [RP.onClick (burgerMenuToggle d), RP.className "burger" ] [ R.text "=" ]
+             , R.div [RP.className "context" ] [ R.text (contextLabel s) ]
+             ] <> (view T._render (T.match _SearchAction searchSpec) d {} s []) <>
+             [ R.div [RP.className "pad" ] []
+             , R.div [RP.className "me" ] [ R.text username ]
+             ])
 
     burgerMenuToggle dispatch ev = dispatch BurgerMenuToggle
+    performAction BurgerMenuToggle p s = void $ T.cotransform (\s -> over burgerOpen not s)
 
-    -- Override link navigation to use pushState instead of the
-    -- browser following the link.
-    --
-    -- TODO: add escape-hatch, e.g. `data-external=true` attribute or
-    -- where the path is non-local. This allows us to link
-    -- e.g. off-site.
-    handleLinks ev = do
-      case (unsafeCoerce ev).target.nodeName of
-        "A" -> do
-          (unsafeCoerce ev).preventDefault
-          navigate ((unsafeCoerce ev).target.pathname)
-        _ -> pure unit
+    -- TODO a bit ugly that we need to pass this performAction to the embedded searchSpec
+    performAction a p s = view T._performAction (T.match _SearchAction searchSpec) a p s
 
-    handleActions = over T._performAction \nestedPerformAction a p s -> do
-      nestedPerformAction a p s
-      handleAction a p s
 
-    -- TODO error handling when fetch fails
-    handleAction BurgerMenuToggle p s = void $ T.cotransform (\s -> over burgerOpen not s)
-
-    handleAction action@(UpdateRoute r) p s = do
+containerSpec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
+containerSpec = fold
+  [ T.split _AnonymousSplit anonymousSpec
+  , T.split _NotLoadedSplit notLoadedSpec
+  , T.split _SignedInSplit signedInSpec
+  , T.simpleSpec performAction T.defaultRender
+  ]
+  where
+    performAction action@(UpdateRoute r) p s = do
       s' <- lift (fetch r s)
       void (T.cotransform (const s'))
+    performAction _ _ _ = void (T.cotransform id)
 
-    handleAction _ _ _ = void (T.cotransform id)
 
+-- | spec is a Thermite-ism. It controls the flow of actions and
+-- dispatches rendering code. Based on the state of the route
+-- component we both focus and split into subcomponents (and the
+-- subcompontents may do the same).
+spec :: forall eff props. T.Spec (err :: E.EXCEPTION, ajax :: AJ.AJAX, dom :: DOM, navigate :: Navigate | eff) State props Action
+spec = T.nestSpec containerSpec $ foldMap (T.focusState routeLens)
+  [ T.split _SettingsState (T.match _SettingsAction Settings.spec)
+  , T.split _BrowseState (T.match _BrowseAction Browse.spec)
+  , T.split _CreateAccountState (T.match _CreateAccountAction CreateAccount.spec)
+  , T.split _CreateRepositoryState (T.match _CreateRepositoryAction CreateRepository.spec)
+  , T.split _404State spec404
+  , T.split _LandingPageState landingPageSpec
+  ]
 
 -- The following is a hack to listen on route changes for the "root"
 -- component that controls everything else. `dispatch` could be
 -- extracted from the spec but takes a `this` pointer which is only
 -- valid once we mounted a component.
 componentDidMount :: forall props eff. (React.ReactThis props State -> Action -> T.EventHandler)
-                     -> React.ComponentDidMount props State (console :: CONSOLE, ajax :: AJ.AJAX | eff)
+                     -> React.ComponentDidMount props State (console :: CONSOLE, ajax :: AJ.AJAX, dom :: DOM | eff)
 componentDidMount dispatch this = do
     matches rootRoutes callback
   where

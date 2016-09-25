@@ -20,10 +20,12 @@ library
       Holborn.Repo.HttpProtocol
       Holborn.Repo.Process
       Holborn.Repo.RawProtocol
+      Holborn.Repo.Search
+      Holborn.Repo.SearchAPI
   hs-source-dirs:
       lib
   default-language: Haskell2010
-  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards
+  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables RecordWildCards
   ghc-options: -Wall -Werror
   build-depends:
       base >=4.9 && <5
@@ -62,6 +64,9 @@ library
     , tagged
     , text
     , transformers
+    , megaparsec
+    , containers
+    , QuickCheck
 
 executable holborn-repo
   main-is: Main.hs
@@ -69,7 +74,7 @@ executable holborn-repo
       src
   default-language: Haskell2010
   ghc-options: -Wall -Werror -threaded -rtsopts
-  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards
+  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables RecordWildCards
   build-depends:
       base >=4.9 && <5
     , holborn-prelude
@@ -80,3 +85,33 @@ executable holborn-repo
     , optparse-applicative
     , time >=1.5
     , wai-extra
+
+test-suite holborn-repo-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs:
+      tests
+  default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables RecordWildCards
+  ghc-options: -Wall -Werror -eventlog
+  build-depends:
+      base >=4.9 && <5
+    , holborn-prelude
+    , servant-server >= 0.8.1
+    , wai
+    , warp
+    , QuickCheck
+    , aeson
+    , bytestring
+    , containers
+    , errors
+    , holborn-repo
+    , http-client
+    , http-types
+    , process
+    , tasty >= 0.10
+    , tasty-hunit >= 0.9.0
+    , tasty-quickcheck >= 0.8
+    , quickcheck-text
+    , text
+    , unix
+  default-language: Haskell2010

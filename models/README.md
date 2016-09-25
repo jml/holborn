@@ -42,3 +42,9 @@ DB so we need to store the schema there as well.
 ```
 pg_dump holborn --schema-only > ../holborn-api/sql/initial.sql
 ```
+
+
+# On the server:
+
+We have a command `holborn-manage` in the general environment. You run
+e.g. `holborn-manage migrate` to run all migrations.

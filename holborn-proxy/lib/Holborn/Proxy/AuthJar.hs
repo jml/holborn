@@ -33,14 +33,14 @@ data TrustedCreds = TrustedCreds
   { email :: Text
   , emailVerified :: Bool
   , name :: Text
-  } deriving (Show, Generic)
+  }
+  deriving (Show, Generic)
 
 instance Hashable TrustedCreds
 
 type UserCookie = ByteString
 
 type CookieMap = HashMap.HashMap UserCookie TrustedCreds
-
 
 -- | MemoryJar is keeping auth cookies in local memory, not on
 -- disk. This means they will be lost on restart.

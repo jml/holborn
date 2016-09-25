@@ -6,7 +6,7 @@ import Control.Monad.Eff.Exception as E
 import Control.Apply ((<*))
 import Control.Alt ((<|>))
 import Network.HTTP.Affjax as AJ
-import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, word, anyOf)
+import Text.Parsing.Simple (Parser, string, alphanum, fromCharList, word, anyOf, sat, eof)
 import Text.Parsing.Combinators (many1)
 
 import React.DOM as R
@@ -29,6 +29,17 @@ import Holborn.Auth as Auth
 
 import Debug.Trace
 
+
+data BrowseRoutes =
+  Home Owner Repo
+  | HomeLoaded Owner Repo
+  | Tree Owner Repo Ref RepoPath
+  | TreeLoaded Owner Repo Ref  RepoPath
+  | Blob Owner Repo Ref RepoPath
+  | BlobLoaded Owner Repo Ref RepoPath
+  | SearchRepo Owner Repo String
+
+
 data State = State
     { route :: BrowseRoutes
     , _meta :: Maybe BrowseMetaResponse -- empty when not loaded
@@ -39,8 +50,21 @@ data State = State
 startRoute :: BrowseRoutes -> State
 startRoute s = State { route: s, _meta: Nothing, _tree: Nothing, _blob: Nothing }
 
-data Action = NOP
+-- | Create a search-link from the state.
+searchLink :: State -> String -> String
+searchLink state q =  (makeLink (view routeLens state)) <> "?q=" <> q
+  where
+    l o r = intercalate "/" ["/code", o, r, "search"]
+    makeLink (Home o r) = l o r
+    makeLink (HomeLoaded o r) = l o r
+    makeLink (Tree o r _ _ ) = l o r
+    makeLink (TreeLoaded o r _ _) = l o r
+    makeLink (Blob o r _ _) = l o r
+    makeLink (BlobLoaded o r _ _) = l o r
+    makeLink (SearchRepo o r s) = l o r
 
+
+data Action = NOP
 
 -- TODO: I think toArrayOf has a bad runtime and can probably be
 -- rewritten via FFI to append to mutable Array because of the
@@ -115,14 +139,6 @@ type RepoPath = String
 type Ref = String
 
 
-data BrowseRoutes =
-  Home Owner Repo
-  | HomeLoaded Owner Repo
-  | Tree Owner Repo Ref RepoPath
-  | TreeLoaded Owner Repo Ref  RepoPath
-  | Blob Owner Repo Ref RepoPath
-  | BlobLoaded Owner Repo Ref RepoPath
-
 
 parseOwner :: Parser String Owner
 parseOwner = fromCharList <$> many1 (alphanum <|> anyOf "-_")
@@ -136,6 +152,9 @@ parsePath = word
 parseRef :: Parser String Ref
 parseRef = fromCharList <$> many1 alphanum
 
+parseSearchQuery :: Parser String String
+parseSearchQuery = fromCharList <$> many1 (sat (const true))
+
 -- NB the ordering of the parser is important, I can't make `eof` work.
 browseRoutes :: Parser String State
 browseRoutes =
@@ -144,6 +163,7 @@ browseRoutes =
       <|> TreeLoaded <$> parseOwner <* string "/" <*> parseRepo <* string "tree/" <*> parseRef <* string "/" <*> parsePath
       <|> Blob <$> parseOwner <* string "/" <*> parseRepo <* string "blob/" <*> parseRef <* string "/" <*> parsePath
       <|> BlobLoaded <$> parseOwner <* string "/" <*> parseRepo <* string "blob/" <*> parseRef <* string "/" <*> parsePath
+      <|> SearchRepo <$> parseOwner <* string "/" <*> parseRepo <* string "search?q=" <*> parseSearchQuery
       <|> Home <$> parseOwner <* string "/" <*> parseRepo
       <|> HomeLoaded <$> parseOwner <* string "/" <*> parseRepo
     )
@@ -166,7 +186,7 @@ spec = T.simpleSpec T.defaultPerformAction render
     render dispatch _ (State { route: BlobLoaded org repo ref path, _meta: Just meta, _blob: Just (GitBlobRendered blob) }) _ =
       [ R.h2 [] [R.text (view MB.description meta)]
         -- TODO count number of lines
-      , R.pre [RP.className "line-numbers"] (renderLines (spy blob.num_lines))
+      , R.pre [RP.className "line-numbers"] (renderLines blob.num_lines)
       , R.div [RP.dangerouslySetInnerHTML {__html: blob.contents}] []
       ]
     render dispatch _ _ _ =
@@ -193,6 +213,6 @@ spec = T.simpleSpec T.defaultPerformAction render
       ]
 
     makeLink org repo treePath (GitTreeEntry entry) = case entry.type_ of
-      "blob" -> intercalate "/" (["", org, repo, "blob", "master"] <> treePath <> [entry.path])
-      "tree" -> intercalate "/" (["", org, repo, "tree", "master"] <> treePath <> [entry.path])
+      "blob" -> intercalate "/" (["", "code", org, repo, "blob", "master"] <> treePath <> [entry.path])
+      "tree" -> intercalate "/" (["", "code", org, repo, "tree", "master"] <> treePath <> [entry.path])
       _ -> "error404 TODO"

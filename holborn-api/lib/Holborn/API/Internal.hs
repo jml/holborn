@@ -14,7 +14,7 @@ module Holborn.API.Internal
   , executeWith
   , sql
   -- | Call backends
-  , jsonGet'
+  , rjsonGet'
   -- | Repository server access
   , RepoAccess(..)
   , pickRepoServer
@@ -238,15 +238,15 @@ execute sqlQuery values = do
   APIHandler $ liftIO $ PostgreSQL.execute conn sqlQuery values
 
 
--- | Call a backend, asking for a JSON response.
+-- | Call a backend, asking for a rendered JSON response.
 --
 -- Will eagerly load the entire response into memory and convert all of the
 -- JSON values to Haskell values.
-jsonGet' :: (FromJSON a) => Text -> APIHandler err (Either String a)
-jsonGet' endpoint = do
+rjsonGet' :: (FromJSON a) => Text -> APIHandler err (Either String a)
+rjsonGet' endpoint = do
     AppConf{httpManager} <- getConfig
     r <- parseUrlThrow (textToString endpoint)
-    let rJson = r { requestHeaders = [(hAccept, "application/json")] }
+    let rJson = r { requestHeaders = [(hAccept, "application/r-json")] }
     APIHandler $ liftIO (httpLbs rJson httpManager) >>= \response -> return (eitherDecode' (responseBody response))
 
 
@@ -301,7 +301,7 @@ repoUrlForId repoId = do
   -- single repo server. In future, we would look up the host details from the
   -- database too.
   AppConf{repoHostname, repoPort} <- getConfig
-  pure $ "http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> toUrlPiece repoId
+  pure $ "http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> toUrlPiece repoId <> "/browse"
 
 
 -- | Given an SSH command line, return enough data to route the git traffic to

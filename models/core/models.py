@@ -30,6 +30,8 @@ class UserRepo(models.Model):
     hosted_on = models.CharField(max_length=256) # pointer to the backend
     created_at = models.DateTimeField()
 
+    class Meta:
+        unique_together = (("user", "name"),)
 
 class OrgRepo(models.Model):
     name = models.CharField(max_length=256)
@@ -37,3 +39,6 @@ class OrgRepo(models.Model):
     org = models.ForeignKey(Org)
     hosted_on = models.CharField(max_length=256) # pointer to the backend
     created_at = models.DateTimeField()
+
+    class Meta:
+        unique_together = (("org", "name"),)
