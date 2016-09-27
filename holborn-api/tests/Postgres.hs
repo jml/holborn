@@ -25,9 +25,6 @@ type Port = Word16
 -- | Postgres username.
 type UserName = String
 
--- | Postgres database name.
-type DatabaseName = String
-
 -- | A Postgres database that we can use for tests.
 --
 -- Create with 'makeDatabase', stop with 'stopPostgres', and get a connection
@@ -43,22 +40,21 @@ makeDatabase schema = do
   -- TODO: Try to re-use existing database directory, somehow
   pgDir <- initDb
   port <- launchPostgres pgDir
-  user <- onException (createPostgresUser port) (stopPostgres' pgDir)
+  user <- onException (createPostgresUser pgDir port) (stopPostgres' pgDir)
   -- Set the template database to be whatever is in the provided schema. Then,
   -- when we drop & create databases to reset them, they'll automatically have
   -- the schema loaded in template1.
   --
   -- See https://www.postgresql.org/docs/9.5/static/manage-ag-templatedbs.html
-  onException (runSqlFromFile port user "template1" schema) (stopPostgres' pgDir)
-  database <- onException (createPostgresDatabase port user) (stopPostgres' pgDir)
   let conn = defaultConnectInfo { connectPort = port
                                 , connectUser = user
-                                , connectDatabase = database
+                                , connectHost = pgDir
                                 }
-  let postgres = Postgres { directory = pgDir
-                          , connection = conn
-                          }
-  pure postgres
+  onException (runSqlFromFile (conn { connectDatabase = "template1" }) schema) (stopPostgres' pgDir)
+  conn' <- onException (createPostgresDatabase conn) (stopPostgres' pgDir)
+  pure $ Postgres { directory = pgDir
+                  , connection = conn'
+                  }
 
   where
     -- | Initialize a Postgresql directory.
@@ -66,6 +62,10 @@ makeDatabase schema = do
     initDb = do
       dir <- mkdtemp "/tmp/holborn-postgres"
       pg_ctl dir "init" []
+      -- Without this, Debian & Ubuntu will try to write to
+      -- /var/run/postgresql, which is for privileged users only.
+      appendFile (dir <> "/postgresql.conf") ("unix_socket_directories = '" <> fromString dir <> "'\n")
+      -- XXX: Assuming socket dir == db dir
       pure dir
 
     -- | Start a Postgresql instance using the given directory.
@@ -87,19 +87,24 @@ makeDatabase schema = do
       pg_ctl pgDir "start" ["-o", portOpt]
 
     -- | Create a valid postgres user and return their name.
-    createPostgresUser :: Port -> IO UserName
-    createPostgresUser port = do
-      cmd "createuser" ["-p", toString port, username]
+    createPostgresUser :: FilePath -> Port -> IO UserName
+    createPostgresUser socketDir port = do
+      cmd "createuser" ["-p", toString port, "-h", socketDir, username]
       pure username
         where
           -- TODO: Don't hardcode this
           username = "holborn-test-user"
 
     -- | Create an empty postgres database owned by this user.
-    createPostgresDatabase :: Port -> UserName -> IO DatabaseName
-    createPostgresDatabase port username = do
-      createDatabase' port username database
-      pure database
+    --
+    -- Takes a ConnectInfo but ignores the 'connectDatabase' field. Returns a
+    -- new ConnectInfo with 'connectDatabase' set to the name of the
+    -- newly-created database.
+    createPostgresDatabase :: ConnectInfo -> IO ConnectInfo
+    createPostgresDatabase connection = do
+      let newConnection = connection { connectDatabase = database }
+      createDatabase' newConnection
+      pure newConnection
         where
           -- TODO: Don't hardcode this
           database = "holborn-test-database"
@@ -109,11 +114,12 @@ makeDatabase schema = do
     --
     -- TODO: What should this return? Something that communicates results and how
     -- it got there.
-    runSqlFromFile :: Port -> UserName -> DatabaseName -> FilePath -> IO ()
-    runSqlFromFile port username database filename = do
-      cmd "psql" [ "-p", toString port
-                 , "-U", username
-                 , "-d", database
+    runSqlFromFile :: ConnectInfo -> FilePath -> IO ()
+    runSqlFromFile ConnectInfo{..} filename = do
+      cmd "psql" [ "-p", toString connectPort
+                 , "-U", connectUser
+                 , "-d", connectDatabase
+                 , "-h", connectHost
                  , "-qf", filename
                  ]
 
@@ -148,25 +154,26 @@ pg_ctl pgDir command args = do
 
 
 -- | Primitive for creating a database in a running Postgres instance.
-createDatabase' :: Port -> UserName -> DatabaseName -> IO ()
-createDatabase' port username database = cmd "createdb" ["-p", toString port, "-O", username, database]
+createDatabase' :: ConnectInfo -> IO ()
+createDatabase' ConnectInfo{..} = cmd "createdb" ["-p", toString connectPort, "-h", connectHost, "-O", connectUser, connectDatabase]
 
 -- | Primitive for dropping a database in a running Postgres instance.
-dropDatabase' :: Port -> UserName -> DatabaseName -> IO ()
-dropDatabase' port username database = cmd "dropdb" ["-p", toString port, "-U", username, database]
+dropDatabase' :: ConnectInfo -> IO ()
+dropDatabase' ConnectInfo{..} = cmd "dropdb" ["-p", toString connectPort, "-U", connectUser, "-h", connectHost, connectDatabase]
 
 -- | Reset the postgres instance to the initial schema.
 resetPostgres :: Postgres -> IO ()
-resetPostgres Postgres{connection = ConnectInfo {connectPort,connectUser,connectDatabase}} = do
+resetPostgres Postgres{connection = connection@(ConnectInfo {connectPort,connectUser,connectDatabase,connectHost})} = do
   runSql "SELECT pid, (SELECT pg_terminate_backend(pid)) as killed from pg_stat_activity WHERE state LIKE 'idle';"
-  dropDatabase' connectPort connectUser connectDatabase
+  dropDatabase' connection
   -- Uses schema set in "template1" database. See comment in makeDatabase.
-  createDatabase' connectPort connectUser connectDatabase
+  createDatabase' connection
   where
     runSql query = do
       cmd "psql" [ "-p", toString connectPort
                  , "-U", connectUser
                  , "-d", connectDatabase
+                 , "-h", connectHost
                  , "-q"
                  , "-c", query
                  ]
