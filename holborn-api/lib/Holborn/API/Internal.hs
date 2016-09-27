@@ -57,7 +57,7 @@ import Servant (ServantErr(..), (:~>)(Nat), toUrlPiece)
 
 import Holborn.API.Config (Config(..))
 import Holborn.Logging (debugWithCallStack)
-import Holborn.JSON.RepoMeta (OwnerName, RepoId, RepoName)
+import Holborn.CommonTypes.Repo (OwnerName, RepoId, RepoName)
 import Holborn.JSON.SSHRepoCommunication
   ( RepoCall(..)
   , GitCommand

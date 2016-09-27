@@ -13,11 +13,9 @@ import Data.Lens (lens, LensP)
 
 
 data RepoMeta = RepoMeta
-    { owner :: String
-    , number_commits :: Int
+    { number_commits :: Int
     , number_objects :: Int
     , size :: Int
-    , id :: Int
     }
 
 

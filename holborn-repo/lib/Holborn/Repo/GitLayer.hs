@@ -44,7 +44,7 @@ import Data.Conduit (runConduit, yield, awaitForever, (=$=))
 import Servant (MimeRender(mimeRender))
 import qualified Data.ByteString.Char8 as BSC8
 import System.Directory (doesDirectoryExist)
-import Data.Maybe (fromJust)
+
 
 -- XXX: Putting web stuff here to avoid orphan warnings. Would be nice to have
 -- it completely separate.
@@ -58,7 +58,8 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Holborn.Repo.HtmlFormatTokens ()
 import Holborn.Syntax (annotateCode)
 import Holborn.ServantTypes (RenderedJson)
-import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..), newOwnerName)
+import Holborn.CommonTypes.Repo (RepoId)
+import Holborn.Repo.JSON.RepoMeta (RepoMeta(..))
 
 -- | A git repository
 -- | TODO: this seems to have the same function as HttpProtocol.DiskLocation?
@@ -435,13 +436,6 @@ notImplementedYet :: Text -> a
 notImplementedYet feature = terror $ "Not implemented yet: " ++ feature
 
 
-instance ToMarkup RepoMeta where
-  toMarkup RepoMeta{..} = do
-    H.h1 "debug rendering for root metadata"
-    -- TODO: FAKE: Hardcodes master
-    H.a ! A.href (H.toValue ("/v1/repos/" <> toUrlPiece id <> "/git/trees/master")) $ "tree-root"
-
-
 -- | Fill in information about the repository we want to render or
 -- show. E.g. languages, number of commits, public URL, ssh URL, etc.
 --
@@ -449,9 +443,11 @@ instance ToMarkup RepoMeta where
 -- but it'll likely be more efficient to cache the metadata on push
 -- (which is much rarer than reading).
 fillRepoMeta :: Repository -> GitM IO RepoMeta
-fillRepoMeta Repo{..} =
-  -- TODO: FAKE: Fake data 10 11 12
-  return $ RepoMeta _repoId 10 11 12 ownerName
-  where
-    -- TODO: FAKE: Fake data owner-filled-by-api
-    ownerName = fromJust (newOwnerName "owner-filled-by-api")
+fillRepoMeta Repo{..} = return (RepoMeta 10 11 12) -- TODO fill in real data
+
+
+instance ToMarkup RepoMeta where
+  toMarkup _ = do
+    H.h1 "debug rendering for root metadata"
+    -- TODO: FAKE: Hardcodes master
+    H.a ! A.href (H.toValue ("/v1/repos/REPO_ID_NOT_KNOWN/git/trees/master" :: Text)) $ "tree-root"

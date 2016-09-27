@@ -18,6 +18,7 @@ library
       Holborn.Repo.GitLayer
       Holborn.Repo.HtmlFormatTokens
       Holborn.Repo.HttpProtocol
+      Holborn.Repo.JSON.RepoMeta
       Holborn.Repo.Process
       Holborn.Repo.RawProtocol
       Holborn.Repo.Search

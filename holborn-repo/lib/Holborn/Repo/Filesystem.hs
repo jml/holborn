@@ -39,7 +39,7 @@ import System.Process (proc, readCreateProcessWithExitCode, CreateProcess(cwd))
 import System.Exit (ExitCode(..))
 import Data.Text (unpack)
 
-import Holborn.JSON.RepoMeta (RepoId)
+import Holborn.CommonTypes.Repo (RepoId)
 import Holborn.Repo.Config (Config(..))
 import Web.HttpApiData (ToHttpApiData(..))
 

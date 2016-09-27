@@ -24,7 +24,7 @@ import Holborn.API.Internal
   , query
   )
 import Holborn.API.Types (DexMail)
-import Holborn.JSON.RepoMeta (OwnerName)
+import Holborn.CommonTypes.Repo (OwnerName)
 
 
 type API =

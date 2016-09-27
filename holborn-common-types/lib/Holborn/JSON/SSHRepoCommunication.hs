@@ -50,7 +50,7 @@ import Test.QuickCheck (Arbitrary(..), elements)
 import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Web.HttpApiData (toUrlPiece)
 
-import Holborn.JSON.RepoMeta
+import Holborn.CommonTypes.Repo
   ( OwnerName
   , ownerNameParser
   , RepoName

@@ -9,7 +9,7 @@ module Holborn.Repo
 
 import Servant ((:>), (:<|>)(..), Capture, Server)
 
-import Holborn.JSON.RepoMeta (RepoId)
+import Holborn.CommonTypes.Repo (RepoId)
 import qualified Holborn.Repo.Browse as Browse
 import qualified Holborn.Repo.SearchAPI as Search
 import Holborn.Repo.Config (Config)

@@ -33,7 +33,7 @@ import Holborn.API.Internal
   , logDebug
   )
 import Holborn.JSON.Browse (BrowseMetaResponse(..))
-import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName, RepoName)
+import Holborn.CommonTypes.Repo (OwnerName, RepoName)
 import Holborn.ServantTypes (RenderedJson)
 
 -- Following imports needed for RPC which we should do in a more
@@ -84,7 +84,7 @@ browse _maybeUsername owner repo = do
             throwHandlerError NotFound
     -- TODO: FAKE: Fake description in repository metadata
     return BrowseMetaResponse
-      { repo_meta = repoMeta { owner = owner }
+      { repo_meta = repoMeta
       , description = "fake description"
       , created_at = Time.UTCTime (Time.ModifiedJulianDay 2000) (Time.secondsToDiffTime 10)
       }

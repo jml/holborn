@@ -29,7 +29,7 @@ import Holborn.API.Internal
   , throwHandlerError
   , query
   )
-import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName, RepoName)
+import Holborn.CommonTypes.Repo (OwnerName, RepoName)
 import Holborn.API.Types (DexMail)
 import Holborn.API.Auth (getUserId)
 
@@ -37,7 +37,7 @@ type API =
     "create-repository"
     :> Header "x-dex-email" DexMail
     :> ReqBody '[JSON] NewRepoRequest
-    :> Post '[JSON] RepoMeta
+    :> Post '[JSON] ()
   -- When creating a repository we need an owners. The following API
   -- call returns a list of valid owner names for a logged in user.
   -- TODO: this might be better off in a different file.
@@ -84,7 +84,7 @@ server conf =
   enter (toServantHandler conf) (newRepo :<|> repoOwnerCandidates)
 
 
-newRepo :: Maybe DexMail -> NewRepoRequest -> APIHandler NewRepoError RepoMeta
+newRepo :: Maybe DexMail -> NewRepoRequest -> APIHandler NewRepoError ()
 newRepo _dexMail NewRepoRequest{..} = do
     -- TODO user permissions and userId to check whether user is
     -- allowed to create repo.
@@ -106,14 +106,14 @@ newRepo _dexMail NewRepoRequest{..} = do
        [Only (repoId :: Int)] <- query [sql|
             insert into core_orgrepo (name, description, org_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (name, description, orgId, repoServer)
-       pure (RepoMeta repoId 0 0 0 owner')
+       pure ()
 
     newUserRepo userId owner' = do
        repoServer <- pickRepoServer
        [Only (repoId :: Int)] <- query [sql|
             insert into core_userrepo (name, description, user_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (name, description, userId, repoServer)
-       pure (RepoMeta repoId 0 0 0 owner')
+       pure ()
 
 
 repoOwnerCandidates :: Maybe DexMail -> APIHandler NewRepoError [OwnerName]

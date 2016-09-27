@@ -33,7 +33,7 @@ import Holborn.Repo.GitLayer ( Blob
                              , withRepository
                              , fillRepoMeta
                              )
-import Holborn.JSON.RepoMeta (RepoMeta(..))
+import Holborn.Repo.JSON.RepoMeta (RepoMeta(..))
 
 -- | The author of a commit
 type Author = Text
