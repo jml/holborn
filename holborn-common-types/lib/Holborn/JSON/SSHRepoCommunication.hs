@@ -41,10 +41,11 @@ import Database.PostgreSQL.Simple.FromField (FromField(..), returnError, ResultE
 import Database.PostgreSQL.Simple.FromRow (FromRow(..), field)
 import Database.PostgreSQL.Simple.ToField (ToField(..), Action(Escape))
 import GHC.Generics (Generic)
+import System.Directory (getTemporaryDirectory)
 import System.Exit (ExitCode(..))
-import System.IO (hClose)
+import System.IO (hClose, openTempFile)
 import System.IO.Unsafe (unsafePerformIO) -- Temporary hack until we have a pure fingerprinter
-import System.Process (runInteractiveCommand, waitForProcess)
+import System.Process (readProcessWithExitCode)
 import Test.QuickCheck (Arbitrary(..), elements)
 import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Web.HttpApiData (toUrlPiece)
@@ -234,15 +235,25 @@ instance FromRow SSHKey where
 -- | Generate an SSH fingerprint.
 sshFingerprint :: Alternative m => ByteString -> IO (m ByteString)
 sshFingerprint keyData = do
-  (i, o, _, p) <- runInteractiveCommand "ssh-keygen -l -f /dev/stdin"
-  BS.hPut i keyData
-  hClose i
-  f <- BS.hGetContents o
-  exitCode <- waitForProcess p
+  -- Not all ssh-keygen's handle /dev/stdin correctly. Write to a temporary
+  -- file instead.
+  keyPath <- withTempFile "ssh-key" $ \path h -> do
+    BS.hPut h keyData
+    pure path
+  (exitCode, out, err) <- readProcessWithExitCode "ssh-keygen" ["-l", "-f", keyPath] ""
   case exitCode of
     ExitFailure 127 -> terror "Could not find ssh-keygen process"
-    ExitFailure _ -> empty
-    ExitSuccess -> pure (pure f)
+    ExitFailure errCode -> do
+      putStrLn $ "ssh-keygen failed: (" <> show errCode <>  ")"
+      putStrLn $ "output:\n" <> fromString out
+      putStrLn $ "error:\n" <> fromString err
+      pure empty
+    ExitSuccess -> pure (pure (fromString out))
+
+  where
+    withTempFile name action = do
+      tempDir <- getTemporaryDirectory
+      bracket (openTempFile tempDir name) (hClose . snd) (uncurry action)
 
 -- | Parse a single SSH key, checking for validity.
 parseSSHKey :: ByteString -> Maybe SSHKey

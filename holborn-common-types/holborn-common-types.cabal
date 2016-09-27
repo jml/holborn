@@ -25,6 +25,7 @@ library
     , attoparsec
     , bytestring
     , containers
+    , directory
     , http-media
     , postgresql-simple
     , process
