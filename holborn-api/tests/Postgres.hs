@@ -35,19 +35,19 @@ data Postgres =
            }
 
 -- | Make sure we have a database made of the SQL that's in the given file.
-makeDatabase :: FilePath -> IO Postgres
-makeDatabase schema = do
+makeDatabase :: UserName -> FilePath -> IO Postgres
+makeDatabase username schema = do
   -- TODO: Try to re-use existing database directory, somehow
   pgDir <- initDb
   port <- launchPostgres pgDir
-  user <- onException (createPostgresUser pgDir port) (stopPostgres' pgDir)
+  onException (createPostgresUser pgDir port username) (stopPostgres' pgDir)
   -- Set the template database to be whatever is in the provided schema. Then,
   -- when we drop & create databases to reset them, they'll automatically have
   -- the schema loaded in template1.
   --
   -- See https://www.postgresql.org/docs/9.5/static/manage-ag-templatedbs.html
   let conn = defaultConnectInfo { connectPort = port
-                                , connectUser = user
+                                , connectUser = username
                                 , connectHost = pgDir
                                 }
   onException (runSqlFromFile (conn { connectDatabase = "template1" }) schema) (stopPostgres' pgDir)
@@ -87,13 +87,9 @@ makeDatabase schema = do
       pg_ctl pgDir "start" ["-o", portOpt]
 
     -- | Create a valid postgres user and return their name.
-    createPostgresUser :: FilePath -> Port -> IO UserName
-    createPostgresUser socketDir port = do
-      cmd "createuser" ["-p", toString port, "-h", socketDir, username]
-      pure username
-        where
-          -- TODO: Don't hardcode this
-          username = "holborn-test-user"
+    createPostgresUser :: FilePath -> Port -> UserName -> IO ()
+    createPostgresUser socketDir port user =
+      cmd "createuser" ["-p", toString port, "-h", socketDir, user]
 
     -- | Create an empty postgres database owned by this user.
     --

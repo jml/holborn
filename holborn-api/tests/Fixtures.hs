@@ -39,7 +39,9 @@ makeHolbornDB :: IO Postgres
 makeHolbornDB = do
   -- See https://www.haskell.org/cabal/users-guide/developing-packages.html#accessing-data-files-from-package-code
   schemaFile <- getDataFileName "sql/initial.sql"
-  makeDatabase schemaFile
+  -- Schema assumes that it's being run as "holborn" user or as someone with
+  -- superuser privileges.
+  makeDatabase "holborn" schemaFile
 
 -- TODO: Figure out some way of properly getting a port for holborn-api while
 -- also having correctly set base url.
