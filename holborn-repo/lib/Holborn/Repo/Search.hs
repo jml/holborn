@@ -2,6 +2,7 @@ module Holborn.Repo.Search
   ( Match(..)
   , parseSearch
   , runBasicSearch
+  , parseGitGrep
   ) where
 
 import HolbornPrelude
@@ -12,7 +13,8 @@ import qualified Text.Megaparsec.Lexer as PL
 import System.Process (readProcess)
 import qualified Data.Set as Set
 import Data.Foldable (fold)
-
+import Web.HttpApiData (ToHttpApiData(toUrlPiece))
+import Debug.Trace
 
 data IncludeExclude = Include | Exclude deriving (Show, Eq)
 
@@ -61,6 +63,7 @@ runBasicSearch :: Repository -> Search -> IO [Match]
 runBasicSearch repo search = do
   e <- exclude
   i <- include
+  traceShowM search
   return (Set.toList (i `Set.difference` e))
   where
     exclude = fmap (Set.fromList . fromMaybe [] . fold) (traverse excludeRun search)
@@ -80,10 +83,12 @@ runOneGrep repo ref term =
     Plain text -> (parseGitGrep ref) <$> fmap fromString (gitGrep text `catch` \(err :: SomeException) -> terror (show err))
       -- TODO implement remaining patterns
     FileName _ -> undefined
-    _ -> pure Nothing
+    _ -> undefined
   where
     -- TODO expose revision to search in?
-    gitGrep text = readProcess "git" ["--git-dir", repoPath repo, "grep", "-n", "--heading", textToString text, textToString (show ref)] ""
+    gitGrep text =
+      readProcess "git" ["--git-dir", repoPath repo, "grep"
+                        , "-n", "--heading", "-e", textToString text, textToString (toUrlPiece ref)] ""
 
 -- output of git grep looks like this for a file (a:b) with two lines "abc"
 -- $ gg --heading -n a master
@@ -96,7 +101,7 @@ parseGitGrep ref s =
 
 parseMatch :: Revision -> P.Parser Match
 parseMatch ref = do
-  void (P.string ((textToString (show ref)) <> ":"))
+  void (P.string ((textToString (toUrlPiece ref)) <> ":"))
   path <- P.someTill P.anyChar P.eol
   matches <- many (P.try oneLine)
   pure (Match path matches)

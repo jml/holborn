@@ -16,15 +16,15 @@ import Servant ((:>), Get, QueryParam, ServantErr(..), Server, MimeRender(mimeRe
 import Servant.Server (enter, (:~>)(..), err400)
 import Data.Aeson (ToJSON, encode)
 import Holborn.ServantTypes (RenderedJson)
-import Holborn.Repo.GitLayer (Repository, Revision, withRepository, BrowseException, Blob, BrowseException(..), getBlob)
+import Holborn.Repo.GitLayer (Repository, withRepository, BrowseException, Blob, BrowseException(..), getBlob, refMaster)
 import qualified Holborn.Repo.Search as S
-import GHC.Generics (Generic)
 import qualified Data.Text as T
-import Web.HttpApiData (FromHttpApiData(..))
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import Text.Blaze (ToMarkup(..))
 import Text.Blaze.Renderer.Text (renderMarkup)
+import Debug.Trace
+import GHC.Generics (Generic)
 
 type GitPath = Text
 
@@ -80,11 +80,11 @@ searchHandler repo q _after = do
 
   let paths = map S.path matches
       pathSegments = (T.splitOn "/") . fromString
-      Right (master :: Revision) = parseUrlPiece "master"
 
   -- Extract all blobs (this can be cached heavily with the current
-  -- commit).t
-  blobs <- mapM (\p -> withRepository repo (getBlob master (pathSegments p))) paths
+  -- commit).
+  traceShowM paths
+  blobs <- traverse (\p -> withRepository repo (getBlob refMaster (pathSegments p))) paths
   let pathToBlob = Map.fromList (zip (map fromString paths) (map fromJust blobs))
 
   pure (matchesToResults pathToBlob matches)
