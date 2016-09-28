@@ -1,6 +1,4 @@
--- | Tests for Holborn.API.NewRepo
-
-module NewRepo (spec) where
+module CreateRepository (spec) where
 
 import HolbornPrelude
 
@@ -32,9 +30,5 @@ spec = do
                   , "visibility" .= ("public" :: Text)
                   ])
           `respondsWithJSON`
-          (object [ "number_objects" .= (0 :: Int)
-                  , "size" .= (0 :: Int)
-                  , "owner" .= (userName user)
-                  , "id" .= (1 :: Int)
-                  , "number_commits" .= (0 :: Int)
+          (object [ "id" .=  (1 :: Int)
                   ])
