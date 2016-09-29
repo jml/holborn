@@ -2,7 +2,7 @@
 
 module Settings.SSHKeys (spec) where
 
-import HolbornPrelude
+import HolbornPrelude hiding (get)
 
 import Data.Aeson (FromJSON, Object, object, (.=), (.:))
 import Data.Aeson.Types (parseMaybe)
