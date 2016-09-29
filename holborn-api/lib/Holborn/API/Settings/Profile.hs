@@ -67,7 +67,7 @@ getUser username = do
     case r of
         [] -> throwHandlerError (UserNotFound (show username))
         [(id_, un, date_joined)] -> pure (ProfileData { id = id_, username = un, about = "about this user TODO fetch from DB", date_joined = date_joined })
-        _ -> terror $ "Multiple users found in the database for " ++ show username ++ ". Found: " ++ show r
+        _ -> error $ "Multiple users found in the database for " ++ show username ++ ". Found: " ++ show r
 
 
 -- TODO The function to fetch the current user should go somewhere

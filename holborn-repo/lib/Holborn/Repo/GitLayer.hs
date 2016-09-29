@@ -23,8 +23,7 @@ module Holborn.Repo.GitLayer
        , fillRepoMeta
        ) where
 
-import HolbornPrelude hiding (id)
-import qualified HolbornPrelude (id)
+import HolbornPrelude
 import Control.Error (bimapExceptT, syncIO)
 import Control.Monad.Reader (ReaderT)
 import Control.Monad.Trans.Except (ExceptT)
@@ -111,7 +110,7 @@ withRepository repo action =
     justBrowseException e =
       case fromException e of
         Just browseException -> browseException
-        _ -> terror $ "Unknown execption: " ++ show e
+        _ -> error $ "Unknown execption: " ++ show e
 
 
 -- XXX: Staircasing
@@ -261,7 +260,7 @@ instance ToHttpApiData Revision where
 refMaster :: Revision
 refMaster = case parseUrlPiece "master" of
   Right x -> x
-  Left err -> terror err
+  Left err -> error err
 
 -- XXX: Is there a thing struggling to get out which is a combination of:
 -- * repository
@@ -433,7 +432,7 @@ instance ToMarkup Tree where
 
 -- TODO: Move this to some more common library
 notImplementedYet :: Text -> a
-notImplementedYet feature = terror $ "Not implemented yet: " ++ feature
+notImplementedYet feature = error $ "Not implemented yet: " ++ feature
 
 
 -- | Fill in information about the repository we want to render or

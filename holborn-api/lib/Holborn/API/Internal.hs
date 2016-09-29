@@ -189,7 +189,7 @@ runAPIHandler config handler = do
 toServantHandler :: JSONCodeableError err => Config -> APIHandler err :~> ExceptT ServantErr IO
 toServantHandler config = Nat toServantHandler'
   where
-    toServantHandler' handler = bimapExceptT toServantErr id (runAPIHandler config handler)
+    toServantHandler' handler = bimapExceptT toServantErr identity (runAPIHandler config handler)
 
 -- | If something throws with 'throwM', we'll convert that to an unexpected exception.
 instance MonadThrow (APIHandler err) where
@@ -243,7 +243,7 @@ execute sqlQuery values = do
 rjsonGet' :: (FromJSON a) => Text -> APIHandler err (Either String a)
 rjsonGet' endpoint = do
     AppConf{httpManager} <- getConfig
-    r <- parseUrlThrow (textToString endpoint)
+    r <- parseUrlThrow (toS endpoint)
     let rJson = r { requestHeaders = [(hAccept, "application/r-json")] }
     APIHandler $ liftIO (httpLbs rJson httpManager) >>= \response -> return (eitherDecode' (responseBody response))
 
@@ -263,7 +263,7 @@ pickRepoServer :: APIHandler err Text
 -- only one), should instead actually pick from a set of repo servers.
 pickRepoServer = do
   AppConf{repoHostname, repoPort} <- getConfig
-  pure $ repoHostname <> ":" <> fromShow repoPort
+  pure $ repoHostname <> ":" <> show repoPort
 
 getRepoId :: OwnerName -> RepoName -> APIHandler err (Maybe RepoId)
 getRepoId owner repo = do
@@ -299,7 +299,7 @@ repoUrlForId repoId = do
   -- single repo server. In future, we would look up the host details from the
   -- database too.
   AppConf{repoHostname, repoPort} <- getConfig
-  pure $ "http://" <> repoHostname <> ":" <> fromShow repoPort <> "/v1/repos/" <> toUrlPiece repoId
+  pure $ "http://" <> repoHostname <> ":" <> show repoPort <> "/v1/repos/" <> toUrlPiece repoId
 
 
 -- | Given an SSH command line, return enough data to route the git traffic to
@@ -322,4 +322,4 @@ logDebug thing =
 -- | We found something in the database that should never have been there in
 -- the first place.
 corruptDatabase :: Text -> a
-corruptDatabase message = terror $ "ERROR: Corrupt database: " <> message
+corruptDatabase message = error $ "ERROR: Corrupt database: " <> message

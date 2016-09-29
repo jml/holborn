@@ -23,7 +23,6 @@ import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import Text.Blaze (ToMarkup(..))
 import Text.Blaze.Renderer.Text (renderMarkup)
-import Debug.Trace
 import GHC.Generics (Generic)
 
 type GitPath = Text
@@ -62,7 +61,7 @@ type API =
 
 -- See http://haskell-servant.github.io/tutorial/server.html#using-another-monad-for-your-handlers
 searchT :: ExceptT BrowseException IO :~> ExceptT ServantErr IO
-searchT = Nat (bimapExceptT searchExceptionToServantErr HolbornPrelude.id)
+searchT = Nat (bimapExceptT searchExceptionToServantErr identity)
   where
     searchExceptionToServantErr _ = err400 { errBody = "invalid query" }
 
@@ -83,7 +82,6 @@ searchHandler repo q _after = do
 
   -- Extract all blobs (this can be cached heavily with the current
   -- commit).
-  traceShowM paths
   blobs <- traverse (\p -> withRepository repo (getBlob refMaster (pathSegments p))) paths
   let pathToBlob = Map.fromList (zip (map fromString paths) (map fromJust blobs))
 

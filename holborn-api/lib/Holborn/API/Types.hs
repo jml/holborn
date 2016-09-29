@@ -52,7 +52,7 @@ instance FromHttpApiData Email where
 newPassword :: Text -> IO Password
 newPassword p = do
     pwd <- BCrypt.hashPasswordUsingPolicy BCrypt.fastBcryptHashingPolicy (encodeUtf8 p)
-    return (Password (fromMaybe (terror "bcrypt returned NULL") pwd))
+    return (Password (fromMaybe (error "bcrypt returned NULL") pwd))
 
 checkPassword :: Password -> ByteString -> Bool
 checkPassword (Password actual) toCheck =
@@ -64,11 +64,11 @@ instance Prelude.Show Password where
 
 instance FromField Username where
     fromField _ (Just bs) = return (Username (decodeUtf8 bs))
-    fromField _ _ = terror "FromField Username should always decode correctly"
+    fromField _ _ = error "FromField Username should always decode correctly"
 
 instance FromField Password where
     fromField _ (Just bs) = return (Password bs)
-    fromField _ _ = terror "FromField Password should always decode correctly"
+    fromField _ _ = error "FromField Password should always decode correctly"
 
 
 instance FromJSON Username where

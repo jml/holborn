@@ -57,11 +57,11 @@ type API =
          :> CaptureAll "pathspec" Text
          :> Get '[JSON, RenderedJson] Value
 
-data BrowseError = NotFound | InvalidSearchQuery
+data BrowseError = NotFound | InvalidSearchQuery Text
 
 instance JSONCodeableError BrowseError where
     toJSON NotFound = (404, object ["message" .= ("could not find object" :: Text)])
-    toJSON InvalidSearchQuery = (400, object ["message" .= ("Invalid search query" :: Text)])
+    toJSON (InvalidSearchQuery q) = (400, object ["message" .= ("Invalid search query: " <> q)])
 
 
 server :: Config -> Server API
@@ -93,9 +93,9 @@ browse _maybeUsername owner repo = do
 -- Search is passed straight through if it meets the authentication
 -- requirements.
 search :: Maybe Username -> OwnerName -> RepoName -> Maybe Text -> APIHandler BrowseError Value
-search _maybeUsername owner repo query  = do
+search _ owner repo query  = do
   repoUrl <- maybe (throwHandlerError NotFound) pure =<< repoApiUrl owner repo
-  q <- maybe (throwHandlerError InvalidSearchQuery) pure query
+  q <- maybe (throwHandlerError (InvalidSearchQuery (maybe "" identity query))) pure query
 
   -- TODO this should probably be an RPC request.
   let repoUrlBrokenAndHardcoded = repoUrl <> "/search?q=" <> q

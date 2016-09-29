@@ -61,7 +61,7 @@ instance FromJSON Visibility where
  parseJSON (String v) = case v of
    "public" -> pure Public
    "private" -> pure Private
-   _ -> fail ("invalid value: " <> (textToString v))
+   _ -> fail ("invalid value: " <> (toS v))
  parseJSON invalid = typeMismatch "Visibility" invalid
 
 
@@ -103,7 +103,7 @@ newRepo _dexMail CreateRepositoryRequest{..} = do
          [("org" :: String, orgId :: Int, owner' :: OwnerName)] -> newOrgRepo orgId owner'
          [("user" :: String, userId' :: Int, owner' :: OwnerName)] -> newUserRepo userId' owner'
          [] -> throwHandlerError OwnerNotFound
-         _ -> terror "Unexpected number of rows in newRepo"
+         _ -> error "Unexpected number of rows in newRepo"
 
   where
     newOrgRepo orgId owner' = do

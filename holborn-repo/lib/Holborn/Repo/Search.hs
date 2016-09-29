@@ -14,7 +14,7 @@ import System.Process (readProcess)
 import qualified Data.Set as Set
 import Data.Foldable (fold)
 import Web.HttpApiData (ToHttpApiData(toUrlPiece))
-import Debug.Trace
+
 
 data IncludeExclude = Include | Exclude deriving (Show, Eq)
 
@@ -37,10 +37,10 @@ data Match = Match
   deriving (Show, Eq, Ord)
 
 parseIncludeExclude :: P.Parser IncludeExclude
-parseIncludeExclude = (P.char '-' >> pure Exclude) <|> pure Include
+parseIncludeExclude = (P.char '-' *> pure Exclude) <|> pure Include
 
 parseQuoted :: P.Parser String
-parseQuoted = P.char '"' >> P.manyTill P.anyChar (P.char '"')
+parseQuoted = P.char '"' *> P.manyTill P.anyChar (P.char '"')
 
 parseTerm :: P.Parser (IncludeExclude, Term)
 parseTerm = do
@@ -63,7 +63,6 @@ runBasicSearch :: Repository -> Search -> IO [Match]
 runBasicSearch repo search = do
   e <- exclude
   i <- include
-  traceShowM search
   return (Set.toList (i `Set.difference` e))
   where
     exclude = fmap (Set.fromList . fromMaybe [] . fold) (traverse excludeRun search)
@@ -80,15 +79,16 @@ runOneGrep repo ref term =
   -- Ignoring in readProcess a bad idea but we do get git complaining
   -- on stderr if there is an actual issue.
   case term of
-    Plain text -> (parseGitGrep ref) <$> fmap fromString (gitGrep text `catch` \(err :: SomeException) -> terror (show err))
+    Plain text -> (parseGitGrep ref) <$> fmap toS (gitGrep text `catch` \(err :: SomeException) -> error (show err))
       -- TODO implement remaining patterns
     FileName _ -> undefined
-    _ -> undefined
+    _ -> error "runOneGrep has an unhandled case, this means you parsed a Term but didn't implement the interpreter."
   where
     -- TODO expose revision to search in?
+    gitGrep :: Text -> IO String
     gitGrep text =
       readProcess "git" ["--git-dir", repoPath repo, "grep"
-                        , "-n", "--heading", "-e", textToString text, textToString (toUrlPiece ref)] ""
+                        , "-n", "--heading", "-e", toS text, toS (toUrlPiece ref)] ""
 
 -- output of git grep looks like this for a file (a:b) with two lines "abc"
 -- $ gg --heading -n a master
@@ -101,7 +101,7 @@ parseGitGrep ref s =
 
 parseMatch :: Revision -> P.Parser Match
 parseMatch ref = do
-  void (P.string ((textToString (toUrlPiece ref)) <> ":"))
+  void (P.string ((toS (toUrlPiece ref)) <> ":"))
   path <- P.someTill P.anyChar P.eol
   matches <- many (P.try oneLine)
   pure (Match path matches)

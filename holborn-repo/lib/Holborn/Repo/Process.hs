@@ -25,7 +25,7 @@ streamIO p stdin stdout = do
     mvar <- newMVar False
     bracket
         open
-        (\(hIn, _, ph) -> close mvar hIn >> Process.terminateProcess ph)
+        (\(hIn, _, ph) -> close mvar hIn *> Process.terminateProcess ph)
         run
   where
     p' = p { Process.std_in  = Process.CreatePipe

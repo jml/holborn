@@ -80,8 +80,8 @@ smartHandshake diskLocation service =
     gitPack' serviceType moreData _flush =
         runShell $ (
             banner serviceName
-            >> (producerCmd (serviceName ++ " --stateless-rpc --advertise-refs " ++ (diskLocationToPath diskLocation)) >-> filterStdErr)
-            >> footer) >-> sendChunks moreData
+            *> (producerCmd (serviceName ++ " --stateless-rpc --advertise-refs " ++ (diskLocationToPath diskLocation)) >-> filterStdErr)
+            *> footer) >-> sendChunks moreData
       where
 
         serviceName = unparseGitCommand serviceType
