@@ -3,7 +3,6 @@ module Main (main) where
 
 import HolbornPrelude
 
-import Turtle hiding (hostname, option, options, stderr, switch)
 import Control.Concurrent (threadDelay)
 import Network.Simple.TCP (connectSock)
 import Options.Applicative
@@ -62,7 +61,7 @@ waitForPort host port timeout delay verbose
       pure (ExitFailure 1)
   | otherwise = do
       when verbose $ putStr $ "Connecting to " <> serverAddr host port <> " ... "
-      result <- try (connectSock host ((textToString . show) port))
+      result <- try (connectSock host (show port))
       case result of
         Left (_ :: IOException) -> do
           when verbose $ putStr "Failed\n"

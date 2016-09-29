@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.13.0.
+-- This file has been generated from package.yaml by hpack version 0.14.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -16,6 +16,7 @@ library
   ghc-options: -Wall -Werror
   build-depends:
       base >=4.9 && <5
+    , hashable
     , mtl
     , protolude >= 0.1.6
     , safe >= 0.3.9
@@ -35,6 +36,7 @@ test-suite holborn-prelude-tests
   ghc-options: -Wall -Werror -eventlog
   build-depends:
       base >=4.9 && <5
+    , hashable
     , mtl
     , protolude >= 0.1.6
     , safe >= 0.3.9

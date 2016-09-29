@@ -6,6 +6,7 @@ module PythonBindings (tests) where
 import HolbornPrelude
 import Control.Applicative (Alternative)
 
+import Data.Text (words, unlines)
 import Test.Tasty (TestTree, TestName, testGroup)
 import Test.Tasty.HUnit
 

@@ -168,7 +168,7 @@ instance ToMarkup Blob where
         -- parse error so we can debug better.
         H.div $ do
           void "Could not parse"
-          H.pre $ toMarkup (show e)
+          H.pre $ toMarkup (show e :: Text)
         H.pre $ toMarkup (decodeUtf8 contents)
       Right annotated -> toMarkup annotated
     where

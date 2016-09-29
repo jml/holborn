@@ -26,5 +26,5 @@ warpSettings :: Config -> Settings
 warpSettings config =
   setBeforeMainLoop printPort (setPort port' defaultSettings)
   where
-    printPort = Log.info $ "holborn-repo running at http://localhost:" ++ show port' ++ "/"
+    printPort = Log.info ("holborn-repo running at http://localhost:" ++ show port' ++ "/" :: Text)
     port' = port config

@@ -3,7 +3,8 @@ version: 0.3.0.0
 synopsis: Syntax analysis library
 license: AllRightsReserved
 
-ghc-options: -Wall -Werror
+# Temporarily disable -Werror while we migrate to Protolude
+ghc-options: -Wall
 default-extensions:
   - GeneralizedNewtypeDeriving
   - MonadFailDesugaring
@@ -15,6 +16,7 @@ default-extensions:
 dependencies:
   - base >= 4.9 && < 5.0
   - holborn-prelude
+  - text
 
 library:
   source-dirs: lib
@@ -26,7 +28,6 @@ library:
     - language-python >= 0.5.2
     - mtl >= 2.2
     - pretty-error
-    - text >= 1.2
 
 tests:
   holborn-syntax-test:

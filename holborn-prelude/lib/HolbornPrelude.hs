@@ -1,96 +1,48 @@
 -- | Prelude for all Holborn code.
 --
--- Heavily inspired by BasicPrelude.
+-- Protolude + some extensions.
+
+{-# LANGUAGE FlexibleContexts #-}
 
 module HolbornPrelude
   ( -- * Module exports
-    module CorePrelude
-  , module Data.List
-  , module Control.Applicative
-  , module Control.Monad
+    module Protolude
 
-    -- ** Folds and traversals
-  , Foldable
-    (
-      foldMap
-    , foldr
-    , foldr'
-    , foldl
-    , foldl'
-    , foldr1
-    , foldl1
-    )
-    -- In base-4.8, these are instance methods.
-  , elem
-  , maximum
-  , minimum
-  , Traversable
-    (
-      traverse
-    , sequenceA
-    , mapM
-    , sequence
-    )
-
-    -- * Enhanced exports
-    -- ** Simpler name for a typeclassed operation
-  , map
-  , (++)
-  , concat
-  , intercalate
-    -- ** Strict implementation
-  , HolbornPrelude.sum
-  , HolbornPrelude.product
-    -- ** Text for Read and Show operations
-  , show
+    -- * Backwards compatibility
+    --
+    -- To make migrating to Protolude easier.
+  , id
+  , terror
+    -- | Protolude doesn't export much String stuff, this is mostly a good
+    -- thing, but we're going to export some String stuff to make our lives
+    -- easier.
+  , IsString(..)
+  , String
   , fromShow
-  , read
-  , readIO
-    -- ** FilePath for file operations
-  , readFile
-  , writeFile
-  , appendFile
-
-    -- * Text exports
-    -- ** Text operations (Pure)
-  , Text.lines
-  , Text.words
-  , Text.unlines
-  , Text.unwords
   , textToString
-  , ltextToString
-  , encodeUtf8
-  , decodeUtf8
-    -- ** Text operations (IO)
-  , Text.getLine
-  , LText.getContents
-  , LText.interact
-
-    -- * Miscellaneous prelude re-exports
-    -- ** Math
-  , Prelude.gcd
-  , Prelude.lcm
-    -- ** Show and Read
-  , Prelude.ShowS
-  , Prelude.showsPrec
-  , Prelude.showList
-  , Prelude.shows
-  , Prelude.showChar
-  , Prelude.showString
-  , Prelude.showParen
-  , Prelude.ReadS
-  , Prelude.readsPrec
-  , Prelude.readList
-  , Prelude.reads
-  , Prelude.readParen
-  , Prelude.lex
-  , readMay
-    -- ** IO operations
-  , Prelude.putChar
-  , Prelude.getChar
-  , Prelude.readLn
+    -- | Options.Applicative 0.12.1 implements monoid, not semigroup.
+    -- Protolude exports (<>) from semigroup. We can remove this after
+    -- upgrading to optparse-applicative 0.13 or later.
+  , (<>)
+    -- | Protolude's versions of these are generic, which requires explict
+    -- types at many call sites. Protolude *does* provide 'putText' as a
+    -- Text-specialized alias 'putStrLn' but for now, export Text-specific
+    -- versions.
+  , putStr
+  , putStrLn
 
     -- * Holborn extensions and innovations
+    -- ** Useful types
+  , Hashable
+    -- ** Generic versions of list functions.
+    --
+    -- In standard Prelude, these are specialised to lists. In BasicPrelude,
+    -- they are more generic. In Protolude, they are back to being
+    -- specialised. Arguably we should use the generic versions everywhere and
+    -- not have these here.
+  , (++)  -- Use (<>) instead
+  , concat  -- Use fold instead
+  , intercalate
     -- ** Error handling
   , hush
   , fmapL
@@ -100,139 +52,56 @@ module HolbornPrelude
   , printErr
   ) where
 
-import CorePrelude
+import Data.Hashable (Hashable)
+import qualified Data.List
+import Data.Monoid ((<>))
+import GHC.Base (String)
+import GHC.Exts (IsString(..))
+import System.IO (hPutStrLn)
 
-import Data.List hiding
-  ( -- prefer monoid versions instead
-    (++)
-  , concat
-  , intercalate
-    -- prefer Text versions instead
-  , lines
-  , words
-  , unlines
-  , unwords
-    -- prefer map = fmap instead
-  , map
-    -- prefer strict versions
-  , sum
-  , product
-    -- prefer Foldable versions
-  , elem
-  , foldl
-  , foldl'
-  , foldl1
-  , foldr
-  , foldr1
-  , maximum
-  , minimum
-  )
+import Protolude hiding ((<>), (++), concat, intercalate, putStr, putStrLn, fromStrict, yield)
+import qualified Base
+import qualified Show
 
--- Import *all of the things* from Control.Monad,
--- specifically, the list-based things that
--- CorePrelude doesn't export
-import Control.Monad hiding
-  ( -- Also exported by Data.Traversable.
-    mapM
-  , sequence
-  )
-
-
-import Control.Applicative
-import Control.Monad.Except (MonadError, throwError)
-import Data.Foldable (Foldable(..), elem, maximum, minimum)
-import Data.Traversable (Traversable(..))
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
-import qualified Data.Text.Lazy as LText
-import qualified Data.Text.Lazy.IO as LText
-import qualified Prelude
-import Data.Text.Encoding (encodeUtf8, decodeUtf8With)
-import Data.Text.Encoding.Error (lenientDecode)
-import qualified Safe
-import System.IO (hPutStrLn, stderr)
-
--- | > map = fmap
-map :: (Functor f) => (a -> b) -> f a -> f b
-map = fmap
-
+(++) :: Monoid m => m -> m -> m
+(++) = (<>)
 infixr 5 ++
 
--- | > (++) = mappend
-(++) :: Monoid w => w -> w -> w
-(++) = mappend
+concat :: (Foldable t, Monoid a) => t a -> a
+concat = fold
 
--- | > concat = mconcat
-concat :: Monoid w => [w] -> w
-concat = mconcat
+{-# DEPRECATED id "Use 'identity' instead" #-}
+id :: a -> a
+id = identity
 
--- | > intercalate = mconcat .: intersperse
+{-# DEPRECATED fromShow "Use 'show' instead" #-}
+fromShow :: (Show a, StringConv String b) => a -> b
+fromShow = show
+
+putStr :: MonadIO m => Text -> m ()
+putStr = Show.putStr
+
+putStrLn :: MonadIO m => Text -> m ()
+putStrLn = Show.putStrLn
+
+-- | Print to standard error.
+-- TODO: Replace 'Text' with generic string type.
+printErr :: Text -> IO ()
+printErr = hPutStrLn stderr . toS
+
+-- | Generalized intercalate (from basic-prelude).
+--
+--   > intercalate = mconcat .: intersperse
 intercalate :: Monoid w => w -> [w] -> w
 intercalate xs xss = mconcat (Data.List.intersperse xs xss)
 
--- | Print to standard error.
-printErr :: Text -> IO ()
-printErr = hPutStrLn stderr . textToString
+{-# DEPRECATED terror "Use 'error' instead" #-}
+terror :: Text -> a
+terror = Base.error . toS
 
--- | Compute the sum of a finite list of numbers.
-sum :: Num a => [a] -> a
-sum = Data.Foldable.foldl' (+) 0
-
--- | Compute the product of a finite list of numbers.
-product :: Num a => [a] -> a
-product = Data.Foldable.foldl' (*) 1
-
-
--- | Convert a value to readable Text
-show :: Show a => a -> Text
-show = Text.pack . Prelude.show
-
--- | Convert a value to readable IsString
---
--- Since 0.3.12
-fromShow :: (Show a, IsString b) => a -> b
-fromShow = fromString . Prelude.show
-
--- | Parse Text to a value
-read :: Read a => Text -> a
-read = Prelude.read . Text.unpack
-
--- | The readIO function is similar to read
--- except that it signals parse failure to the IO monad
--- instead of terminating the program.
-readIO :: Read a => Text -> IO a
-readIO = Prelude.readIO . Text.unpack
-
-
--- | Read a file and return the contents of the file as Text.
--- The entire file is read strictly.
-readFile :: FilePath -> IO Text
-readFile = Text.readFile
-
--- | Write Text to a file.
--- The file is truncated to zero length before writing begins.
-writeFile :: FilePath -> Text -> IO ()
-writeFile = Text.writeFile
-
--- | Write Text to the end of a file.
-appendFile :: FilePath -> Text -> IO ()
-appendFile = Text.appendFile
-
-textToString :: Text -> Prelude.String
-textToString = Text.unpack
-
-ltextToString :: LText -> Prelude.String
-ltextToString = LText.unpack
-
--- | Note that this is /not/ the standard @Data.Text.Encoding.decodeUtf8@. That
--- function will throw impure exceptions on any decoding errors. This function
--- instead uses @decodeLenient@.
-decodeUtf8 :: ByteString -> Text
-decodeUtf8 = decodeUtf8With lenientDecode
-
-readMay :: Read a => Text -> Maybe a
-readMay = Safe.readMay . Text.unpack
-
+{-# DEPRECATED textToString "Use 'toS' instead" #-}
+textToString :: Text -> String
+textToString = toS
 
 -- | Generic version of 'hush' from Control.Errors
 hush :: Alternative m => Either e a -> m a

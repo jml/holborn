@@ -11,7 +11,7 @@ mkDerivation {
     language-python mtl pretty-error text
   ];
   testHaskellDepends = [
-    base holborn-prelude tasty tasty-hunit tasty-quickcheck
+    base holborn-prelude tasty tasty-hunit tasty-quickcheck text
   ];
   description = "Syntax analysis library";
   license = stdenv.lib.licenses.unfree;

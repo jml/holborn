@@ -3,7 +3,8 @@ version: 0.1.0.0
 synopsis: Serve git repositories
 license: AllRightsReserved
 
-ghc-options: -Wall -Werror
+# Temporarily disabling -Werror for protolude migration.
+ghc-options: -Wall
 default-extensions:
   - GeneralizedNewtypeDeriving
   - MonadFailDesugaring
