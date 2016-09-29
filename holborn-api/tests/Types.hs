@@ -14,5 +14,5 @@ tests =
   testGroup "Holborn.API.Types"
   [ testCase "password not shown" $ do
         pwd <- newPassword "hello"
-        show pwd @?= "*hidden-password*"
+        (show pwd :: Text) @?= "*hidden-password*"
   ]

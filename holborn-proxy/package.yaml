@@ -3,6 +3,7 @@ version: 0.1.0.0
 synopsis: Reverse proxy / http terminator for holborn
 license: AllRightsReserved
 
+# Temporarily disable -Werror while migrating to Protolude
 ghc-options: -Wall
 default-extensions:
   - GeneralizedNewtypeDeriving
@@ -19,7 +20,6 @@ dependencies:
 
 library:
   source-dirs: lib
-  ghc-options: -Werror
   dependencies:
     - aeson
     - base64-bytestring
@@ -47,7 +47,6 @@ executables:
   holborn-proxy:
     main: holborn-proxy.hs
     source-dirs: src
-    ghc-options: -Werror
     dependencies:
       - holborn-proxy
       - http-client

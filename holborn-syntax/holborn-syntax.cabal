@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.13.0.
+-- This file has been generated from package.yaml by hpack version 0.14.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -19,6 +19,7 @@ library
   build-depends:
       base >= 4.9 && < 5.0
     , holborn-prelude
+    , text
     , bytestring >= 0.10
     , containers >= 0.5
     , errors >= 2.0
@@ -26,12 +27,11 @@ library
     , language-python >= 0.5.2
     , mtl >= 2.2
     , pretty-error
-    , text >= 1.2
   hs-source-dirs:
       lib
   default-language: Haskell2010
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards
-  ghc-options: -Wall -Werror
+  ghc-options: -Wall
 
 test-suite holborn-syntax-test
   type: exitcode-stdio-1.0
@@ -39,10 +39,11 @@ test-suite holborn-syntax-test
   hs-source-dirs:
       tests
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards
-  ghc-options: -Wall -Werror
+  ghc-options: -Wall
   build-depends:
       base >= 4.9 && < 5.0
     , holborn-prelude
+    , text
     , holborn-syntax
     , tasty
     , tasty-hunit

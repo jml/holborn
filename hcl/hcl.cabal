@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.13.0.
+-- This file has been generated from package.yaml by hpack version 0.14.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -13,7 +13,7 @@ executable hcl-unused
   build-depends:
       base >=4.9 && <5
     , holborn-prelude
-    , turtle >=1.2
+    , turtle
   hs-source-dirs:
       src
   ghc-options: -Wall -Werror -threaded
@@ -25,7 +25,6 @@ executable hcl-wait-for-port
   build-depends:
       base >=4.9 && <5
     , holborn-prelude
-    , turtle >=1.2
     , optparse-applicative
     , network-simple >= 0.4
   hs-source-dirs:

@@ -80,7 +80,7 @@ warpSettings :: Warp.Port -> Warp.Settings
 warpSettings port =
   Warp.setBeforeMainLoop printPort (Warp.setPort port' Warp.defaultSettings)
   where
-    printPort = Log.info $ "holborn-api running at http://localhost:" ++ show port' ++ "/"
+    printPort = Log.info $ "holborn-api running at http://localhost:" ++ (show port' :: Text) ++ "/"
     port' = port
 
 

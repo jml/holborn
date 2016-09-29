@@ -12,6 +12,7 @@ module Holborn.API.NewRepo
 
 import HolbornPrelude
 
+import Control.Monad (fail)
 import Data.Aeson (FromJSON(..), Value(String), object, (.=))
 import Data.Aeson.Types (typeMismatch)
 import Servant

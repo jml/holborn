@@ -14,7 +14,6 @@ source-dirs: src
 dependencies:
   - base >=4.9 && <5
   - holborn-prelude
-  - turtle >=1.2
 
 executables:
   hcl-wait-for-port:
@@ -25,3 +24,5 @@ executables:
 
   hcl-unused:
     main: unused.hs
+    dependencies:
+      - turtle

@@ -19,6 +19,7 @@ import           HolbornPrelude
 
 import           Blaze.ByteString.Builder (Builder, fromByteString)
 import qualified Data.ByteString as BS
+import           Data.List (lookup)
 import           Network.HTTP.Types.Header (hContentEncoding, RequestHeaders)
 import           Network.HTTP.Types.Status (ok200)
 import           Network.Wai (Application, responseStream, requestBody, requestHeaders, Request, Response)

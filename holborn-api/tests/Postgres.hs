@@ -16,6 +16,7 @@ import HolbornPrelude
 import Data.Word (Word16)
 import Database.PostgreSQL.Simple (ConnectInfo(..), defaultConnectInfo)
 import System.Exit (ExitCode(..))
+import System.IO.Error (userError)
 import qualified System.Process as P
 import System.Posix.Temp (mkdtemp)
 

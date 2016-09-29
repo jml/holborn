@@ -3,7 +3,8 @@ version: 0.1.3.0
 synopsis: Types shared between our nodes
 license: AllRightsReserved
 
-ghc-options: -Wall -Werror
+# Disable -Werror while we port to protolude
+ghc-options: -Wall
 default-extensions:
   - GeneralizedNewtypeDeriving
   - NamedFieldPuns

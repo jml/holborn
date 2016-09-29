@@ -37,8 +37,6 @@ import HolbornPrelude
 import Control.Error (bimapExceptT)
 import Control.Monad.Catch (MonadThrow(..))
 import Control.Monad.Fail (MonadFail(..))
-import Control.Monad.Trans.Except (ExceptT, throwE)
-import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
 import Data.Aeson (FromJSON, ToJSON, Value, eitherDecode', encode, object, (.=))
 import qualified Database.PostgreSQL.Simple as PostgreSQL
 import Database.PostgreSQL.Simple.Internal (RowParser)
@@ -123,7 +121,7 @@ instance (JSONCodeableError a) => JSONCodeableError (APIError a) where
     toJSON NoUserAccount = (418, object [])
     toJSON InsufficientPermissions = (403, object [])
     toJSON (SubAPIError x) = toJSON x
-    toJSON (UnexpectedException e) = (500, object [ "message" .= show e
+    toJSON (UnexpectedException e) = (500, object [ "message" .= (show e :: Text)
                                                   , "type" .= ("UncaughtException" :: Text)
                                                   ])
     toJSON (BrokenCode msg) = (500, object [ "message" .= msg
@@ -138,7 +136,7 @@ throwHandlerError = throwAPIError . SubAPIError
 
 -- | Raise a general API error.
 throwAPIError :: APIError err -> APIHandler err a
-throwAPIError = APIHandler . lift . throwE
+throwAPIError = APIHandler . lift . throwError
 
 
 -- | The internal "configuration" of the application. Collects things used

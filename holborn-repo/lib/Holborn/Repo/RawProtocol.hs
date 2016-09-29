@@ -14,7 +14,6 @@ module Holborn.Repo.RawProtocol
 
 import           HolbornPrelude
 
-import           Control.Monad.State.Strict (runStateT)
 import           Network.Socket (Socket, SockAddr)
 import           Pipes.Core (Consumer, Producer)
 import           Pipes.Network.TCP (HostPreference(..))
@@ -66,7 +65,7 @@ accept :: Config -> (Socket, SockAddr) -> IO ()
 accept config (sock, _) = do
     let from = fromSocket sock 4096
     let to = toSocket sock
-    (header, fromRest) <- runStateT getRepoParser from
+    (header, fromRest) <- PP.runStateT getRepoParser from
     Log.debug header
     void $ case header of
         Just (WritableRepoCall GitUploadPack repoId) ->

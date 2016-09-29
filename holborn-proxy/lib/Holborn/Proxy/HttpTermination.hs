@@ -8,12 +8,13 @@ module Holborn.Proxy.HttpTermination
   , proxyApp
   ) where
 
-import HolbornPrelude
+import HolbornPrelude hiding (get)
 
 import Control.Error (hoistMaybe)
 import Control.Monad.Trans.Maybe (runMaybeT)
 import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
+import Data.List (lookup)
 import Network.HTTP.Client (Manager)
 import Network.HTTP.ReverseProxy (defaultOnExc, waiProxyTo, WaiProxyResponse(..), ProxyDest(..))
 import Network.HTTP.Types (status302, status200, Header)

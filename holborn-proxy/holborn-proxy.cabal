@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.13.0.
+-- This file has been generated from package.yaml by hpack version 0.14.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -42,7 +42,7 @@ library
       lib
   default-language: Haskell2010
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards
-  ghc-options: -Wall -Werror
+  ghc-options: -Wall
 
 executable holborn-proxy
   build-depends:
@@ -58,7 +58,7 @@ executable holborn-proxy
     , warp-tls >=3.2.1
   hs-source-dirs:
       src
-  ghc-options: -Wall -Werror
+  ghc-options: -Wall
   main-is: holborn-proxy.hs
   default-language: Haskell2010
   default-extensions: GeneralizedNewtypeDeriving MonadFailDesugaring NamedFieldPuns NoImplicitPrelude OverloadedStrings ScopedTypeVariables RecordWildCards

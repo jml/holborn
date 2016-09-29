@@ -14,7 +14,7 @@ module Helpers
   , postAs
   ) where
 
-import HolbornPrelude
+import HolbornPrelude hiding (get)
 
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (FromJSON, ToJSON, decode, encode)

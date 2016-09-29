@@ -11,7 +11,7 @@ module Holborn.Proxy.AuthJar
   ) where
 
 
-import HolbornPrelude
+import HolbornPrelude hiding (get)
 
 import qualified Data.HashMap.Strict as HashMap
 import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar', readTVar, TVar)

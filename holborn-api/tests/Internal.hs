@@ -38,6 +38,6 @@ jsonGetTests getDB =
       let expectedException = UnexpectedException (toException (InvalidUrlException badUrl "Invalid URL")) :: APIError Int
       result <- runExceptT (runAPIHandler config apiResult)
       case result of
-        Left e -> show expectedException @?= show e
+        Left e -> show expectedException @?= (show e :: Text)
         Right _ -> assertFailure $ "Unexpectedly parsed URL: " ++ badUrl
   ]

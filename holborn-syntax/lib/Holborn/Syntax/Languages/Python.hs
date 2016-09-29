@@ -21,11 +21,10 @@ Currently missing support for:
 -}
 module Holborn.Syntax.Languages.Python (annotateSourceCode, getAST, ParseError, Token) where
 
-import HolbornPrelude hiding (lex)
+import HolbornPrelude hiding (Handler)
 
 import qualified Data.Map as M
 import Data.Text (pack)
-import Debug.Trace
 import Language.Python.Common ( Argument(..)
                               , Comprehension(..)
                               , ComprehensionExpr(..)

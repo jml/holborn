@@ -6,7 +6,7 @@
 
 module Holborn.Repo.HtmlFormatTokens () where
 
-import HolbornPrelude hiding (div, span)
+import HolbornPrelude hiding (div)
 
 import Text.Blaze (ToMarkup(..))
 import Text.Blaze.Html5 (Html, (!))
@@ -57,7 +57,7 @@ instance (H.ToValue a, Show a) => ToMarkup (HolbornToken a) where
      baseToken = H.span ! A.class_ (tokenShortName token) $ H.toHtml contents
      contents = decodeUtf8 (tokenName token)
      findReferencesUrl = "https://google.com/?q=" ++ decodeUtf8 (tokenName token)
-     bindingUrl i = "#" ++ show i
+     bindingUrl i = "#" ++ show i :: Text
 
 
 instance ToMarkup HolbornSource where
@@ -76,9 +76,9 @@ lineNos n = lineNos' 1
   where
     lineNos' c
         | c <= n = do
-            H.a ! A.href (H.toValue $ "#L-" ++ show c)
-                ! A.name (H.toValue $ "L-" ++ show c) $
-              H.toHtml (show c)
+            H.a ! A.href (H.toValue ("#L-" ++ show c :: Text))
+                ! A.name (H.toValue ("L-" ++ show c :: Text)) $
+              H.toHtml (show c :: Text)
 
             H.toHtml ("\n" :: Text)
 
