@@ -133,7 +133,7 @@ addKey dexMail (AddKeyData key) = do
 
     case result of
       Left DuplicateValue -> throwHandlerError KeyAlreadyExists
-      Left e -> terror $ "Unexpected data error in addKey: " <> show e
+      Left e -> error $ "Unexpected data error in addKey: " <> show e
       Right [r] -> pure r
       Right _ -> corruptDatabase "Inserting key in addKey returned something weird"
 

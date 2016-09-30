@@ -2,9 +2,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE KindSignatures #-}
 
-module Holborn.JSON.RepoMeta
-  ( RepoMeta(..)
-  , RepoName
+module Holborn.CommonTypes.Repo
+  ( RepoName
   , newRepoName
   , repoNameParser
   , OwnerName
@@ -16,7 +15,6 @@ module Holborn.JSON.RepoMeta
 import HolbornPrelude
 
 import Data.Aeson (ToJSON(..), FromJSON(..), Value(String), withText)
-import GHC.Generics (Generic)
 import qualified Data.Attoparsec.Text as AT
 import Data.Char (isDigit, isAsciiUpper, isAsciiLower)
 import qualified Data.Text
@@ -93,24 +91,3 @@ newOwnerName = newName
 
 ownerNameParser :: AT.Parser OwnerName
 ownerNameParser = nameParser
-
--- | This is what we're sending to users who query repository meta
--- data. GH return this:
--- https://developer.github.com/v3/repos/#list-organization-repositories
---
--- TODO: rename to ProjectMeta
--- TODO: put in the fields we think are needed to write tools
-data RepoMeta = RepoMeta
-    { id :: RepoId
-    , number_commits :: Int -- git rev-list --count master
-    , number_objects :: Int -- git count-objects
-    , size :: Int -- git count-objects
-    , owner :: OwnerName
-    -- TODO newest commit
-    -- TODO branches, tags, ..., everything needed to render the landing page
-    } deriving (Show, Generic)
-
-
-instance ToJSON RepoMeta
-
-instance FromJSON RepoMeta

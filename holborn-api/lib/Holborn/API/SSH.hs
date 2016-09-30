@@ -48,7 +48,7 @@ import Holborn.API.Internal
   , throwHandlerError
   , toServantHandler
   )
-import Holborn.JSON.RepoMeta (OwnerName, RepoName)
+import Holborn.CommonTypes.Repo (OwnerName, RepoName)
 import Holborn.JSON.SSHRepoCommunication
   ( KeyType(..)
   , GitCommand(..)

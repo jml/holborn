@@ -33,7 +33,7 @@ import Holborn.API.Internal
   , logDebug
   )
 import Holborn.JSON.Browse (BrowseMetaResponse(..))
-import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName, RepoName)
+import Holborn.CommonTypes.Repo (OwnerName, RepoName)
 import Holborn.ServantTypes (RenderedJson)
 
 -- Following imports needed for RPC which we should do in a more
@@ -48,26 +48,35 @@ type API =
     :<|> Header "x-dex-name" Username
          :> Capture "owner" OwnerName
          :> Capture "repo" RepoName
+         :> "search"
+         :> QueryParam "q" Text
+         :> Get '[JSON, RenderedJson] Value
+    :<|> Header "x-dex-name" Username
+         :> Capture "owner" OwnerName
+         :> Capture "repo" RepoName
          :> CaptureAll "pathspec" Text
          :> Get '[JSON, RenderedJson] Value
 
-data BrowseError = NotFound
+data BrowseError = NotFound | InvalidSearchQuery Text
 
 instance JSONCodeableError BrowseError where
     toJSON NotFound = (404, object ["message" .= ("could not find object" :: Text)])
+    toJSON (InvalidSearchQuery q) = (400, object ["message" .= ("Invalid search query: " <> q)])
 
 
 server :: Config -> Server API
 server conf =
   enter (toServantHandler conf) $
   browse
+  :<|> search
   :<|> treeCommitBlob
+
 
 
 browse :: Maybe Username -> OwnerName -> RepoName -> APIHandler BrowseError BrowseMetaResponse
 browse _maybeUsername owner repo = do
     repoUrl <- maybe (throwHandlerError NotFound) pure =<< repoApiUrl owner repo
-    r <- rjsonGet' repoUrl
+    r <- rjsonGet' (repoUrl <> "/browse")
     repoMeta <- case r of
         Right x -> pure x
         Left err -> do
@@ -75,10 +84,29 @@ browse _maybeUsername owner repo = do
             throwHandlerError NotFound
     -- TODO: FAKE: Fake description in repository metadata
     return BrowseMetaResponse
-      { repo_meta = repoMeta { owner = owner }
+      { repo_meta = repoMeta
       , description = "fake description"
-      , created_at = Time.LocalTime (Time.ModifiedJulianDay 2000) (Time.TimeOfDay 1 1 1)
+      , created_at = Time.UTCTime (Time.ModifiedJulianDay 2000) (Time.secondsToDiffTime 10)
       }
+
+
+-- Search is passed straight through if it meets the authentication
+-- requirements.
+search :: Maybe Username -> OwnerName -> RepoName -> Maybe Text -> APIHandler BrowseError Value
+search _ owner repo query  = do
+  repoUrl <- maybe (throwHandlerError NotFound) pure =<< repoApiUrl owner repo
+  q <- maybe (throwHandlerError (InvalidSearchQuery (maybe "" identity query))) pure query
+
+  -- TODO this should probably be an RPC request.
+  let repoUrlBrokenAndHardcoded = repoUrl <> "/search?q=" <> q
+  r <- rjsonGet' repoUrlBrokenAndHardcoded
+  r' <- case r of
+    Right x -> pure x
+    Left err -> do
+      logDebug ("Error when decoding JSON from repo backend at" :: String, repoUrlBrokenAndHardcoded, err)
+      throwHandlerError NotFound
+  return r'
+
 
 -- Tree, commit & blob are passed straight through if they meet the
 -- authentication requirements.
@@ -88,7 +116,7 @@ treeCommitBlob _maybeUsername owner repo pathspec = do
     -- TODO: constructing this URL manually is still not great. A
     -- secondary concern is that we're decoding, then re-encoding JSON
     -- here. Might be easier to pipe through backend responses unmodified.
-    let repoUrlBrokenAndHardcoded = repoUrl <> "/" <> intercalate "/" pathspec
+    let repoUrlBrokenAndHardcoded = repoUrl <> "/browse/" <> intercalate "/" pathspec
     r <- rjsonGet' repoUrlBrokenAndHardcoded
     r' <- case r of
         Right x -> pure x

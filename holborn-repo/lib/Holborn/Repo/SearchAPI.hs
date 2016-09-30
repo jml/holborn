@@ -12,19 +12,18 @@ import HolbornPrelude
 
 import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Except (ExceptT, throwE)
-import Servant ((:>), Get, QueryParam, ServantErr(..), Server, JSON)
+import Servant ((:>), Get, QueryParam, ServantErr(..), Server, MimeRender(mimeRender))
 import Servant.Server (enter, (:~>)(..), err400)
-import Data.Aeson (ToJSON)
-
-import Holborn.Repo.GitLayer (Repository, Revision, withRepository, BrowseException, Blob, BrowseException(..), getBlob)
+import Data.Aeson (ToJSON, encode)
+import Holborn.ServantTypes (RenderedJson)
+import Holborn.Repo.GitLayer (Repository, withRepository, BrowseException, Blob, BrowseException(..), getBlob, refMaster)
 import qualified Holborn.Repo.Search as S
-import GHC.Generics (Generic)
 import qualified Data.Text as T
-import Web.HttpApiData (FromHttpApiData(..))
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import Text.Blaze (ToMarkup(..))
 import Text.Blaze.Renderer.Text (renderMarkup)
+import GHC.Generics (Generic)
 
 type GitPath = Text
 
@@ -34,8 +33,14 @@ data SearchResultRow = SearchResultRow
   , lineNumbers :: [Integer] -- Context to show to be decided on client side
   } deriving (Show, Generic)
 
+
 instance ToJSON SearchResultRow
 
+instance MimeRender RenderedJson SearchResultRow where
+   mimeRender _ = encode
+
+instance MimeRender RenderedJson [SearchResultRow] where
+   mimeRender _ = encode
 
 -- Transform a list of matches a renderable search result. This means
 -- rendering a file with the syntax highlighter, snipping out the
@@ -51,12 +56,12 @@ matchesToResults blobMap matches' = map toRow matches'
 -- API exposed by holborn-api.
 type API =
   -- q for query, after for pagination
-  QueryParam "q" Text :> QueryParam "after" Text :> Get '[JSON] [SearchResultRow]
+  QueryParam "q" Text :> QueryParam "after" Text :> Get '[RenderedJson] [SearchResultRow]
 
 
 -- See http://haskell-servant.github.io/tutorial/server.html#using-another-monad-for-your-handlers
 searchT :: ExceptT BrowseException IO :~> ExceptT ServantErr IO
-searchT = Nat (bimapExceptT searchExceptionToServantErr HolbornPrelude.id)
+searchT = Nat (bimapExceptT searchExceptionToServantErr identity)
   where
     searchExceptionToServantErr _ = err400 { errBody = "invalid query" }
 
@@ -74,11 +79,10 @@ searchHandler repo q _after = do
 
   let paths = map S.path matches
       pathSegments = (T.splitOn "/") . fromString
-      Right (master :: Revision) = parseUrlPiece "master"
 
   -- Extract all blobs (this can be cached heavily with the current
-  -- commit).t
-  blobs <- mapM (\p -> withRepository repo (getBlob master (pathSegments p))) paths
+  -- commit).
+  blobs <- traverse (\p -> withRepository repo (getBlob refMaster (pathSegments p))) paths
   let pathToBlob = Map.fromList (zip (map fromString paths) (map fromJust blobs))
 
   pure (matchesToResults pathToBlob matches)

@@ -5,15 +5,16 @@
 {-# LANGUAGE QuasiQuotes        #-}
 
 
-module Holborn.API.NewRepo
+module Holborn.API.CreateRepository
        ( API
        , server
+       , CreateRepositoryResponse(..) -- to make warnings shut up
        ) where
 
-import HolbornPrelude
+import HolbornPrelude hiding (id)
 
 import Control.Monad (fail)
-import Data.Aeson (FromJSON(..), Value(String), object, (.=))
+import Data.Aeson (FromJSON(..), Value(String), object, (.=), ToJSON(..))
 import Data.Aeson.Types (typeMismatch)
 import Servant
 
@@ -29,15 +30,19 @@ import Holborn.API.Internal
   , throwHandlerError
   , query
   )
-import Holborn.JSON.RepoMeta (RepoMeta(..), OwnerName, RepoName)
+import Holborn.CommonTypes.Repo (OwnerName, RepoName)
 import Holborn.API.Types (DexMail)
 import Holborn.API.Auth (getUserId)
+
+data CreateRepositoryResponse =
+  CreateRepositoryResponse { id :: Int } deriving (Show, Generic)
+instance ToJSON CreateRepositoryResponse
 
 type API =
     "create-repository"
     :> Header "x-dex-email" DexMail
-    :> ReqBody '[JSON] NewRepoRequest
-    :> Post '[JSON] RepoMeta
+    :> ReqBody '[JSON] CreateRepositoryRequest
+    :> Post '[JSON] CreateRepositoryResponse
   -- When creating a repository we need an owners. The following API
   -- call returns a list of valid owner names for a logged in user.
   -- TODO: this might be better off in a different file.
@@ -56,11 +61,11 @@ instance FromJSON Visibility where
  parseJSON (String v) = case v of
    "public" -> pure Public
    "private" -> pure Private
-   _ -> fail ("invalid value: " <> (textToString v))
+   _ -> fail ("invalid value: " <> (toS v))
  parseJSON invalid = typeMismatch "Visibility" invalid
 
 
-data NewRepoRequest = NewRepoRequest
+data CreateRepositoryRequest = CreateRepositoryRequest
     { owner :: OwnerName
     , name :: RepoName
     , description :: Maybe Text -- Optional
@@ -68,12 +73,12 @@ data NewRepoRequest = NewRepoRequest
     } deriving (Show, Generic)
 
 
-instance FromJSON NewRepoRequest
+instance FromJSON CreateRepositoryRequest
 
 
-data NewRepoError = AlreadyExists | PermissionDenied | OwnerNotFound
+data CreateRepositoryError = AlreadyExists | PermissionDenied | OwnerNotFound
 
-instance JSONCodeableError NewRepoError where
+instance JSONCodeableError CreateRepositoryError where
     toJSON AlreadyExists = (400, object ["message" .= ("Repository with this name already exists" :: Text)])
     toJSON PermissionDenied = (400, object ["message" .= ("You are not allowed to create this repository" :: Text)])
     toJSON OwnerNotFound = (400, object ["message" .= ("Owner not found" :: Text)])
@@ -84,8 +89,8 @@ server conf =
   enter (toServantHandler conf) (newRepo :<|> repoOwnerCandidates)
 
 
-newRepo :: Maybe DexMail -> NewRepoRequest -> APIHandler NewRepoError RepoMeta
-newRepo _dexMail NewRepoRequest{..} = do
+newRepo :: Maybe DexMail -> CreateRepositoryRequest -> APIHandler CreateRepositoryError CreateRepositoryResponse
+newRepo _dexMail CreateRepositoryRequest{..} = do
     -- TODO user permissions and userId to check whether user is
     -- allowed to create repo.
 
@@ -98,7 +103,7 @@ newRepo _dexMail NewRepoRequest{..} = do
          [("org" :: String, orgId :: Int, owner' :: OwnerName)] -> newOrgRepo orgId owner'
          [("user" :: String, userId' :: Int, owner' :: OwnerName)] -> newUserRepo userId' owner'
          [] -> throwHandlerError OwnerNotFound
-         _ -> terror "Unexpected number of rows in newRepo"
+         _ -> error "Unexpected number of rows in newRepo"
 
   where
     newOrgRepo orgId owner' = do
@@ -106,17 +111,17 @@ newRepo _dexMail NewRepoRequest{..} = do
        [Only (repoId :: Int)] <- query [sql|
             insert into core_orgrepo (name, description, org_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (name, description, orgId, repoServer)
-       pure (RepoMeta repoId 0 0 0 owner')
+       pure (CreateRepositoryResponse repoId)
 
     newUserRepo userId owner' = do
        repoServer <- pickRepoServer
        [Only (repoId :: Int)] <- query [sql|
             insert into core_userrepo (name, description, user_id, hosted_on) values (?, ?, ?, ?) returning id
             |] (name, description, userId, repoServer)
-       pure (RepoMeta repoId 0 0 0 owner')
+       pure (CreateRepositoryResponse repoId)
 
 
-repoOwnerCandidates :: Maybe DexMail -> APIHandler NewRepoError [OwnerName]
+repoOwnerCandidates :: Maybe DexMail -> APIHandler CreateRepositoryError [OwnerName]
 repoOwnerCandidates dexMail = do
   userId <- getUserId dexMail
   [Only (ownerName :: OwnerName) ] <- query [sql|

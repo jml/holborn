@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.14.0.
+-- This file has been generated from package.yaml by hpack version 0.14.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -19,8 +19,8 @@ library
       Holborn.API.Browse
       Holborn.API.Config
       Holborn.API.CreateAccount
+      Holborn.API.CreateRepository
       Holborn.API.Internal
-      Holborn.API.NewRepo
       Holborn.API.Settings.Profile
       Holborn.API.Settings.SSHKeys
       Holborn.API.SSH
@@ -102,10 +102,10 @@ test-suite holborn-api-tests
     , wai
     , wai-extra
   other-modules:
+      CreateRepository
       Fixtures
       Helpers
       Internal
-      NewRepo
       Postgres
       Settings.SSHKeys
       SSH

@@ -50,7 +50,7 @@ import Test.QuickCheck (Arbitrary(..), elements)
 import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Web.HttpApiData (toUrlPiece)
 
-import Holborn.JSON.RepoMeta
+import Holborn.CommonTypes.Repo
   ( OwnerName
   , ownerNameParser
   , RepoName
@@ -63,7 +63,7 @@ import Holborn.JSON.RepoMeta
 data GitCommand = GitUploadPack | GitReceivePack deriving (Eq, Show, Generic)
 
 gitCommandParser :: AT.Parser GitCommand
-gitCommandParser = ("git-upload-pack" >> pure GitUploadPack) <|> ("git-receive-pack" >> pure GitReceivePack)
+gitCommandParser = ("git-upload-pack" *> pure GitUploadPack) <|> ("git-receive-pack" *> pure GitReceivePack)
 
 unparseGitCommand :: IsString string => GitCommand -> string
 unparseGitCommand serviceType =
@@ -181,7 +181,7 @@ instance FromField KeyType where
   fromField f x            = returnError ConversionFailed f ("Invalid key type in database: " <> (textToString (show x)))
 
 keyTypeParser :: AB.Parser KeyType
-keyTypeParser = ("ssh-rsa" >> pure RSA) <|> ("ssh-dss" >> pure DSA)
+keyTypeParser = ("ssh-rsa" *> pure RSA) <|> ("ssh-dss" *> pure DSA)
 
 parseKeyType :: Alternative m => ByteString -> m KeyType
 parseKeyType = hush . AB.parseOnly keyTypeParser

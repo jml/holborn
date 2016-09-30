@@ -10,15 +10,14 @@ module Holborn.JSON.Browse
        ) where
 
 import HolbornPrelude
-import Data.Aeson (ToJSON)
+import Data.Aeson (ToJSON, Value)
 import GHC.Generics (Generic)
-import Data.Time.LocalTime (LocalTime)
-import Holborn.JSON.RepoMeta (RepoMeta)
+import Data.Time (UTCTime)
 
 data BrowseMetaResponse = BrowseMetaResponse
-    { repo_meta :: RepoMeta
+    { repo_meta :: Value
     , description :: Text
-    , created_at :: LocalTime
+    , created_at :: UTCTime
     -- TODO so many missing fields
     } deriving (Show, Generic)
 
@@ -26,7 +25,7 @@ data BrowseMetaResponse = BrowseMetaResponse
 instance ToJSON BrowseMetaResponse
 
 data AuthorInfo = AuthorInfo
-    { date :: LocalTime
+    { date :: UTCTime
     , name :: Text
     , email :: Text
     } deriving (Show, Generic)

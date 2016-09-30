@@ -20,10 +20,10 @@ module Holborn.Repo.GitLayer
        , withRepository
        , repoPath
        , refMaster
+       , fillRepoMeta
        ) where
 
-import HolbornPrelude hiding (id)
-import qualified HolbornPrelude (id)
+import HolbornPrelude
 import Control.Error (bimapExceptT, syncIO)
 import Control.Monad.Reader (ReaderT)
 import Control.Monad.Trans.Except (ExceptT)
@@ -44,6 +44,7 @@ import Servant (MimeRender(mimeRender))
 import qualified Data.ByteString.Char8 as BSC8
 import System.Directory (doesDirectoryExist)
 
+
 -- XXX: Putting web stuff here to avoid orphan warnings. Would be nice to have
 -- it completely separate.
 import Text.Blaze.Html5 ((!))
@@ -56,7 +57,8 @@ import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Holborn.Repo.HtmlFormatTokens ()
 import Holborn.Syntax (annotateCode)
 import Holborn.ServantTypes (RenderedJson)
-import Holborn.JSON.RepoMeta (RepoId, RepoMeta(..))
+import Holborn.CommonTypes.Repo (RepoId)
+import Holborn.Repo.JSON.RepoMeta (RepoMeta(..))
 
 -- | A git repository
 -- | TODO: this seems to have the same function as HttpProtocol.DiskLocation?
@@ -108,7 +110,7 @@ withRepository repo action =
     justBrowseException e =
       case fromException e of
         Just browseException -> browseException
-        _ -> terror $ "Unknown execption: " ++ show e
+        _ -> error $ "Unknown execption: " ++ show e
 
 
 -- XXX: Staircasing
@@ -258,7 +260,7 @@ instance ToHttpApiData Revision where
 refMaster :: Revision
 refMaster = case parseUrlPiece "master" of
   Right x -> x
-  Left err -> terror err
+  Left err -> error err
 
 -- XXX: Is there a thing struggling to get out which is a combination of:
 -- * repository
@@ -430,11 +432,21 @@ instance ToMarkup Tree where
 
 -- TODO: Move this to some more common library
 notImplementedYet :: Text -> a
-notImplementedYet feature = terror $ "Not implemented yet: " ++ feature
+notImplementedYet feature = error $ "Not implemented yet: " ++ feature
+
+
+-- | Fill in information about the repository we want to render or
+-- show. E.g. languages, number of commits, public URL, ssh URL, etc.
+--
+-- For now it has access to the repository itself to run git commands
+-- but it'll likely be more efficient to cache the metadata on push
+-- (which is much rarer than reading).
+fillRepoMeta :: Repository -> GitM IO RepoMeta
+fillRepoMeta Repo{..} = return (RepoMeta 10 11 12) -- TODO fill in real data
 
 
 instance ToMarkup RepoMeta where
-  toMarkup RepoMeta{..} = do
+  toMarkup _ = do
     H.h1 "debug rendering for root metadata"
     -- TODO: FAKE: Hardcodes master
-    H.a ! A.href (H.toValue ("/v1/repos/" <> toUrlPiece id <> "/git/trees/master")) $ "tree-root"
+    H.a ! A.href (H.toValue ("/v1/repos/REPO_ID_NOT_KNOWN/git/trees/master" :: Text)) $ "tree-root"

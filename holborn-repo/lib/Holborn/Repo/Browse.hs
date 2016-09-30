@@ -9,8 +9,7 @@
 
 module Holborn.Repo.Browse (API, server) where
 
-import HolbornPrelude hiding (id)
-import qualified HolbornPrelude (id)
+import HolbornPrelude
 
 import Control.Error (bimapExceptT)
 import Control.Monad.Trans.Except (ExceptT, throwE)
@@ -31,8 +30,9 @@ import Holborn.Repo.GitLayer ( Blob
                              , getTree
                              , notImplementedYet
                              , withRepository
+                             , fillRepoMeta
                              )
-import Holborn.JSON.RepoMeta (RepoMeta(..))
+import Holborn.Repo.JSON.RepoMeta (RepoMeta(..))
 
 -- | The author of a commit
 type Author = Text
@@ -44,7 +44,8 @@ type Author = Text
 
 type API =
   -- e.g. /v1/repos/src/pulp/blob/master/setup.py
-  "git" :> "blobs" :> Capture "revspec" Revision :>
+  Get '[HTML, JSON, RenderedJson] RepoMeta
+  :<|> "git" :> "blobs" :> Capture "revspec" Revision :>
     CaptureAll "pathspec" Text :> Get '[HTML, JSON, RenderedJson] Blob
 
   -- e.g. /v1/repos/src/pulp/tree/master/
@@ -62,7 +63,7 @@ type RepoBrowser = ExceptT BrowseException IO
 --
 -- See http://haskell-servant.github.io/tutorial/server.html#using-another-monad-for-your-handlers
 gitBrowserT :: ExceptT BrowseException IO :~> ExceptT ServantErr IO
-gitBrowserT = Nat (bimapExceptT browseExceptionToServantErr HolbornPrelude.id)
+gitBrowserT = Nat (bimapExceptT browseExceptionToServantErr identity)
   where
     browseExceptionToServantErr (GitException e) = err500 { errBody = fromStrict (encodeUtf8 (show e)) }
     browseExceptionToServantErr BlobNotFoundException = err404 { errBody = "not found" }
@@ -76,8 +77,8 @@ gitBrowserT = Nat (bimapExceptT browseExceptionToServantErr HolbornPrelude.id)
 
 server :: Repository -> Server API
 server repo = enter gitBrowserT $
-  -- XXX: What should we do for repos that don't have a master?
-  renderBlob repo
+  renderMeta repo
+  :<|> renderBlob repo
   :<|> renderTree repo
   :<|> renderCommits repo
   :<|> renderCommit repo
@@ -113,3 +114,9 @@ instance MimeRender RenderedJson RepoMeta where
 
 instance MimeRender RenderedJson Tree where
    mimeRender _ = encode
+
+
+renderMeta :: Repository -> RepoBrowser RepoMeta
+renderMeta repo = do
+  x <- withRepository repo fillRepoMeta
+  pure x

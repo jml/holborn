@@ -13,7 +13,7 @@ import Test.Tasty.Hspec (testSpec)
 import Fixtures (withConfig)
 
 import qualified Internal
-import qualified NewRepo
+import qualified CreateRepository
 import qualified Settings.SSHKeys
 import qualified SSH
 import qualified Types
@@ -36,7 +36,7 @@ tests = do
 waiTests :: IO TestTree
 waiTests = do
   testSpec "REST API tests" $ withConfig $ do
-    NewRepo.spec
+    CreateRepository.spec
     Settings.SSHKeys.spec
     SSH.spec
 

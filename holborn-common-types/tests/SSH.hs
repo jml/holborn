@@ -27,7 +27,7 @@ import Holborn.JSON.SSHRepoCommunication
   , unparseSSHCommand
   , parseSSHCommand
   )
-import Holborn.JSON.RepoMeta (newOwnerName, newRepoName)
+import Holborn.CommonTypes.Repo (newOwnerName, newRepoName)
 import Helpers (jsonIdentity, httpApiDataIdentity)
 
 

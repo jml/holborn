@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.14.0.
+-- This file has been generated from package.yaml by hpack version 0.14.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -11,8 +11,8 @@ cabal-version:       >= 1.10
 
 library
   exposed-modules:
+      Holborn.CommonTypes.Repo
       Holborn.JSON.Browse
-      Holborn.JSON.RepoMeta
       Holborn.JSON.SSHRepoCommunication
       Holborn.Logging
       Holborn.ServantTypes
