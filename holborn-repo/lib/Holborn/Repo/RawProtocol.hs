@@ -74,7 +74,7 @@ accept config (sock, _) = do
             gitReceivePack (getLocation' repoId) fromRest to
             -- TODO: This doesn't appear to abort the connection, which is
             -- what we want it to do.
-        _ -> terror $ "Bad header: " <> show header
+        _ -> error $ "Bad header: " <> show header
     return ()
   where
     getLocation' = getLocation config

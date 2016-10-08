@@ -55,7 +55,7 @@ mutateDB :: (ToRow args, Show args, MonadIO m) => Config -> Query -> args -> m I
 mutateDB config query params = do
   result <- liftIO $ runExceptT $ runAPIHandler config $ execute query params
   case result of
-    Left _ -> terror $ "Error running query: " <> show query <> " " <> show params
+    Left _ -> error $ "Error running query: " <> show query <> " " <> show params
     Right r -> pure r
 
 -- | Make an arbitrary user for testing.
