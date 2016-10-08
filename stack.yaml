@@ -11,8 +11,8 @@ packages:
   - location:
       # double-conversion doesn't build on Darwin.
       # See https://github.com/bos/double-conversion/pull/14
-      git: https://github.com/bradediger/double-conversion.git
-      commit: fb8666ecccc303a4a48ced16a5fbd8d2e6e83e3e
+      git: https://github.com/jml/double-conversion.git
+      commit: 79c7c08abac06f164522f6a327dd3e044efcd922
     extra-dep: true
   - location:
       # pipes-shell doesn't work with ghc 8.0

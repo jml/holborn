@@ -94,7 +94,7 @@ makeRepository = Repo
 -- XXX: Store "Repository" in Reader(T)
 withRepository :: Repository -> (Repository -> GitM IO a) -> ExceptT BrowseException IO a
 withRepository repo action =
-  bimapExceptT justBrowseException HolbornPrelude.id $ syncIO $ do
+  bimapExceptT justBrowseException identity $ syncIO $ do
     repoExists <- doesDirectoryExist (_repoPath repo)
     if repoExists
       then Git.withRepository' lgFactory options (action repo)
