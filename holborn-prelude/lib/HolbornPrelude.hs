@@ -8,10 +8,6 @@ module HolbornPrelude
   ( -- * Module exports
     module Protolude
 
-    -- * Backwards compatibility
-    --
-    -- To make migrating to Protolude easier.
-  , id
     -- | Protolude doesn't export much String stuff, this is mostly a good
     -- thing, but we're going to export some String stuff to make our lives
     -- easier.
@@ -67,10 +63,6 @@ infixr 5 ++
 
 concat :: (Foldable t, Monoid a) => t a -> a
 concat = fold
-
-{-# DEPRECATED id "Use 'identity' instead" #-}
-id :: a -> a
-id = identity
 
 {-# DEPRECATED fromShow "Use 'show' instead" #-}
 fromShow :: (Show a, StringConv String b) => a -> b
