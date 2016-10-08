@@ -72,8 +72,8 @@ instance FromField (Name a) where
     -- TODO: Remove these partial functions.
     fromField _ (Just bs) = case newName (decodeUtf8 bs) of
         Just x -> pure x
-        Nothing -> terror ("Could not parse repo name. " <> decodeUtf8 bs)
-    fromField _ Nothing = terror "FromField Permissions should always decode correctly"
+        Nothing -> error ("Could not parse repo name. " <> decodeUtf8 bs)
+    fromField _ Nothing = error "FromField Permissions should always decode correctly"
 
 
 instance ToField (Name a) where

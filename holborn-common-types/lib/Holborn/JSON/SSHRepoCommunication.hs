@@ -222,7 +222,7 @@ instance FromField SSHKey where
         _ -> returnError ConversionFailed f ("Invalid SSH key in database: " <> textToString (show bs))
 
     -- TODO: Move corruptDatabase to holborn-prelude and use that
-    fromField _ _ = terror "FromField SSHKey should always decode correctly"
+    fromField _ _ = error "FromField SSHKey should always decode correctly"
 
 instance ToField SSHKey where
     toField = Escape . unparseSSHKey
@@ -242,7 +242,7 @@ sshFingerprint keyData = do
     pure path
   (exitCode, out, err) <- readProcessWithExitCode "ssh-keygen" ["-l", "-f", keyPath] ""
   case exitCode of
-    ExitFailure 127 -> terror "Could not find ssh-keygen process"
+    ExitFailure 127 -> error "Could not find ssh-keygen process"
     ExitFailure errCode -> do
       putStrLn $ "ssh-keygen failed: (" <> show errCode <>  ")"
       putStrLn $ "output:\n" <> fromString out

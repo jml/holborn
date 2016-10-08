@@ -12,7 +12,6 @@ module HolbornPrelude
     --
     -- To make migrating to Protolude easier.
   , id
-  , terror
     -- | Protolude doesn't export much String stuff, this is mostly a good
     -- thing, but we're going to export some String stuff to make our lives
     -- easier.
@@ -60,7 +59,6 @@ import GHC.Exts (IsString(..))
 import System.IO (hPutStrLn)
 
 import Protolude hiding ((<>), (++), concat, intercalate, putStr, putStrLn, fromStrict, yield)
-import qualified Base
 import qualified Show
 
 (++) :: Monoid m => m -> m -> m
@@ -94,10 +92,6 @@ printErr = hPutStrLn stderr . toS
 --   > intercalate = mconcat .: intersperse
 intercalate :: Monoid w => w -> [w] -> w
 intercalate xs xss = mconcat (Data.List.intersperse xs xss)
-
-{-# DEPRECATED terror "Use 'error' instead" #-}
-terror :: Text -> a
-terror = Base.error . toS
 
 {-# DEPRECATED textToString "Use 'toS' instead" #-}
 textToString :: Text -> String

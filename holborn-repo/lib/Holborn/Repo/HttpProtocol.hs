@@ -74,7 +74,7 @@ smartHandshake diskLocation service =
             (gitPack' serviceType)
 
     backupResponse :: Response
-    backupResponse = terror "no git service specified: I have no idea whether we can reach this state."
+    backupResponse = error "no git service specified: I have no idea whether we can reach this state."
 
     gitPack' :: GitCommand -> (Builder -> IO ()) -> IO () -> IO ()
     gitPack' serviceType moreData _flush =
@@ -169,7 +169,7 @@ filterStdErr = do
     x <- await
     case x of
          -- TODO send errors to journald && maybe measure
-         Left err -> terror (decodeUtf8 err)
+         Left err -> error (decodeUtf8 err)
          Right data' -> do
              yield data'
              filterStdErr

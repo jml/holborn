@@ -110,8 +110,7 @@ url = eitherReader parseUrl
     parseUrl s = fmapL (textToString . show) (parseBaseUrl s)
 
 defaultApiUrl :: BaseUrl
-defaultApiUrl = fromMaybe (terror "Default URL is broken") (parseBaseUrl "http://localhost:8002")
-
+defaultApiUrl = fromMaybe (panic "Default URL is broken") (parseBaseUrl "http://localhost:8002")
 
 options :: ParserInfo Config
 options =

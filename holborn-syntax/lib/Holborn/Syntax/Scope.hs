@@ -159,7 +159,7 @@ getBinding :: Symbol -> Environment a -> Maybe (Binding a)
 getBinding symbol env =
   case M.lookup symbol (definitions env) of
     Nothing -> Nothing
-    Just [] -> terror $ "Empty definition list for " ++ show symbol
+    Just [] -> error $ "Empty definition list for " <> show symbol
     Just (x:_) -> Just x
 
 
