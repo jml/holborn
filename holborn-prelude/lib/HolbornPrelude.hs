@@ -59,7 +59,6 @@ import GHC.Exts (IsString(..))
 import System.IO (hPutStrLn)
 
 import Protolude hiding ((<>), (++), concat, intercalate, putStr, putStrLn, fromStrict, yield)
-import qualified Base
 import qualified Show
 
 (++) :: Monoid m => m -> m -> m
