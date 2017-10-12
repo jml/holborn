@@ -28,14 +28,6 @@ Code review should be focused on making sure that you understand what's going
 on, that we're not making irreversible mistakes, and identifying low-hanging
 fruit for improvement.
 
-## Documentation
-
-There are various docs on
-[Google Drive](https://drive.google.com/drive/folders/0BzzRizsvL_4ONVBMZU9wSlkwOTg).
-
-Please update [reading-material.md](reading-material.md) with interesting
-things you find about Git, DVCS, or development collaboration.
-
 ## Running locally
 
 To run locally, you need several components:
