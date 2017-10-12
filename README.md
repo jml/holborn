@@ -12,6 +12,14 @@ We assume you're using:
 * nix
 * direnv
 
+## License and Copyright
+
+Copyright (c) 2015-2017 Thomas E. Hunger and Jonathan M. Lange
+
+Made available under GNU AGPL v3
+
+Unless otherwise stated.
+
 ## Review
 
 All changes require code review.

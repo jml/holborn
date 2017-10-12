@@ -1,7 +1,9 @@
 name: holborn-syntax
 version: 0.3.0.0
 synopsis: Syntax analysis library
-license: AllRightsReserved
+license: AGPL
+license-file: LICENSE
+copyright: (c) 2015-2017 Thomas E. Hunger and Jonathan M. Lange
 
 # Temporarily disable -Werror while we migrate to Protolude
 ghc-options: -Wall

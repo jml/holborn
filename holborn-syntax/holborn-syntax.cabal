@@ -1,11 +1,13 @@
--- This file has been generated from package.yaml by hpack version 0.14.0.
+-- This file has been generated from package.yaml by hpack version 0.17.1.
 --
 -- see: https://github.com/sol/hpack
 
 name:                holborn-syntax
 version:             0.3.0.0
 synopsis:            Syntax analysis library
-license:             AllRightsReserved
+copyright:           (c) 2015-2017 Thomas E. Hunger and Jonathan M. Lange
+license:             AGPL
+license-file:        LICENSE
 build-type:          Simple
 cabal-version:       >= 1.10
 

@@ -1,7 +1,9 @@
 name: holborn-repo
 version: 0.1.0.0
 synopsis: Serve git repositories
-license: AllRightsReserved
+license: AGPL
+license-file: LICENSE
+copyright: (c) 2015-2017 Thomas E. Hunger and Jonathan M. Lange
 
 # Temporarily disabling -Werror for protolude migration.
 ghc-options: -Wall
