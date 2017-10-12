@@ -1,7 +1,9 @@
 name: holborn-api
 version: 0.1.0.0
 synopsis: API server for Holborn
-license: AllRightsReserved
+license: AGPL
+license-file: LICENSE
+copyright: (c) 2015-2017 Thomas E. Hunger and Jonathan M. Lange
 
 data-files:
   - sql/initial.sql

@@ -7,4 +7,7 @@ setup(
     author='teh & jml',
     scripts=['manage.py'],
     packages=find_packages(),
+    classifiers=[
+        "License :: OSI Approved :: GNU Affero General Public License v3",
+    ],
 )

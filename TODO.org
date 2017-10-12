@@ -23,11 +23,3 @@ hlint should be useful
 ** TODO Logging
 *** TODO R&D Haskell logging
 *** TODO Decide on logging approach
-* Marketing
-** TODO Pick a name!
-https://docs.google.com/document/d/1dSjS1E_DJxIMPPLXnVFRLFtmj1kMesPLlobp5TJY2Yc/edit
-** TODO Competitor anaylsis
-https://docs.google.com/document/d/11ewu-AVmqHofTB22kdB00zVzOi9WCmfC5MSrPsMmKws/edit
-* References
-** Drive folder: https://drive.google.com/drive/folders/0BzzRizsvL_4ONVBMZU9wSlkwOTg
-** UI brainstorming: https://docs.google.com/document/d/1_dNm5ekuzG4P6ITMzfhpglTVtlZ_jRQzr-3sjDaHS5U/edit

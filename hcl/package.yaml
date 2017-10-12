@@ -1,7 +1,9 @@
 name: hcl
 version: 0.1.0.0
 synopsis: Command line tool for Holborn
-license: AllRightsReserved
+license: AGPL
+license-file: LICENSE
+copyright: (c) 2015-2017 Thomas E. Hunger and Jonathan M. Lange
 
 ghc-options: -Wall -Werror -threaded
 default-extensions:

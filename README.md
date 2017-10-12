@@ -1,11 +1,6 @@
 # holborn
 
-Now deployed at https://norf.co/
-
-## Goal
-
-Provide a code hosting and collaboration platform that gets out of people's
-way while they make great software.
+WIP Git hosting platform. Now deployed at https://norf.co/
 
 ## Hacking
 
@@ -17,11 +12,17 @@ We assume you're using:
 * nix
 * direnv
 
+## License and Copyright
+
+Copyright (c) 2015-2017 Thomas E. Hunger and Jonathan M. Lange
+
+Made available under GNU AGPL v3
+
+Unless otherwise stated.
+
 ## Review
 
-All changes require code review. We're currently in "claiming territory"
-phase, which means that the focus is on delivering functionality without
-screwing ourselves over wrt scalability or long-term maintenance.
+All changes require code review.
 
 Code review should be focused on making sure that you understand what's going
 on, that we're not making irreversible mistakes, and identifying low-hanging

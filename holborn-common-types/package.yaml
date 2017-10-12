@@ -1,7 +1,9 @@
 name: holborn-common-types
 version: 0.1.3.0
 synopsis: Types shared between our nodes
-license: AllRightsReserved
+license: AGPL
+license-file: LICENSE
+copyright: (c) 2015-2017 Thomas E. Hunger and Jonathan M. Lange
 
 # Disable -Werror while we port to protolude
 ghc-options: -Wall
