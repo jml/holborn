@@ -10,8 +10,6 @@
 
 * [GH devs commenting on what they are planning for code review](https://news.ycombinator.com/item?id=11291714)
 
-* [Selling Software to the Enterprise](https://training.kalzumeus.com/newsletters/archive/enterprise_sales)
-
 * [switch to gerrit](http://techspot.zzzeek.org/2016/04/21/gerrit-is-awesome/)
 
 * [composing smaller parsers that can deal with invalid code and still generate useful facts](https://blog.acolyer.org/2016/05/31/how-to-build-static-checking-systems-using-orders-of-magnitude-less-code/)
